@@ -1,0 +1,46 @@
+{
+  "module": "M3_privacy_consent",
+  "version": "2026.09.01.1",
+  "rules": [
+    {
+      "id": "M3-001",
+      "name": "suppressed_reject",
+      "module": "M3",
+      "statute_ref": "DPDP Act 2023 §6 — Consent must be free and easy to withdraw",
+      "severity": "high",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "[id*='cookie'] button, [class*='cookie'] button, [id*='consent'] button, [class*='consent'] button",
+        "structural_check": {
+          "type": "visibility_suppressed",
+          "threshold": 0.5
+        },
+        "text_patterns": [
+          "^(reject|decline|no|manage options|customize)$"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "The option to reject tracking is visually suppressed compared to the 'Accept' button, violating equal consent standards."
+    },
+    {
+      "id": "M3-002",
+      "name": "pre_ticked_consent",
+      "module": "M3",
+      "statute_ref": "DPDP Act 2023 §6 — Affirmative action required",
+      "severity": "high",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "input[type='checkbox']",
+        "structural_check": {
+          "type": "pre_checked_checkbox",
+          "reference_selector": "form, [class*='signup'], [class*='register'], [class*='cookie']"
+        },
+        "text_patterns": [
+          "agree to", "send me", "subscribe", "marketing", "updates", "share my data", "promotions"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "A consent checkbox for marketing or data sharing is pre-ticked. Valid consent requires your active opt-in."
+    }
+  ]
+}

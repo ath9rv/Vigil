@@ -1,0 +1,58 @@
+[
+  {
+    "id": 2001,
+    "priority": 1,
+    "action": {
+      "type": "redirect",
+      "redirect": {
+        "transform": {
+          "queryTransform": {
+            "removeParams": [
+              "utm_source",
+              "utm_medium",
+              "utm_campaign",
+              "utm_content",
+              "utm_term",
+              "utm_id",
+              "utm_cid",
+              "fbclid",
+              "gclid",
+              "gclsrc",
+              "mc_eid",
+              "msclkid",
+              "yclid",
+              "_ga",
+              "_gl",
+              "_hsenc",
+              "_hsmi",
+              "_openstat",
+              "dclid",
+              "ICID",
+              "igshid",
+              "ref_",
+              "oly_anon_id",
+              "oly_enc_id",
+              "__s",
+              "vero_id",
+              "wickedid",
+              "wt_zmc",
+              "mkt_tok",
+              "s_cid"
+            ]
+          }
+        }
+      }
+    },
+    "condition": {
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "script",
+        "image",
+        "xmlhttprequest",
+        "ping",
+        "other"
+      ]
+    }
+  }
+]

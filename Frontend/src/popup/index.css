@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    width: 380px;
+    max-height: 520px;
+    overflow-y: auto;
+    background-color: theme('colors.white');
+    font-family: theme('fontFamily.sans');
+  }
+
+  /* Custom scrollbar styling (thin, subtle) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.gray.300');
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.gray.400');
+  }
+}

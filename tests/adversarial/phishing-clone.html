@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>Phishing Clone Test</title></head>
+<body>
+    <pre style="font-family: monospace; background: #f0f0f0; padding: 20px;">
+VIGIL TEST FIXTURE
+--------------------
+Test: PHISHING_CLONE
+
+To test this:
+1. Seed the local threat DB with the hash for 'localhost' / '127.0.0.1'.
+2. Load this page.
+3. Open Vigil.
+4. Verify KNOWN_PHISHING is flagged and is HIGH confidence.
+    </pre>
+    <form>
+        <input type="text" placeholder="Username">
+        <input type="password" placeholder="Password">
+        <button type="submit">Login</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,82 @@
+{
+  "module": "M2_threat_shield",
+  "version": "2026.09.01",
+  "rules": [
+    {
+      "id": "M2-001",
+      "name": "domain_similarity",
+      "module": "M2",
+      "statute_ref": "IT Act 2000 §66D — Cheating by personation using computer resources",
+      "severity": "severe",
+      "selector_strategy": "domain_analysis",
+      "match": {
+        "target": "_document_location",
+        "text_patterns": [],
+        "case_insensitive": true
+      },
+      "explanation_template": "This domain closely resembles '{similar_domain}' (similarity: {score}%). This could be a phishing or typosquatting attempt designed to impersonate a legitimate website and steal your credentials."
+    },
+    {
+      "id": "M2-002",
+      "name": "pre_consent_tracking",
+      "module": "M2",
+      "statute_ref": "DPDP Act 2023 §6 — Consent requirement; IT Rules 2021 Intermediary Guidelines",
+      "severity": "high",
+      "selector_strategy": "timing",
+      "match": {
+        "target": "script[src]",
+        "text_patterns": [
+          "google-analytics",
+          "googletagmanager",
+          "gtag",
+          "facebook.*pixel",
+          "fb.*pixel",
+          "fbevents",
+          "analytics",
+          "tracker",
+          "tracking",
+          "hotjar",
+          "mixpanel",
+          "segment",
+          "amplitude",
+          "clarity\\.ms",
+          "doubleclick",
+          "adsbygoogle",
+          "adsense"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Tracking script '{script_name}' was loaded before any consent interaction was detected on this page. Under DPDP Act 2023, personal data processing requires valid prior consent."
+    },
+    {
+      "id": "M2-003",
+      "name": "phishing_clone",
+      "module": "M2",
+      "statute_ref": "IT Act 2000 §66C — Identity theft; §66D — Cheating by personation",
+      "severity": "severe",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "form",
+        "structural_check": {
+          "type": "missing_nearby_element",
+          "expected_nearby": "input[type='password'], input[type='email'], input[name*='card'], input[name*='credit'], input[name*='cvv'], input[name*='expir'], input[autocomplete='cc-number']"
+        },
+        "text_patterns": [
+          "sign in",
+          "log in",
+          "login",
+          "enter (your )?password",
+          "enter (your )?(email|username)",
+          "verify (your )?(account|identity|email)",
+          "confirm (your )?(account|identity|password)",
+          "update (your )?(payment|billing|card)",
+          "security (check|verification|alert)",
+          "unusual (activity|sign[- ]?in|login)",
+          "account (suspended|locked|restricted|compromised)"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "This page contains a login or payment form on a domain that closely resembles a known legitimate site. Combined with domain similarity, this is a strong indicator of a phishing attack attempting to steal your credentials."
+    }
+  ]
+}

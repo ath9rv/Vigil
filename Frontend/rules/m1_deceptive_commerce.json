@@ -1,0 +1,167 @@
+{
+  "module": "M1_deceptive_commerce",
+  "version": "2026.09.01.2",
+  "rules": [
+    {
+      "id": "M1-001",
+      "name": "false_urgency",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Creating a false sense of urgency",
+      "severity": "medium",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='countdown'], [class*='timer'], [id*='countdown'], [id*='timer']",
+        "text_patterns": [
+          "\\b\\d{1,2}:\\d{2}:\\d{2}\\b",
+          "offer ends in \\d+",
+          "sale ends in \\d+",
+          "hurry[,!] .*\\b(only|last|before)\\b",
+          "act (now|fast|quickly).*miss"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "This site uses aggressive countdown timers or pressure language. Genuine limited stock is fine, but artificial timers are a dark pattern."
+    },
+    {
+      "id": "M1-002",
+      "name": "basket_sneaking",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Basket sneaking",
+      "severity": "high",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "input[type='checkbox']",
+        "structural_check": {
+          "type": "pre_checked_checkbox",
+          "reference_selector": "[class*='cart'], [class*='checkout'], [id*='cart'], [id*='checkout']",
+          "proximity_px": 300
+        },
+        "text_patterns": [
+          "add .* (protection|insurance|warranty|donation)",
+          "extended warranty",
+          "include .* (plan|coverage)"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "An extra service or fee was pre-selected for you. You must actively opt-in to additions, they shouldn't be snuck into your basket."
+    },
+    {
+      "id": "M1-003",
+      "name": "confirm_shaming",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Confirmshaming",
+      "severity": "medium",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "button, a[role='button'], [role='button']",
+        "text_patterns": [
+          "no thanks,? i (prefer|like|enjoy|love) (paying|spend|miss|lose|stay)",
+          "i('?d)? rather (not save|pay (full|more))",
+          "no,? i('?ll| will) pay (full|more|regular)",
+          "no,? (keep|leave) me (uninformed|unprotected)"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "The 'decline' button uses guilt-inducing language. You should be able to decline without being emotionally manipulated."
+    },
+    {
+      "id": "M1-004",
+      "name": "forced_continuity",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Forced continuity",
+      "severity": "high",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "button, input[type='submit']",
+        "text_patterns": [
+          "start (free|my|your) trial",
+          "activate (free|my|your) trial"
+        ],
+        "case_insensitive": true,
+        "structural_check": {
+          "type": "missing_nearby_element",
+          "expected_nearby": "[href*='cancel'], [class*='cancel'], [id*='cancel']",
+          "proximity_px": 500
+        }
+      },
+      "explanation_template": "This free trial button doesn't show a clear way to cancel nearby. It should be just as easy to cancel as it is to sign up."
+    },
+    {
+      "id": "M1-005",
+      "name": "subscription_trap",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Subscription trap",
+      "severity": "high",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "button, input[type='submit']",
+        "text_patterns": [
+          "subscribe now",
+          "become a (member|subscriber|premium)"
+        ],
+        "case_insensitive": true,
+        "structural_check": {
+          "type": "missing_nearby_element",
+          "expected_nearby": "[href*='unsubscribe'], [href*='cancel']",
+          "proximity_px": 500
+        }
+      },
+      "explanation_template": "Easy to subscribe, but there's no clear unsubscribe option visible."
+    },
+    {
+      "id": "M1-006",
+      "name": "interface_interference",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Interface interference",
+      "severity": "medium",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "[role='dialog'] button, [class*='modal'] button, [class*='cookie'] button",
+        "structural_check": {
+          "type": "visibility_suppressed",
+          "threshold": 0.5
+        },
+        "text_patterns": [
+          "^(no thanks|reject|decline|skip)$"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "The 'decline' option is visually suppressed — made significantly faded or smaller compared to the accept button."
+    },
+    {
+      "id": "M1-007",
+      "name": "bait_and_switch",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Bait and switch",
+      "severity": "high",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='checkout'] [class*='price'], [class*='checkout'] [class*='total']",
+        "text_patterns": [
+          "price changed",
+          "updated price",
+          "price may (have )?changed"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "The price appears to have changed between the listing and checkout."
+    },
+    {
+      "id": "M1-008",
+      "name": "drip_pricing",
+      "module": "M1",
+      "statute_ref": "CCPA Guidelines 2023 — Category: Drip pricing",
+      "severity": "high",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='checkout'] *, [class*='order-summary'] *",
+        "text_patterns": [
+          "(convenience|platform|handling|booking) (fee|charge)",
+          "hidden (fee|charge|cost)"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Extra fees appeared at checkout that weren't shown upfront."
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "name": "OneTrust",
+    "detector": "#onetrust-banner-sdk",
+    "reject_selectors": ["#onetrust-reject-all-handler", ".ot-pc-refuse-all-handler", "button[aria-label='Reject All']"],
+    "manage_selectors": [".ot-pc-open-source", "#onetrust-pc-btn-handler"],
+    "toggle_off": ".ot-switch input[type='checkbox']:checked",
+    "save_selectors": [".save-preference-btn-handler", "#accept-recommended-btn-handler"]
+  },
+  {
+    "name": "Cookiebot",
+    "detector": "#CybotCookiebotDialog",
+    "reject_selectors": ["#CybotCookiebotDialogBodyButtonDecline", "a#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll"],
+    "manage_selectors": [],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "TrustArc",
+    "detector": "#trustarc-banner-overlay, #teconsent",
+    "reject_selectors": [".trustarc-reject-all, #trustarc-reject-btn", "a.call[aria-label*='reject' i]", "#truste-show-consent"],
+    "manage_selectors": ["#truste-show-consent"],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "Quantcast",
+    "detector": ".qc-cmp2-main, .qc-cmp-ui-container",
+    "reject_selectors": [".qc-cmp2-summary-buttons button[mode='secondary']", ".qc-cmp2-summary-buttons button.qc-cmp2-reject-all", "button[data-testid='qc-cmp2-reject-all']"],
+    "manage_selectors": [".qc-cmp2-summary-buttons button[mode='secondary']"],
+    "toggle_off": "",
+    "save_selectors": [".qc-cmp2-footer button[mode='primary']"]
+  },
+  {
+    "name": "Didomi",
+    "detector": "#didomi-host",
+    "reject_selectors": ["#didomi-notice-learn-more-button", "#didomi-notice-disagree-button"],
+    "manage_selectors": ["#didomi-notice-learn-more-button"],
+    "toggle_off": ".didomi-consent-switch input:checked",
+    "save_selectors": ["#didomi-consent-popup-save-button"]
+  },
+  {
+    "name": "Usercentrics",
+    "detector": "#usercentrics-root, #uc-center-container",
+    "reject_selectors": ["button[data-testid='uc-deny-all-button']", "button[data-testid='uc-customize-button']"],
+    "manage_selectors": ["button[data-testid='uc-customize-button']", "button.uc-btn-more"],
+    "toggle_off": "input[type='checkbox'].uc-toggle:checked",
+    "save_selectors": ["button[data-testid='uc-save-button']"]
+  },
+  {
+    "name": "CookiePro",
+    "detector": ".cookiepro-banner",
+    "reject_selectors": [".cookiepro-reject", "#cookiepro-reject-all"],
+    "manage_selectors": [".cookiepro-manage"],
+    "toggle_off": ".cookiepro-switch input:checked",
+    "save_selectors": [".cookiepro-save"]
+  },
+  {
+    "name": "Complianz",
+    "detector": "#cmplz-cookiebanner-container, .cmplz-cookiebanner",
+    "reject_selectors": [".cmplz-btn.cmplz-deny"],
+    "manage_selectors": [".cmplz-btn.cmplz-view-preferences"],
+    "toggle_off": ".cmplz-checkbox input:checked",
+    "save_selectors": [".cmplz-btn.cmplz-save-preferences"]
+  },
+  {
+    "name": "Termly",
+    "detector": "div[data-termly-cookie-banner]",
+    "reject_selectors": ["button[data-tid='banner-decline']", "button.termly-decline", "button[aria-label*='Decline' i]"],
+    "manage_selectors": ["button[data-tid='banner-preferences']", "button.termly-preferences", "button[aria-label*='Preferences' i]"],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "Generic_A",
+    "detector": ".cc-window, .cc-banner",
+    "reject_selectors": [".cc-deny", ".cc-dismiss"],
+    "manage_selectors": [],
+    "toggle_off": "",
+    "save_selectors": []
+  }
+]

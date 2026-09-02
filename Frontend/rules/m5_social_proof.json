@@ -1,0 +1,44 @@
+{
+  "module": "M5_social_proof",
+  "version": "2026.09.01.1",
+  "rules": [
+    {
+      "id": "M5-001",
+      "name": "monotonic_counters",
+      "module": "M5",
+      "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
+      "severity": "medium",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "span, div, p",
+        "text_patterns": [
+          "\\d+ (people|others) are (looking|viewing|watching) (at )?this",
+          "\\d+ booked in the last",
+          "in high demand"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Displays metrics claiming high current activity. These are often artificially generated to create herd-mentality pressure."
+    },
+    {
+      "id": "M5-002",
+      "name": "undisclosed_sponsored",
+      "module": "M5",
+      "statute_ref": "Consumer Protection Act — Undisclosed Ad",
+      "severity": "high",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "[class*='sponsored'], [class*='ad-label'], [class*='promoted'], [class*='advertisement']",
+        "structural_check": {
+          "type": "visibility_suppressed",
+          "threshold": 0.4
+        },
+        "text_patterns": [
+          "^sponsored$", "^ad$", "^promoted$"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "The 'Sponsored' or 'Ad' label is severely faded or illegible, illegally disguising paid content as organic content."
+    }
+  ]
+}

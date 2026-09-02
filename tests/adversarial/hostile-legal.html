@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><title>Hostile Legal Terms Test</title></head>
+<body>
+    <h1>Terms of Service</h1>
+    <div id="legal-content">
+        <p id="arbitration">1. You agree to binding individual arbitration and waive any right to participate in a class action lawsuit or class-wide arbitration.</p>
+        <p id="license">2. By uploading content, you grant us a perpetual, irrevocable, worldwide, royalty-free license to use, modify, distribute, and train artificial intelligence models on your content without compensation.</p>
+        <p id="false-positive">3. Nothing in these terms waives your rights where such waiver is expressly prohibited by applicable law.</p>
+        <p id="termination">4. We reserve the right to terminate your account or modify these terms at any time, for any reason, without prior notice.</p>
+    </div>
+    
+    <script>
+        window.__VIGIL_TEST__ = {
+            expected: {
+                findings: [
+                    { category: 'LEGAL', text: 'waive any right to participate in a class action' },
+                    { category: 'LEGAL', text: 'train artificial intelligence models' }
+                ],
+                falsePositivesToIgnore: [
+                    { text: 'prohibited by applicable law' }
+                ]
+            }
+        };
+    </script>
+</body>
+</html>

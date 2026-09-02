@@ -1,0 +1,42 @@
+{
+  "module": "M4_attention_addiction",
+  "version": "2026.09.01.1",
+  "rules": [
+    {
+      "id": "M4-001",
+      "name": "loss_framed_streaks",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation / Deceptive Design",
+      "severity": "medium",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "p, span, div, h1, h2, h3",
+        "text_patterns": [
+          "don'?t break your streak",
+          "lose your streak",
+          "streak is at risk",
+          "keep your streak alive"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Gamification using 'loss framing' to induce anxiety and compel you to return to the app or site."
+    },
+    {
+      "id": "M4-002",
+      "name": "autoplay_trap",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation / Addictive UX",
+      "severity": "low",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='autoplay'], [class*='next'], [class*='countdown']",
+        "text_patterns": [
+          "playing next in \\d+",
+          "up next in \\d+"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Auto-playing the next piece of content removes natural stopping cues, encouraging binge consumption."
+    }
+  ]
+}

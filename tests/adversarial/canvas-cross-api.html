@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cross API Fingerprint Test</title>
+    <script>
+        const c = document.createElement('canvas');
+        const ctx = c.getContext('2d');
+        ctx.fillText('CrossAPI', 10, 10);
+        
+        const dataUrl = c.toDataURL();
+        const imgData = ctx.getImageData(0,0,10,10).data.join(',');
+        
+        c.toBlob(blob => {
+            window.__VIGIL_TEST_RESULT__ = {
+                name: 'CROSS_API_FINGERPRINT',
+                dataUrl: dataUrl,
+                imgData: imgData,
+                blobType: blob.type
+            };
+        });
+    </script>
+</head>
+<body>Cross API Canvas Fixture</body>
+</html>

@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "Vigil — Web Trust & Safety Shield",
+  "description": "Detects dark patterns, phishing, and deceptive design on any website. Grounded in CCPA & DPDP law.",
+  "version": "0.1.0",
+  "icons": {
+    "16": "public/icons/icon-16.png",
+    "48": "public/icons/icon-48.png",
+    "128": "public/icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "public/icons/icon-16.png",
+      "48": "public/icons/icon-48.png"
+    },
+    "default_title": "Vigil — Web Trust Score"
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      { "id": "tracker_blocklist", "enabled": true, "path": "rules/tracker_blocklist.json" },
+      { "id": "url_sanitizer", "enabled": true, "path": "rules/url_sanitizer.json" },
+      { "id": "https_upgrades", "enabled": true, "path": "rules/https_upgrades.json" }
+    ]
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "privacy",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "declarativeNetRequestFeedback",
+    "activeTab",
+    "notifications"
+  ],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content-scripts/index.ts"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "rules/m1_deceptive_commerce.json",
+        "rules/m2_threat_shield.json",
+        "rules/m3_privacy_consent.json",
+        "rules/m4_attention_addiction.json",
+        "rules/m5_social_proof.json",
+        "rules/cookie_consent_rules.json"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

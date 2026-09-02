@@ -1,0 +1,190 @@
+[
+  {
+    "id": 1001,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "doubleclick.net",
+        "googlesyndication.com",
+        "googleadservices.com",
+        "adnxs.com",
+        "adsrvr.com",
+        "criteo.com",
+        "taboola.com",
+        "outbrain.com",
+        "amazon-adsystem.com",
+        "moatads.com",
+        "pubmatic.com",
+        "rubiconproject.com",
+        "openx.net",
+        "casalemedia.com",
+        "bidswitch.net",
+        "contextweb.com",
+        "smartadserver.com",
+        "advertising.com",
+        "33across.com",
+        "sharethrough.com",
+        "indexexchange.com",
+        "media.net",
+        "yieldmo.com",
+        "teads.tv",
+        "triplelift.com"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 1002,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "google-analytics.com",
+        "googletagmanager.com",
+        "hotjar.com",
+        "fullstory.com",
+        "mixpanel.com",
+        "segment.io",
+        "segment.com",
+        "amplitude.com",
+        "heap.io",
+        "mouseflow.com",
+        "luckyorange.com",
+        "clarity.ms",
+        "newrelic.com",
+        "nr-data.net",
+        "bugsnag.com",
+        "loggly.com",
+        "datadoghq.com",
+        "sumologic.com"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 1003,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "connect.facebook.net",
+        "platform.twitter.com",
+        "platform.linkedin.com",
+        "snap.licdn.com",
+        "bat.bing.com"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 1004,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "apis.google.com/js/platform.js",
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 1005,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "cdn.krxd.net",
+        "iovation.com",
+        "fingerprintjs.com"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 1006,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "cdn.jsdelivr.net/npm/@aspect*",
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 1007,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "coinhive.com",
+        "coin-hive.com",
+        "jsecoin.com",
+        "cryptoloot.pro",
+        "minero.cc",
+        "webmine.cz"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  }
+]
