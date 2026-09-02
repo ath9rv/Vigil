@@ -1,4 +1,4 @@
-﻿# Privacy Policy
+# Privacy Policy
 
 **Effective Date:** September 3, 2026  
 **Commitment:** Zero User Tracking. Zero Analytics. Zero Browsing History Transmission.
@@ -60,3 +60,10 @@ In compliance with Chromium Manifest V3 least-privilege standards:
 ## 5. Open Source Auditability
 
 Vigil's code is 100% open source under the Apache 2.0 License. Any user or security researcher can inspect, build, and verify the extension directly from the source repository.
+
+---
+
+## 6. Contact & Inquiries
+
+For any questions, concerns, or inquiries regarding this Privacy Policy or Vigil's data architecture, contact:
+* **Email:** [mailxatharv@gmail.com](mailto:mailxatharv@gmail.com)

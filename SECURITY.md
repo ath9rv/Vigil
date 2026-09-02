@@ -1,4 +1,4 @@
-﻿# Security Policy
+# Security Policy
 
 ## Supported Versions
 
@@ -24,7 +24,7 @@ Project Vigil is built on a **Zero-Trust Client Architecture**:
 
 If you discover a potential security vulnerability in Project Vigil, please report it responsibly:
 
-* **Email:** security@browex.org (or open a private security advisory on GitHub)
+* **Email:** mailxatharv@gmail.com (or open a private security advisory on GitHub)
 * **Expected Response Time:** 48 hours for initial triage.
 * **Disclosure Policy:** We request a 90-day coordinated disclosure window before public publication.
 

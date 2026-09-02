@@ -1,4 +1,4 @@
-﻿# VIGIL — Cognitive Firewall & Autonomous Privacy Shield
+# VIGIL — Cognitive Firewall & Autonomous Privacy Shield
 
 [![Protocol v5.0.0 Ratified](https://img.shields.io/badge/QA%2FQC%20Standard-Protocol%20v5.0.0-00E5FF.svg)](#governance--qaqc-standard)
 [![Tests Passing](https://img.shields.io/badge/Unit%20Tests-23%2F23%20Passing-00E676.svg)](#test-verification--evidence-ledger)
@@ -181,3 +181,10 @@ Vigil is governed under **`VIGIL MASTER QA/QC PROTOCOL v5.0.0 — FINAL RELEASE-
 * **License:** Licensed under the [Apache License, Version 2.0](LICENSE).
 * **Security:** For vulnerability disclosure guidelines, see [SECURITY.md](SECURITY.md).
 * **Privacy:** For details on our zero-telemetry architecture, see [PRIVACY.md](PRIVACY.md).
+
+---
+
+## Maintainer & Contact
+
+* **Lead Developer:** Atharv ([@ath9rv](https://github.com/ath9rv))
+* **Contact & Inquiries:** [mailxatharv@gmail.com](mailto:mailxatharv@gmail.com)
