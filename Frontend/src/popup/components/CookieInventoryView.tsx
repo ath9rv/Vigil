@@ -1,5 +1,5 @@
-﻿import React, { useState } from 'react';
-import { DetailedCookie, CookieCategory } from '../../network/cookie-classifier';
+import React, { useState } from 'react';
+import { DetailedCookie, CookieCategory, generateCookieSummary } from '../../network/cookie-classifier';
 
 interface Props {
   cookies: DetailedCookie[];
@@ -22,6 +22,8 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCookie, setExpandedCookie] = useState<string | null>(null);
 
+  const summary = generateCookieSummary(cookies, domain);
+
   const categoryCounts = cookies.reduce((acc, c) => {
     acc[c.category] = (acc[c.category] || 0) + 1;
     return acc;
@@ -42,6 +44,44 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Plain English Summary Box for Normal People */}
+      <div className={`p-3 rounded-xl border flex flex-col gap-1.5 shadow-sm ${
+        summary.verdict === 'TRACKED' 
+          ? 'bg-rose-50/80 border-rose-200' 
+          : summary.verdict === 'CAUTION' 
+          ? 'bg-blue-50/80 border-blue-200' 
+          : 'bg-emerald-50/80 border-emerald-200'
+      }`}>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold flex items-center gap-1.5 text-gray-900">
+            <span>{summary.verdict === 'TRACKED' ? '⚠️' : summary.verdict === 'CAUTION' ? '📊' : '🛡️'}</span>
+            <span>{summary.headline}</span>
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            summary.verdict === 'TRACKED'
+              ? 'bg-rose-200 text-rose-800'
+              : summary.verdict === 'CAUTION'
+              ? 'bg-blue-200 text-blue-800'
+              : 'bg-emerald-200 text-emerald-800'
+          }`}>
+            {summary.verdict === 'TRACKED' ? 'Ad Tracking Active' : summary.verdict === 'CAUTION' ? 'Analytics Only' : '100% Safe'}
+          </span>
+        </div>
+        <p className="text-[11px] text-gray-700 leading-relaxed font-normal">
+          {summary.verdictText}
+        </p>
+        {summary.bulletPoints.length > 0 && (
+          <div className="flex flex-col gap-1 pt-1.5 border-t border-gray-200/70 mt-0.5 text-[10px] text-gray-600">
+            {summary.bulletPoints.map((bp, i) => (
+              <div key={i} className="flex items-start gap-1.5">
+                <span className="text-gray-400 mt-0.5 font-bold">•</span>
+                <span>{bp}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex flex-col">

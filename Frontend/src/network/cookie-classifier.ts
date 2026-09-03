@@ -113,11 +113,46 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
 
   // ─── LinkedIn ───────────────────────────────────────────────────────────────
   {
-    pattern: /^(bcookie|bscookie|lidc|UserMatchHistory)$/i,
+    pattern: /^(bcookie|UserMatchHistory)$/i,
     category: 'MARKETING',
     risk: 'HIGH',
     provider: 'LinkedIn',
-    purpose: 'Browser identifier cookie used to track use of LinkedIn embed services and cross-site conversion tracking.'
+    purpose: 'Primary browser tracking ID used to follow your visits across LinkedIn and partner websites to deliver targeted ads and job sponsorships.'
+  },
+  {
+    pattern: /^li_sugr$/i,
+    category: 'MARKETING',
+    risk: 'HIGH',
+    provider: 'LinkedIn',
+    purpose: 'Synthesized User Global Request tracker used to match your identity outside LinkedIn for cross-site behavioral ad targeting.'
+  },
+  {
+    pattern: /^(liap|li_at|bscookie)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'LinkedIn',
+    purpose: 'Secure authentication key proving you are signed into your LinkedIn account so you don\'t have to re-login on every page.'
+  },
+  {
+    pattern: /^(li_theme|li_theme_set)$/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'LinkedIn',
+    purpose: 'Remembers your personal display preferences (such as Light Mode vs Dark Mode).'
+  },
+  {
+    pattern: /^lidc$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'LinkedIn',
+    purpose: 'Directs your network traffic to the nearest LinkedIn data center to make pages load quickly.'
+  },
+  {
+    pattern: /^AnalyticsSyncHistory$/i,
+    category: 'ANALYTICS',
+    risk: 'MEDIUM',
+    provider: 'LinkedIn',
+    purpose: 'Records the timestamp of when your advertising analytics data was last synchronized with partner networks.'
   },
 
   // ─── TikTok ────────────────────────────────────────────────────────────────
@@ -291,4 +326,72 @@ export function parseDocumentCookies(cookieStr: string, currentDomain: string): 
   }
 
   return results;
+}
+
+export interface CookieSummary {
+  headline: string;
+  verdict: 'SAFE' | 'CAUTION' | 'TRACKED';
+  verdictText: string;
+  essentialCount: number;
+  functionalCount: number;
+  marketingCount: number;
+  analyticsCount: number;
+  unknownCount: number;
+  bulletPoints: string[];
+}
+
+/**
+ * Summarizes cookies in plain, simple everyday language for normal people.
+ */
+export function generateCookieSummary(cookies: DetailedCookie[], domain: string): CookieSummary {
+  const marketing = cookies.filter(c => c.category === 'MARKETING');
+  const analytics = cookies.filter(c => c.category === 'ANALYTICS');
+  const essential = cookies.filter(c => c.category === 'ESSENTIAL');
+  const functional = cookies.filter(c => c.category === 'FUNCTIONAL');
+  const unknown = cookies.filter(c => c.category === 'UNKNOWN');
+
+  let verdict: 'SAFE' | 'CAUTION' | 'TRACKED' = 'SAFE';
+  let verdictText = '';
+  let headline = '';
+
+  if (marketing.length > 0) {
+    verdict = 'TRACKED';
+    headline = `Ad Tracking Detected`;
+    const topTrackers = marketing.map(m => m.name).slice(0, 2).join(', ');
+    verdictText = `This site uses ${marketing.length} ad tracker${marketing.length > 1 ? 's' : ''} (${topTrackers}) to follow what you do and show you targeted ads across the web.`;
+  } else if (analytics.length > 0) {
+    verdict = 'CAUTION';
+    headline = `Visitor Stats Recorded`;
+    verdictText = `This site counts page views to see what content is popular, but isn't following you with cross-site ad trackers.`;
+  } else {
+    verdict = 'SAFE';
+    headline = `Clean & Essential Only`;
+    verdictText = `Only essential cookies are present to keep the site working safely (like keeping you logged in). No advertising trackers!`;
+  }
+
+  const bulletPoints: string[] = [];
+  if (essential.length > 0) {
+    bulletPoints.push(`${essential.length} safe cookie${essential.length > 1 ? 's' : ''} to keep you logged in and protect your account.`);
+  }
+  if (functional.length > 0) {
+    bulletPoints.push(`${functional.length} setting${functional.length > 1 ? 's' : ''} to remember your preferences (like dark mode or language).`);
+  }
+  if (marketing.length > 0) {
+    bulletPoints.push(`${marketing.length} ad tracker${marketing.length > 1 ? 's' : ''} watching your activity to profile you for advertising.`);
+  }
+  if (analytics.length > 0) {
+    bulletPoints.push(`${analytics.length} analytics counter${analytics.length > 1 ? 's' : ''} measuring page traffic.`);
+  }
+
+  return {
+    headline,
+    verdict,
+    verdictText,
+    essentialCount: essential.length,
+    functionalCount: functional.length,
+    marketingCount: marketing.length,
+    analyticsCount: analytics.length,
+    unknownCount: unknown.length,
+    bulletPoints
+  };
 }
