@@ -1,3 +1,8 @@
+import { extractCookieDNA, type CookieBehavioralDNA, type RuntimeContext } from './behavioral-dna';
+import { scoreCookieBehavior, type ScoredBehavioralDNA } from './behavioral-scorer';
+
+export type { CookieBehavioralDNA, ScoredBehavioralDNA };
+
 export type CookieCategory = 'ESSENTIAL' | 'ANALYTICS' | 'MARKETING' | 'FUNCTIONAL' | 'UNKNOWN';
 export type CookieRisk = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -15,6 +20,7 @@ export interface DetailedCookie {
   sameSite?: string;
   session?: boolean;
   expiryText?: string;
+  dna?: ScoredBehavioralDNA;
 }
 
 interface CookieDef {
@@ -498,31 +504,80 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
 ];
 
 /**
- * Classifies a cookie based on its name, value, and origin using an extensive knowledge base
- * and multi-stage semantic heuristics.
+ * Classifies a cookie based on its name, value, and origin using an extensive knowledge base,
+ * Behavioral DNA feature extraction, and multi-stage semantic heuristics.
  */
-export function classifyCookie(name: string, value: string, domain: string): {
+export function classifyCookie(
+  name: string,
+  value: string,
+  domain: string,
+  context?: RuntimeContext & {
+    secure?: boolean;
+    httpOnly?: boolean;
+    sameSite?: string;
+    session?: boolean;
+    expirationDate?: number;
+  }
+): {
   category: CookieCategory;
   risk: CookieRisk;
   provider: string;
   purpose: string;
+  dna: ScoredBehavioralDNA;
 } {
   const cleanName = name.trim();
+
+  // ─── Behavioral DNA Extraction & Heuristic Scoring ────────────────────────
+  const rawDna = extractCookieDNA({
+    name: cleanName,
+    value,
+    domain,
+    secure: context?.secure,
+    httpOnly: context?.httpOnly,
+    sameSite: context?.sameSite,
+    session: context?.session,
+    expirationDate: context?.expirationDate
+  }, context);
+  const dna = scoreCookieBehavior(rawDna);
+
+  // 1. Check Explicit Knowledge Base
   for (const def of COOKIE_KNOWLEDGE_BASE) {
     if (def.pattern.test(cleanName)) {
       return {
         category: def.category,
         risk: def.risk,
         provider: def.provider,
-        purpose: def.purpose
+        purpose: def.purpose,
+        dna
       };
     }
   }
 
-  // ─── Supercharged Semantic Heuristic Classifier ───────────────────────────
+  // 2. Behavioral DNA Adaptive Inference (High confidence behavioral trackers)
+  if (dna.category === 'high_risk_tracker') {
+    return {
+      category: 'MARKETING',
+      risk: 'HIGH',
+      provider: `${domain} (Behavioral Profiler)`,
+      purpose: `Vigil Behavioral DNA identified cross-site tracking patterns (Score ${dna.score}/100: ${dna.reasons[0] || 'High-entropy identifier'}).`,
+      dna
+    };
+  }
+
+  if (dna.category === 'probable_tracker') {
+    return {
+      category: 'ANALYTICS',
+      risk: 'MEDIUM',
+      provider: `${domain} (Telemetry/Tracker)`,
+      purpose: `Vigil Behavioral DNA identified persistent telemetry identifier (Score ${dna.score}/100).`,
+      dna
+    };
+  }
+
+  // 3. Supercharged Semantic Heuristic Classifier
   const lower = cleanName.toLowerCase();
 
-  // 1. Performance & Telemetry (e.g. csm, hit, perf, metric, ping, log, stats)
+  // Telemetry (e.g. csm, hit, perf, metric, ping, log, stats)
   if (
     lower.includes('csm') || 
     lower.includes('hit') || 
@@ -541,11 +596,12 @@ export function classifyCookie(name: string, value: string, domain: string): {
       category: 'ANALYTICS',
       risk: 'LOW',
       provider: `${domain} (Telemetry)`,
-      purpose: 'Performance and telemetry cookie measuring page load times, click events, or server response latency.'
+      purpose: 'Performance and telemetry cookie measuring page load times, click events, or server response latency.',
+      dna
     };
   }
 
-  // 2. Advertising & Cross-Site Tracking (e.g. track, ad, pixel, campaign, utm, affiliate)
+  // Advertising & Cross-Site Tracking (e.g. track, ad, pixel, campaign, utm, affiliate)
   if (
     lower.includes('track') || 
     lower.includes('ad') || 
@@ -563,11 +619,12 @@ export function classifyCookie(name: string, value: string, domain: string): {
       category: 'MARKETING',
       risk: 'HIGH',
       provider: `${domain} (Marketing)`,
-      purpose: 'Advertising or cross-site tracking identifier used to profile your browsing behavior and target advertisements.'
+      purpose: 'Advertising or cross-site tracking identifier used to profile your browsing behavior and target advertisements.',
+      dna
     };
   }
 
-  // 3. Essential Session, Security & Checkout (e.g. session, auth, token, csrf, cart, order)
+  // Essential Session, Security & Checkout (e.g. session, auth, token, csrf, cart, order)
   if (
     lower.includes('token') || 
     lower.includes('auth') || 
@@ -589,11 +646,12 @@ export function classifyCookie(name: string, value: string, domain: string): {
       category: 'ESSENTIAL',
       risk: 'LOW',
       provider: `${domain} (Session)`,
-      purpose: 'Session security or checkout state cookie maintaining your authenticated status and cart items.'
+      purpose: 'Session security or checkout state cookie maintaining your authenticated status and cart items.',
+      dna
     };
   }
 
-  // 4. Functional Preferences (e.g. lang, theme, dark, pref, mode, currency)
+  // Functional Preferences (e.g. lang, theme, dark, pref, mode, currency)
   if (
     lower.includes('lang') || 
     lower.includes('theme') || 
@@ -611,16 +669,18 @@ export function classifyCookie(name: string, value: string, domain: string): {
       category: 'FUNCTIONAL',
       risk: 'LOW',
       provider: `${domain} (Preferences)`,
-      purpose: 'Remembers user display settings, regional language, preferred currency, or interface customization.'
+      purpose: 'Remembers user display settings, regional language, preferred currency, or interface customization.',
+      dna
     };
   }
 
-  // 5. General Application Cookie
+  // General Application Cookie
   return {
     category: 'FUNCTIONAL',
     risk: 'LOW',
     provider: domain,
-    purpose: 'First-party application cookie managing site features or internal session state.'
+    purpose: 'First-party application cookie managing site features or internal session state.',
+    dna
   };
 }
 
@@ -651,6 +711,7 @@ export function parseDocumentCookies(cookieStr: string, currentDomain: string): 
       risk: classification.risk,
       provider: classification.provider,
       purpose: classification.purpose,
+      dna: classification.dna,
       session: true,
       secure: typeof window !== 'undefined' && window.location ? window.location.protocol === 'https:' : true,
       expiryText: 'Session'

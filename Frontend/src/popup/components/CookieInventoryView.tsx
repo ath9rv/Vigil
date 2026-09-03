@@ -247,6 +247,58 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
                         </p>
                       </div>
 
+                      {/* Behavioral DNA & Explainability Panel */}
+                      {cookie.dna && (
+                        <div className="p-2.5 rounded-lg border border-indigo-200 bg-indigo-50/70 text-indigo-950 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[11px] flex items-center gap-1 text-indigo-900">
+                              <span>🧬</span> Behavioral DNA Signature:
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              cookie.dna.score >= 80 ? 'bg-red-100 text-red-800' :
+                              cookie.dna.score >= 60 ? 'bg-amber-100 text-amber-800' :
+                              cookie.dna.score >= 30 ? 'bg-blue-100 text-blue-800' :
+                              'bg-emerald-100 text-emerald-800'
+                            }`}>
+                              {cookie.dna.score >= 80 ? 'High-Risk Tracker' :
+                               cookie.dna.score >= 60 ? 'Probable Tracker' :
+                               cookie.dna.score >= 30 ? 'Suspicious' :
+                               'Benign'} ({cookie.dna.score}/100)
+                            </span>
+                          </div>
+
+                          {/* Metric Chips */}
+                          <div className="grid grid-cols-3 gap-1 text-[9px] font-mono">
+                            <div className="bg-white/80 p-1.5 rounded border border-indigo-100">
+                              <span className="text-gray-400 block uppercase text-[8px]">Entropy</span>
+                              <span className="font-bold text-indigo-900">{cookie.dna.entropy.toFixed(2)} bits/b</span>
+                            </div>
+                            <div className="bg-white/80 p-1.5 rounded border border-indigo-100">
+                              <span className="text-gray-400 block uppercase text-[8px]">Encoding</span>
+                              <span className="font-bold text-indigo-900 uppercase truncate">{cookie.dna.charsetProfile}</span>
+                            </div>
+                            <div className="bg-white/80 p-1.5 rounded border border-indigo-100">
+                              <span className="text-gray-400 block uppercase text-[8px]">Confidence</span>
+                              <span className="font-bold text-indigo-900">{Math.round(cookie.dna.confidence * 100)}%</span>
+                            </div>
+                          </div>
+
+                          {/* Explainable Reasons */}
+                          {cookie.dna.reasons && cookie.dna.reasons.length > 0 && (
+                            <div className="mt-0.5">
+                              <span className="text-[10px] font-bold text-indigo-900 block mb-1">
+                                Why Vigil scored this ({cookie.dna.score}/100):
+                              </span>
+                              <ul className="space-y-1 text-[10px] text-indigo-900/90 pl-3 list-disc">
+                                {cookie.dna.reasons.map((reason, idx) => (
+                                  <li key={idx} className="leading-tight">{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div>
                         <span className="font-bold text-gray-700 block mb-0.5 text-[11px]">Technical Purpose:</span>
                         <p className="text-gray-600 leading-relaxed text-xs">{cookie.purpose}</p>

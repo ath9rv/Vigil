@@ -12,6 +12,7 @@ import { LegalAuditView } from './components/LegalAuditView';
 import { EXTENSION_VERSION } from '../shared/constants';
 import { correlateFindings } from '../correlation/correlate';
 import { DetailedCookie, classifyCookie, parseDocumentCookies } from '../network/cookie-classifier';
+import { recordCookieObservation } from '../network/behavioral-store';
 import { Finding } from '../evidence/evidence';
 
 type NavigationTab = 'OVERVIEW' | 'COOKIES' | 'LEGAL';
@@ -47,7 +48,20 @@ export default function App() {
       chrome.cookies.getAll({ domain }, (cookieList) => {
         if (cookieList && cookieList.length > 0) {
           const parsed: DetailedCookie[] = cookieList.map(c => {
-            const meta = classifyCookie(c.name, c.value, c.domain);
+            const meta = classifyCookie(c.name, c.value, c.domain, {
+              secure: c.secure,
+              httpOnly: c.httpOnly,
+              sameSite: c.sameSite,
+              session: c.session,
+              expirationDate: c.expirationDate,
+              activeDomain: domain
+            });
+
+            // Record privacy-preserving observation in local store (zero raw secrets)
+            if (meta.dna) {
+              recordCookieObservation(c.name, c.domain, meta.dna, domain).catch(() => {});
+            }
+
             return {
               name: c.name,
               value: c.value ? (c.value.length > 40 ? c.value.substring(0, 37) + '...' : c.value) : '',
@@ -61,7 +75,8 @@ export default function App() {
               httpOnly: c.httpOnly,
               sameSite: c.sameSite,
               session: c.session,
-              expiryText: c.session ? 'Session' : (c.expirationDate ? new Date(c.expirationDate * 1000).toLocaleDateString() : 'Persistent')
+              expiryText: c.session ? 'Session' : (c.expirationDate ? new Date(c.expirationDate * 1000).toLocaleDateString() : 'Persistent'),
+              dna: meta.dna
             };
           });
           setCookies(parsed);
