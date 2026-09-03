@@ -140,4 +140,42 @@ test.describe('Vigil Anti-Fingerprinting Protocol v5 Verification Suite', () => 
 
     await browser.close();
   });
+
+  // ─── STAGE B3: Hardware Persona Stealth & Native Prototype Lie Checks (Level E4) ─
+  test('STAGE B3: Hardware persona normalizes to 8 cores and passes native prototype lie checks', async () => {
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const defenderSource = fs.readFileSync(defenderPath, 'utf8');
+    await page.addInitScript({ content: defenderSource });
+
+    await page.goto('http://localhost:8080/index.html');
+
+    const evalResult = await page.evaluate(() => {
+      const hw = navigator.hardwareConcurrency;
+      const mem = (navigator as any).deviceMemory;
+      const col = screen.colorDepth;
+
+      // CreepJS prototype lie checks
+      const descHw = Object.getOwnPropertyDescriptor(Navigator.prototype, 'hardwareConcurrency');
+      const hwGetterStr = descHw?.get ? Function.prototype.toString.call(descHw.get) : '';
+      const toDataUrlStr = Function.prototype.toString.call(HTMLCanvasElement.prototype.toDataURL);
+
+      return {
+        hardwareConcurrency: hw,
+        deviceMemory: mem,
+        colorDepth: col,
+        hwGetterNative: hwGetterStr.includes('[native code]'),
+        toDataUrlNative: toDataUrlStr.includes('[native code]')
+      };
+    });
+
+    expect(evalResult.hardwareConcurrency).toBe(8);
+    expect(evalResult.deviceMemory).toBe(8);
+    expect(evalResult.colorDepth).toBe(24);
+    expect(evalResult.hwGetterNative).toBe(true);
+    expect(evalResult.toDataUrlNative).toBe(true);
+
+    await browser.close();
+  });
 });
