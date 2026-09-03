@@ -35,7 +35,8 @@
     "declarativeNetRequestWithHostAccess",
     "declarativeNetRequestFeedback",
     "activeTab",
-    "notifications"
+    "notifications",
+    "cookies"
   ],
   "optional_host_permissions": [
     "<all_urls>"

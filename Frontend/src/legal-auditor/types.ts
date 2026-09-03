@@ -1,6 +1,12 @@
 export type LegalClauseCategory = 
+  | 'DATA_COLLECTION'
   | 'DATA_SHARING' 
   | 'DATA_SALE' 
+  | 'COOKIE_POLICY'
+  | 'DATA_RETENTION'
+  | 'CHILDREN_DATA'
+  | 'GOVERNMENT_DISCLOSURE'
+  | 'USER_RIGHTS'
   | 'CONTENT_LICENSE' 
   | 'AI_TRAINING' 
   | 'ARBITRATION' 
