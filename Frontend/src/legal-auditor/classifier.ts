@@ -1,82 +1,144 @@
 import { SegmentedClause, ClauseAssessment, LegalClauseCategory } from './types';
 
-const RISK_KEYWORDS = [
-  'arbitration', 'class action', 'jury', 'dispute',
-  'license', 'perpetual', 'irrevocable', 'reproduce', 'modify',
-  'sell', 'share', 'third party', 'partner', 'advertising',
-  'ai ', 'artificial intelligence', 'machine learning', 'train',
-  'renew', 'subscription', 'cancel', 'billing',
-  'change', 'modify the terms', 'price', 'fee',
-  'terminate', 'suspend', 'sole discretion',
-  'liability', 'as is', 'warranty',
-  'governing law', 'jurisdiction',
-  'cookie', 'tracking', 'essential', 'strictly necessary', 'analytics', 'marketing', 'consent',
-  'collect', 'personal data', 'personal information', 'retention', 'retain', 'delete',
-  'children', 'minor', 'coppa', 'law enforcement', 'subpoena', 'government'
+/**
+ * High-precision regex patterns for filtering candidate clauses.
+ * Uses strict word boundaries (\b) to eliminate substring collisions
+ * (e.g. preventing "seller" or "bookseller" from matching data sale,
+ * or "injury" from matching jury trial).
+ */
+const CANDIDATE_PATTERNS: RegExp[] = [
+  /\b(arbitrat(e|ion|or)|jury\s+trial|trial\s+by\s+jury|class\s+action)\b/i,
+  /\b(perpetual|irrevocable)\b.*\b(license|reproduce|modify|sub[- ]?license)\b/i,
+  /\b(sell|selling|sale\s+of|monetiz(e|ation)|commercializ(e|ation))\b/i,
+  /\b(share|shared|disclos(e|ure)|transfer)\b.*\b(third\s+part(y|ies)|affiliates|partners|vendors|service\s+providers)\b/i,
+  /\b(artificial\s+intelligence|machine\s+learning|ai\s+models?|llms?|generative\s+ai)\b/i,
+  /\b(train|training)\b.*\b(ai|artificial\s+intelligence|machine\s+learning|model)\b/i,
+  /\b(auto[- ]renew|automatic\s+renewal|subscription|recurring\s+charge)\b/i,
+  /\b(sole\s+discretion)\b.*\b(terminat(e|ion)|suspend|modify\s+these\s+terms|cancel)\b/i,
+  /\b(disclaim(er|s)?|limitation\s+of\s+liability|as\s+is|without\s+warrant(y|ies))\b/i,
+  /\b(cookie|tracking\s+pixel|web\s+beacon|local\s+storage)\b/i,
+  /\b(right\s+to\s+(access|delete|erasure|portability)|request\s+deletion|opt[- ]out)\b/i,
+  /\b(law\s+enforcement|subpoena|court\s+order|government\s+agenc(y|ies)|legal\s+process)\b/i,
+  /\b(retain|retention\s+period)\b.*\b(indefinitely|as\s+long\s+as\s+necessary|years)\b/i,
+  /\b(children|minor|under\s+(13|16|18)|coppa)\b/i
 ];
 
 export function filterCandidateClauses(clauses: SegmentedClause[]): SegmentedClause[] {
   return clauses.filter(c => {
-    const text = c.text.toLowerCase();
-    return RISK_KEYWORDS.some(kw => text.includes(kw));
+    const text = c.text;
+    return CANDIDATE_PATTERNS.some(pat => pat.test(text));
   });
 }
 
 /**
- * Checks whether a matched phrase is preceded or qualified by an explicit negation
- * (e.g. "we do not sell", "will never share", "arbitration does not apply to EU residents").
+ * Precision Negation Engine.
+ * Detects explicit negations, carve-outs, and statutory disclaimers
+ * across both global sentence patterns and prefix windows.
  */
-function isNegated(text: string, phrase: string): boolean {
-  const idx = text.indexOf(phrase);
-  if (idx === -1) return false;
-  
-  // Inspect the window of 45 characters before the phrase
-  const windowStart = Math.max(0, idx - 45);
-  const prefix = text.substring(windowStart, idx);
-  
-  const negationTerms = [
+export function isNegated(text: string, keywordOrPattern: string | RegExp): boolean {
+  const clean = text.toLowerCase();
+
+  // 1. Global explicit negation patterns for data selling
+  const globalNoSalePatterns = [
+    /\bnot\s+in\s+the\s+business\s+of\s+selling\b/,
+    /\bdo\s+not\s+sell\b/,
+    /\bdoes\s+not\s+sell\b/,
+    /\bwill\s+not\s+sell\b/,
+    /\bwe\s+never\s+sell\b/,
+    /\bnever\s+sell\b/,
+    /\bno\s+sale\s+of\b/,
+    /\bnot\s+sell[,\s]+rent[,\s]+or\s+lease\b/,
+    /\bdo\s+not\s+rent\s+or\s+sell\b/,
+    /\bwe\s+don'?t\s+sell\b/,
+    /\bneither\s+sell\s+nor\b/,
+    /\bwithout\s+selling\b/,
+    /\bprohibit(ed|s)?\s+from\s+selling\b/,
+    /\bdo\s+not\s+monetize\b/,
+    /\bdo\s+not\s+trade\b/,
+    /\bnot\s+sold\s+to\s+third\s+parties\b/,
+    /\bdo\s+not\s+share.*for\s+money\b/
+  ];
+
+  if (typeof keywordOrPattern === 'string' && keywordOrPattern.toLowerCase() === 'sell') {
+    if (globalNoSalePatterns.some(p => p.test(clean))) {
+      return true;
+    }
+  }
+
+  // 2. Locate keyword match index for windowed prefix analysis
+  let matchIndex = -1;
+  if (typeof keywordOrPattern === 'string') {
+    // Search with word boundary to avoid partial substring false positives
+    const regex = new RegExp(`\\b${keywordOrPattern}\\b`, 'i');
+    const match = regex.exec(clean);
+    matchIndex = match ? match.index : -1;
+  } else {
+    const match = keywordOrPattern.exec(clean);
+    matchIndex = match ? match.index : -1;
+  }
+
+  if (matchIndex === -1) return false;
+
+  // Inspect 60-character prefix window
+  const windowStart = Math.max(0, matchIndex - 60);
+  const prefix = clean.substring(windowStart, matchIndex);
+
+  const prefixNegationTerms = [
     'do not', "don't", 'does not', "doesn't", 'will not', "won't",
     'never', 'not applicable to', 'shall not', 'no right to',
-    'prohibited from', 'except as required by law', 'not sell', 'without your consent'
+    'prohibited from', 'except as required by law', 'not sell',
+    'without your consent', 'without consent', 'is not', 'are not',
+    'not permitted to', 'restricted from', 'not intended to',
+    'no obligation to', 'opt-out of', 'exempt from', 'neither', 'nor'
   ];
-  
-  return negationTerms.some(term => prefix.includes(term));
+
+  return prefixNegationTerms.some(term => prefix.includes(term));
 }
 
 /**
  * Contextual Hierarchical Legal Classifier.
- * Multi-dimensional analysis covering data collection, sharing, cookies, user rights,
- * dispute terms, and artificial intelligence usage.
+ * Multi-dimensional analysis with rigorous word-boundary parsing,
+ * distinguishing data sales from operational service providers, business transfers, and affiliate sharing.
  */
 export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<ClauseAssessment[]> {
   const assessments: ClauseAssessment[] = [];
-  
+
   for (const clause of candidates) {
-    const text = clause.text.toLowerCase();
-    
+    const text = clause.text;
+    const lower = text.toLowerCase();
+
     let category: LegalClauseCategory | null = null;
     let confidence: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
     let rationale = '';
 
-    // 1. Data Sale (with Negation Defense)
-    if (text.includes('sell') && (text.includes('personal information') || text.includes('personal data') || text.includes('consumer data'))) {
-      category = 'DATA_SALE';
-      confidence = 'HIGH';
-      if (isNegated(text, 'sell')) {
-        rationale = 'FAIR: Site explicitly affirms that it DOES NOT sell your personal data.';
-      } else {
-        rationale = 'WARNING: Site reserves the right to sell or commercialize personal data.';
+    // ─── 1. Commercial Data Sale (Strict Verb & Object Binding) ──────────────
+    // Matches \b(sell|selling|sale of|monetize)\b bound to personal/consumer/customer data
+    const isSaleVerbPresent = /\b(sell|selling|sale\s+of|monetiz(e|ing)|commercializ(e|ing))\b/i.test(lower);
+    const isPersonalDataPresent = /\b(personal\s+information|personal\s+data|consumer\s+data|customer\s+(personal\s+)?information|user\s+data)\b/i.test(lower);
+    const isBusinessTransferContext = /\b(business\s+transfers?|merger|acquisition|transferred\s+business\s+assets?|sell\s+or\s+buy\s+other\s+businesses)\b/i.test(lower);
+
+    if (isSaleVerbPresent && isPersonalDataPresent && !isBusinessTransferContext) {
+      // Check if it's explicitly negated (e.g. Amazon's "not in the business of selling")
+      if (isNegated(lower, 'sell')) {
+        category = 'DATA_SALE';
+        confidence = 'HIGH';
+        rationale = 'FAIR: Site explicitly confirms that it DOES NOT sell customer personal information to third parties.';
+      } else if (/\b(we|may|reserves?\s+the\s+right\s+to)\s+(sell|monetiz(e|ing)|commercializ(e|ing))\b/i.test(lower) || /\b(is|are)\s+sold\s+to\b/i.test(lower)) {
+        category = 'DATA_SALE';
+        confidence = 'HIGH';
+        rationale = 'WARNING: Site explicitly reserves the right to sell or commercialize personal consumer data.';
       }
     }
 
-    // 2. Forced Arbitration & Class Action Waiver
-    else if (text.includes('arbitration') || text.includes('jury trial')) {
-      const isArbitrationNegated = isNegated(text, 'arbitration') || text.includes('does not apply to') || text.includes('opt-out of arbitration');
+    // ─── 2. Forced Arbitration & Trial Waivers ────────────────────────────────
+    else if (/\b(arbitrat(e|ion|or)|jury\s+trial|trial\s+by\s+jury)\b/i.test(lower)) {
+      const isCarveOut = isNegated(lower, 'arbitration') || /\b(does\s+not\s+apply\s+to|opt[- ]out\s+of\s+arbitration|small\s+claims\s+court\s+exception)\b/i.test(lower);
       category = 'ARBITRATION';
-      if (isArbitrationNegated) {
+
+      if (isCarveOut) {
         confidence = 'MEDIUM';
-        rationale = 'NOTICE: Arbitration clause contains explicit carve-outs, jurisdiction exceptions, or opt-out rights.';
-      } else if (text.includes('binding') || text.includes('mandatory') || text.includes('waive any right to a jury')) {
+        rationale = 'NOTICE: Dispute clause specifies arbitration with explicit carve-outs, small claims exceptions, or opt-out rights.';
+      } else if (/\b(binding\s+arbitration|mandatory\s+arbitration|waiv(e|ing)\s+(any\s+right\s+to\s+a\s+)?jury\s+trial)\b/i.test(lower)) {
         confidence = 'HIGH';
         rationale = 'TRICKY: Mandatory binding arbitration with court trial waiver. Disables your right to seek legal remedies in public courts.';
       } else {
@@ -85,120 +147,141 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       }
     }
 
-    // 3. Class Action Waiver
-    else if (text.includes('class action') && (text.includes('waive') || text.includes('prohibit') || text.includes('solely in individual capacity'))) {
-      if (!isNegated(text, 'class action')) {
+    // ─── 3. Class Action Lawsuit Waiver ───────────────────────────────────────
+    else if (/\bclass\s+action\b/i.test(lower) && /\b(waiv(e|er|ing)|prohibit(ed)?|solely\s+in\s+individual\s+capacity|cannot\s+be\s+brought\s+as\s+a\s+class)\b/i.test(lower)) {
+      if (!isNegated(lower, 'class action')) {
         category = 'CLASS_ACTION';
         confidence = 'HIGH';
         rationale = 'TRICKY: Explicit class-action lawsuit waiver. Requires all disputes to be handled strictly as individual proceedings.';
       }
     }
 
-    // 4. Cookies & Trackers
-    else if (text.includes('cookie') || text.includes('tracking pixel') || text.includes('web beacon') || text.includes('local storage')) {
+    // ─── 4. Cookies, Storage & Tracking Beacons ───────────────────────────────
+    else if (/\b(cookie|cookies|tracking\s+pixel|web\s+beacon|local\s+storage)\b/i.test(lower)) {
       category = 'COOKIE_POLICY';
-      if ((text.includes('essential') || text.includes('strictly necessary')) && !text.includes('advertising') && !text.includes('marketing')) {
+      if (/\b(strictly\s+necessary|essential)\b/i.test(lower) && !/\b(marketing|advertising|cross[- ]context)\b/i.test(lower)) {
         confidence = 'HIGH';
-        rationale = 'HARMLESS: Essential operational cookies. Safe to accept.';
-      } else if (text.includes('marketing') || text.includes('advertising') || text.includes('third party') || text.includes('cross-context behavioral')) {
+        rationale = 'HARMLESS: Essential operational cookies required for page navigation, security, and cart features.';
+      } else if (/\b(marketing|advertising|targeted|commercial\s+partners?|cross[- ]context)\b/i.test(lower)) {
         confidence = 'HIGH';
-        rationale = 'WARNING: Marketing and cross-site behavioral tracking cookies detected.';
-      } else if (text.includes('analytics') || text.includes('performance') || text.includes('statistics')) {
+        rationale = 'WARNING: Marketing and cross-site behavioral tracking cookies deployed for targeted advertising.';
+      } else if (/\b(analytics|performance|statistics|telemetry)\b/i.test(lower)) {
         confidence = 'HIGH';
-        rationale = 'NOTICE: Site deploys analytics cookies to measure site visits, traffic flow, and UX interactions.';
+        rationale = 'NOTICE: Site deploys analytics cookies to measure site visits, render latency, and UX performance.';
       } else {
         confidence = 'MEDIUM';
-        rationale = 'NOTICE: Site utilizes analytics or preference tracking cookies.';
+        rationale = 'NOTICE: Discloses deployment of browser cookies and tracking tags.';
       }
     }
 
-    // 5. Data Sharing & Third-Party Disclosure
-    else if ((text.includes('share') || text.includes('disclose') || text.includes('transfer')) && 
-             (text.includes('third party') || text.includes('partners') || text.includes('affiliates') || text.includes('vendors') || text.includes('service providers'))) {
+    // ─── 5. Third-Party Data Sharing, Service Providers & Business Transfers ───
+    else if (
+      isBusinessTransferContext ||
+      /\b(service\s+providers?|contractors?|vendors?)\b.*\b(perform\s+functions|have\s+access\s+to|process\s+personal|fulfill)\b/i.test(lower) ||
+      (/\b(share|shared|disclos(e|ure)|transfer|transferr(ed|ing)|provid(e|ing)|access)\b/i.test(lower) && 
+       /\b(third\s+part(y|ies)|partners?|affiliates?|subsidiaries|vendors?|service\s+providers?|contractors?)\b/i.test(lower))
+    ) {
       category = 'DATA_SHARING';
-      if (isNegated(text, 'share') || isNegated(text, 'disclose')) {
+
+      if (isNegated(lower, 'share') || isNegated(lower, 'disclose')) {
         confidence = 'HIGH';
-        rationale = 'FAIR: Site restricts third-party disclosure and promises not to share data without consent.';
-      } else if (text.includes('advertising') || text.includes('marketing partners') || text.includes('commercial')) {
+        rationale = 'FAIR: Platform restricts third-party disclosures and commits not to share personal data without affirmative consent.';
+      } else if (isBusinessTransferContext) {
         confidence = 'HIGH';
-        rationale = 'WARNING: Personal data is shared with third-party advertisers and commercial partners.';
+        rationale = 'NOTICE: Customer information may be transferred as a business asset during a merger, acquisition, or sale of assets, subject to pre-existing privacy notice commitments.';
+      } else if (/\b(service\s+providers?|vendors?|contractors?|fulfill(ing|ment)?|payment\s+processing|delivery|cloud\s+infrastructure|customer\s+service)\b/i.test(lower)) {
+        confidence = 'HIGH';
+        rationale = 'NOTICE: Personal information shared with contracted service providers (e.g. order fulfillment, payment processing, delivery, and analytics) subject to purpose restrictions.';
+      } else if (/\b(advertising\s+partners?|marketing\s+partners?|commercial\s+promotions?|data\s+brokers?)\b/i.test(lower)) {
+        confidence = 'HIGH';
+        rationale = 'WARNING: Personal data is shared with third-party advertising networks or commercial marketing partners for promotional targeting.';
+      } else if (/\b(affiliates?|subsidiaries|corporate\s+group)\b/i.test(lower)) {
+        confidence = 'MEDIUM';
+        rationale = 'NOTICE: Personal information shared across corporate affiliates and subsidiaries subject to common privacy practices.';
       } else {
         confidence = 'MEDIUM';
-        rationale = 'NOTICE: Data shared with third-party infrastructure vendors and cloud service providers.';
+        rationale = 'NOTICE: Data shared with third-party service providers and operational infrastructure vendors.';
       }
     }
 
-    // 6. User Rights & Data Control (GDPR / CCPA / DPDP)
-    else if (text.includes('right to access') || text.includes('right to delete') || text.includes('request deletion') || text.includes('opt-out') || text.includes('rectification') || text.includes('data portability')) {
+    // ─── 6. User Rights & Data Control (GDPR / CCPA / DPDP) ───────────────────
+    else if (/\b(right\s+to\s+(access|delete|erasure|portability|rectification)|request\s+deletion|opt[- ]out|data\s+protection\s+officer)\b/i.test(lower)) {
       category = 'USER_RIGHTS';
       confidence = 'HIGH';
-      rationale = 'FAIR: Site outlines concrete privacy rights, allowing you to access, export, or delete your personal data.';
+      rationale = 'FAIR: Site outlines concrete privacy rights, allowing you to access, export, rectify, or delete your personal data.';
     }
 
-    // 7. Government & Law Enforcement Disclosures
-    else if ((text.includes('law enforcement') || text.includes('subpoena') || text.includes('court order') || text.includes('government agency') || text.includes('legal process')) && (text.includes('disclose') || text.includes('provide') || text.includes('comply'))) {
+    // ─── 7. Law Enforcement & Statutory Disclosures ───────────────────────────
+    else if (/\b(law\s+enforcement|subpoena|court\s+order|government\s+agenc(y|ies)|legal\s+process|comply\s+with\s+the\s+law)\b/i.test(lower) && 
+             /\b(disclos(e|ure)|provide|release|comply)\b/i.test(lower)) {
       category = 'GOVERNMENT_DISCLOSURE';
       confidence = 'HIGH';
-      rationale = 'NOTICE: Site reserves the right to disclose records to law enforcement agencies or upon court orders.';
+      rationale = 'NOTICE: Platform discloses records to law enforcement agencies or judicial authorities when required by subpoena or statutory process.';
     }
 
-    // 8. Data Retention Policies
-    else if (text.includes('retain') && (text.includes('as long as necessary') || text.includes('indefinitely') || text.includes('retention period') || text.includes('until account deletion'))) {
+    // ─── 8. Data Retention Policies ───────────────────────────────────────────
+    else if (/\b(retain|retention\s+period)\b/i.test(lower) && 
+             /\b(indefinitely|perpetual|as\s+long\s+as\s+necessary|until\s+account\s+deletion|statutory\s+period)\b/i.test(lower)) {
       category = 'DATA_RETENTION';
-      if (text.includes('indefinitely') || text.includes('perpetual')) {
+      if (/\b(indefinitely|perpetual)\b/i.test(lower)) {
         confidence = 'HIGH';
         rationale = 'WARNING: Personal information may be retained indefinitely even after account closure.';
       } else {
         confidence = 'MEDIUM';
-        rationale = 'NOTICE: Personal data is retained for the duration necessary to provide services or satisfy statutory audits.';
+        rationale = 'NOTICE: Personal data is retained for the duration necessary to deliver services, satisfy statutory audits, or resolve disputes.';
       }
     }
 
-    // 9. Children\'s Privacy Protection
-    else if (text.includes('children') || text.includes('minor') || text.includes('under 13') || text.includes('under 16') || text.includes('under 18') || text.includes('coppa')) {
+    // ─── 9. Children's Privacy Protection ─────────────────────────────────────
+    else if (/\b(children|minor|minors|under\s+(13|16|18)|coppa)\b/i.test(lower)) {
       category = 'CHILDREN_DATA';
-      if (text.includes('do not knowingly collect') || text.includes('not directed to children')) {
+      if (/\b(do\s+not\s+knowingly\s+collect|not\s+directed\s+to\s+children|parental\s+consent\s+required)\b/i.test(lower)) {
         confidence = 'HIGH';
-        rationale = 'HARMLESS: Site explicitly affirms it does not target minors or knowingly collect children\'s data.';
+        rationale = 'HARMLESS: Site explicitly affirms it does not target minors or knowingly collect personal data from children without parental consent.';
       } else {
         confidence = 'MEDIUM';
-        rationale = 'NOTICE: Specific age-verification or parental consent provisions apply to minor users.';
+        rationale = 'NOTICE: Specific age verification or parental consent provisions apply to minor users.';
       }
     }
 
-    // 10. User Content Licensing
-    else if (text.includes('perpetual') && text.includes('license') && (text.includes('content') || text.includes('submissions') || text.includes('materials') || text.includes('user content'))) {
-      if (!isNegated(text, 'license')) {
+    // ─── 10. User Content Licensing ───────────────────────────────────────────
+    else if (/\b(perpetual|irrevocable)\b/i.test(lower) && 
+             /\blicense\b/i.test(lower) && 
+             /\b(user\s+content|submissions?|reviews?|feedback|materials?)\b/i.test(lower)) {
+      if (!isNegated(lower, 'license')) {
         category = 'CONTENT_LICENSE';
         confidence = 'HIGH';
-        rationale = 'TRICKY: Grants the platform a perpetual, irrevocable, royalty-free license to use or monetize your uploaded content.';
+        rationale = 'TRICKY: Grants the platform an irrevocable, perpetual, royalty-free license to reproduce, adapt, and distribute your submitted content or reviews.';
       }
     }
 
-    // 11. AI Model Training on User Data
-    else if ((text.includes('train') || text.includes('training')) && (text.includes('artificial intelligence') || text.includes('machine learning') || text.includes('llm') || text.includes('generative ai'))) {
+    // ─── 11. AI Model Training on User Data ───────────────────────────────────
+    else if (/\b(train|training)\b/i.test(lower) && 
+             /\b(artificial\s+intelligence|machine\s+learning|ai\s+models?|llms?|generative\s+ai)\b/i.test(lower)) {
       category = 'AI_TRAINING';
-      if (isNegated(text, 'train')) {
+      if (isNegated(lower, 'train')) {
         confidence = 'HIGH';
-        rationale = 'FAIR: Site confirms user content is NOT used to train proprietary AI/ML models.';
+        rationale = 'FAIR: Platform confirms user content is NOT ingested or used to train artificial intelligence or machine learning models.';
       } else {
         confidence = 'HIGH';
-        rationale = 'TRICKY: Site uses your personal submissions or communications to train machine learning models.';
+        rationale = 'TRICKY: Platform reserves the right to use your personal submissions, chats, or communications to train machine learning models.';
       }
     }
 
-    // 12. Unilateral Modification & Termination
-    else if (text.includes('sole discretion') && (text.includes('terminate') || text.includes('suspend') || text.includes('without notice') || text.includes('modify these terms'))) {
+    // ─── 12. Unilateral Modification & Termination ────────────────────────────
+    else if (/\bsole\s+discretion\b/i.test(lower) && 
+             /\b(terminat(e|ion)|suspend|without\s+prior\s+notice|modify\s+these\s+terms)\b/i.test(lower)) {
       category = 'TERMINATION';
       confidence = 'MEDIUM';
-      rationale = 'UNFAIR: Reserves unconstrained authority to alter terms, terminate access, or seize accounts without prior notice.';
+      rationale = 'UNFAIR: Reserves unconstrained authority to alter terms, suspend accounts, or terminate access without prior notice.';
     }
 
-    // 13. Broad Liability & Warranty Disclaimers
-    else if ((text.includes('as is') || text.includes('without warranty') || text.includes('limitation of liability')) && (text.includes('consequential damages') || text.includes('indirect damages') || text.includes('disclaim all warranties'))) {
+    // ─── 13. Broad Liability & Warranty Disclaimers ───────────────────────────
+    else if (/\b(as\s+is|without\s+warrant(y|ies)|limitation\s+of\s+liability)\b/i.test(lower) && 
+             /\b(consequential\s+damages|indirect\s+damages|disclaim\s+all\s+warranties)\b/i.test(lower)) {
       category = 'LIABILITY';
       confidence = 'MEDIUM';
-      rationale = 'NOTICE: Broad disclaimer of warranties and cap on liability for platform malfunctions or service outages.';
+      rationale = 'NOTICE: Broad disclaimer of warranties and standard cap on liability for service interruptions or platform downtime.';
     }
 
     if (category) {
@@ -210,7 +293,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       });
     }
   }
-  
+
   return assessments;
 }
 
@@ -222,23 +305,28 @@ export function getPlainEnglishLegalExplanation(category: string, isTricky: bool
     switch (category) {
       case 'DATA_SALE':
         return {
-          title: '🛡️ Fair Promise (No Data Selling):',
-          explanation: 'Good news! The company explicitly promises they will NOT sell your personal browsing or account data to third-party ad brokers.'
+          title: '🛡️ Fair Commitment (No Data Sale):',
+          explanation: 'Good news! The company explicitly promises that it does NOT sell your personal browsing habits, email, or account data to third-party data brokers.'
         };
       case 'USER_RIGHTS':
         return {
           title: '🛡️ Your Legal Privacy Rights Protected:',
-          explanation: 'You have the right to request a complete copy of all personal data they have collected about you, and demand they delete it permanently.'
+          explanation: 'You have the explicit right to request a complete copy of all personal data they have collected about you, and demand they delete it permanently.'
         };
       case 'AI_TRAINING':
         return {
           title: '🛡️ Your Content Protected from AI:',
           explanation: 'The company explicitly confirms they will NOT feed your posts, files, or personal messages into AI or machine learning models.'
         };
+      case 'DATA_SHARING':
+        return {
+          title: '🛡️ Strict Sharing Safeguards:',
+          explanation: 'The platform commits not to disclose or share your personal records with outside third parties without your affirmative consent.'
+        };
       default:
         return {
           title: '🛡️ Consumer-Friendly Term:',
-          explanation: 'This clause protects your rights and promises not to exploit your personal data.'
+          explanation: 'This clause protects your rights and establishes clear boundaries on how your information is handled.'
         };
     }
   }
@@ -253,12 +341,12 @@ export function getPlainEnglishLegalExplanation(category: string, isTricky: bool
     case 'CLASS_ACTION':
       return {
         title: '🚨 Why this is tricky for you (No Group Lawsuits):',
-        explanation: 'You waive your right to team up with thousands of other cheated users in a class action lawsuit. If the company commits fraud, you must fight them completely alone at your own expense.'
+        explanation: 'You waive your right to team up with other affected customers in a class-action lawsuit. If the company commits fraud, you must arbitrate completely alone at your own expense.'
       };
     case 'DATA_SALE':
       return {
         title: '🚨 Why this is tricky for you (Commercial Data Sale):',
-        explanation: 'The company claims the right to sell or license your personal profile, email, or browsing habits to outside marketing companies and data brokers for money.'
+        explanation: 'The company explicitly reserves the right to sell or commercialize your personal profile, contact information, or browsing habits to outside data brokers for money.'
       };
     case 'AI_TRAINING':
       return {
@@ -267,48 +355,48 @@ export function getPlainEnglishLegalExplanation(category: string, isTricky: bool
       };
     case 'DATA_SHARING':
       return {
-        title: '👥 Why to be careful (Third-Party Sharing):',
-        explanation: 'Your personal information is shared with their corporate affiliates, sponsors, and advertising partners.'
+        title: '👥 What this means for you (Third-Party Sharing):',
+        explanation: 'Personal information is shared with authorized contractors (e.g. delivery couriers, payment processors, and cloud infrastructure) to complete your orders, or with marketing partners subject to notice.'
       };
     case 'CONTENT_LICENSE':
       return {
         title: '📄 Why this is tricky (Broad Content License):',
-        explanation: 'You give them an irrevocable, worldwide license to use, display, reproduce, and monetize any photos, comments, or content you submit.'
+        explanation: 'You give the company an irrevocable, perpetual license to use, display, reproduce, and adapt any photos, product reviews, or comments you submit.'
       };
     case 'TERMINATION':
       return {
         title: '⚠️ Why this is tricky (Account Termination):',
-        explanation: 'The company can delete your account, wipe all your stored data, and ban you at any time for any reason without warning, appeal, or refund.'
+        explanation: 'The company reserves unconstrained authority to alter terms, freeze accounts, or delete stored data at any time in its sole discretion without prior notice.'
       };
     case 'LIABILITY':
       return {
-        title: '📜 What this means for you (Zero Guarantee):',
-        explanation: 'The company disclaims all liability. If their service crashes, loses your files, or causes you financial loss, they owe you zero or only a tiny refund (often limited to what you paid in the last month).'
+        title: '📜 What this means for you (Liability Disclaimer):',
+        explanation: 'The platform disclaims warranties for uninterrupted service. If the platform experiences downtime or technical errors, their financial liability to you is strictly limited.'
       };
     case 'DATA_RETENTION':
       return {
-        title: '⏳ What this means for you (Indefinite Storage):',
-        explanation: 'The company may keep your personal information on their servers even after you delete your account or stop using the service.'
+        title: '⏳ What this means for you (Data Retention):',
+        explanation: 'The company discloses how long it retains your personal data on its servers, which may continue for statutory accounting or audit requirements.'
       };
     case 'CHILDREN_DATA':
       return {
         title: '👶 Children\'s Data Protection Notice:',
-        explanation: 'Notice regarding whether minors are permitted to use this site and how parental consent is handled under law.'
+        explanation: 'Discloses whether minors are permitted to use this site and how parental consent is handled under applicable child protection laws.'
       };
     case 'GOVERNMENT_DISCLOSURE':
       return {
         title: '🏛️ Government Disclosure Terms:',
-        explanation: 'The company will hand over your private chats, logs, and account records to government agencies or law enforcement without notifying you if they receive a subpoena.'
+        explanation: 'The platform discloses customer records to law enforcement agencies or judicial authorities when formally required by subpoena, search warrant, or court order.'
       };
     case 'COOKIE_POLICY':
       return {
         title: '🍪 Cookie & Tracking Notice:',
-        explanation: 'The company discloses that it stores tracking tags and cookies on your browser to identify you and record your site usage.'
+        explanation: 'The company discloses that it stores tracking tags, analytics cookies, or session tokens on your browser to identify your device and monitor site performance.'
       };
     default:
       return {
         title: isTricky ? '🚨 Why this is tricky for you:' : '⚠️ Important Notice:',
-        explanation: 'This legal clause restricts your rights, limits the company’s responsibility, or expands what they can do with your information.'
+        explanation: 'This legal clause specifies rights, operational terms, or company authority regarding your account and data.'
       };
   }
 }
