@@ -241,7 +241,7 @@ export async function scanPage(): Promise<void> {
         // Skip if we're ON a known domain (exact match = legit)
         let isKnown = false;
         for (const known of KNOWN_DOMAINS) {
-          if (domain === known || domain === 'www.' + known) {
+          if (domain === known || domain === 'www.' + known || domain.endsWith('.' + known)) {
             isKnown = true;
             break;
           }
@@ -295,27 +295,32 @@ export async function scanPage(): Promise<void> {
       }
     }
 
-    // M2-004: Login Form on Suspicious Domain
+    // M2-004: Insecure or Lookalike Phishing Login Form
     const passwordInputs = querySelectorAllDeep('input[type="password"]');
     if (passwordInputs.length > 0) {
-      let isKnown = false;
-      for (const known of KNOWN_DOMAINS) {
-        if (domain === known || domain === 'www.' + known) {
-          isKnown = true;
-          break;
-        }
-      }
-      if (!isKnown && !matchedRuleIds.has('M2-004')) {
+      const isPlainHttp = window.location.protocol === 'http:';
+      const isRawIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(domain);
+      const isLookalikePhishing = m2001Match;
+
+      // Only flag if there is an objective cryptographic or homoglyph risk
+      if ((isPlainHttp || isRawIp || isLookalikePhishing) && !matchedRuleIds.has('M2-004')) {
         matchedRuleIds.add('M2-004');
+        let explanation = 'Insecure Login: Form transmits credentials over unencrypted HTTP, vulnerable to network packet sniffing.';
+        if (isLookalikePhishing) {
+          explanation = 'Phishing Threat: Password form detected on a brand lookalike mimicking a trusted service.';
+        } else if (isRawIp) {
+          explanation = 'Suspicious Login: Password form hosted directly on a raw numeric IP address without a verified domain certificate.';
+        }
+
         findings.push({
           id: crypto.randomUUID(),
           ruleId: 'M2-004',
-          ruleName: 'login_on_suspicious_domain',
+          ruleName: isPlainHttp ? 'insecure_http_login' : 'login_on_suspicious_domain',
           module: 'M2',
           severity: 'high',
           confidenceState: 'confirmed',
           statuteRef: '',
-          explanation: 'Login form found on an unknown domain. This could be a phishing attempt.',
+          explanation,
           elementSelector: generateSelector(passwordInputs[0]),
           elementRect: passwordInputs[0].getBoundingClientRect(),
           pageUrl: window.location.href,
