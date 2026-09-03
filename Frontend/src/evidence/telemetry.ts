@@ -10,7 +10,8 @@ export interface CorrectionSubmission {
   clauseSignature: string;      // Normalized clause template
   proposedVerdict: "FAIR" | "WARNING";
   domain: string;
-  sessionId: string;            // Anonymous, rotates daily
+  sourceUrl: string;            // Needed for backend verification crawl
+  installationId: string;       // Stable, anonymous ID to build Sybil-resistant reputation
   submittedAt: number;
 }
 
@@ -20,7 +21,7 @@ export interface PatternLedgerEntry {
   category: "FAIR" | "WARNING" | "REVIEW";
   evidenceCount: number;
   distinctDomains: Set<string>;
-  distinctSessions: Set<string>;
+  distinctInstallations: Set<string>;
   firstSeen: number;
   lastConfirmed: number;
   status: "review" | "auto-resolved";
@@ -33,11 +34,11 @@ export interface PatternLedgerEntry {
 export function normalizeClauseSignature(rawText: string): string {
   let sig = rawText.toLowerCase();
   
-  // Strip numbers, dates, emails, and URLs to prevent PII leakage
+  // Strip dates, emails, and URLs to prevent PII leakage, but RETAIN numbers 
+  // (e.g., "30 days" vs "3 years" is crucial for retention/opt-out windows).
   sig = sig.replace(/\b\d{1,4}[-/]\d{1,2}[-/]\d{1,4}\b/g, '<DATE>');
   sig = sig.replace(/\b[\w.-]+@[\w.-]+\.\w+\b/g, '<EMAIL>');
   sig = sig.replace(/https?:\/\/[^\s]+/g, '<URL>');
-  sig = sig.replace(/\b\d+\b/g, '<NUM>');
   
   // Strip common filler and punctuation for a stable hash
   sig = sig.replace(/[.,;:'"()\[\]{}]/g, '');
@@ -53,29 +54,25 @@ export function normalizeClauseSignature(rawText: string): string {
 export async function submitCorrection(
   rawClauseText: string, 
   domain: string, 
+  sourceUrl: string,
   proposedVerdict: "FAIR" | "WARNING"
 ): Promise<void> {
-  // Generate a daily rotating anonymous session ID
-  const today = new Date().toISOString().split('T')[0];
-  const salt = await chrome.storage.local.get('vigil_install_salt');
-  let installSalt = salt.vigil_install_salt;
-  if (!installSalt) {
-    installSalt = crypto.randomUUID();
-    await chrome.storage.local.set({ vigil_install_salt: installSalt });
+  // Retrieve or generate a stable, anonymous installation ID.
+  // A stable ID is mathematically required for the backend to build a Sybil-resistant
+  // reputation score (install age, past fraud flags) for this client.
+  const storage = await chrome.storage.local.get('vigil_installation_id');
+  let installationId = storage.vigil_installation_id;
+  if (!installationId) {
+    installationId = crypto.randomUUID();
+    await chrome.storage.local.set({ vigil_installation_id: installationId });
   }
-  
-  // Hash the salt + date to get an unlinkable daily session ID
-  const encoder = new TextEncoder();
-  const data = encoder.encode(installSalt + today);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const sessionId = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
 
   const submission: CorrectionSubmission = {
     clauseSignature: normalizeClauseSignature(rawClauseText),
     proposedVerdict,
     domain,
-    sessionId,
+    sourceUrl,
+    installationId,
     submittedAt: Date.now()
   };
 
