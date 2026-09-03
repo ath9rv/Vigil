@@ -55,6 +55,20 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
         ...cache,
         [domain]: allFindings
       }));
+      await atomicUpdateStorage('scan_coverage', reports => ({
+        ...reports,
+        [domain]: {
+          domain,
+          capturedAt: Date.now(),
+          dom: true,
+          threatIntel: true,
+          network: reports?.[domain]?.network ?? false,
+          cookies: reports?.[domain]?.cookies ?? false,
+          dynamicEvents: true,
+          storage: false,
+          crossSite: false
+        }
+      }));
 
       return { success: true };
     }
@@ -149,6 +163,20 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
         capturedAt: Date.now()
       };
       await atomicUpdateStorage('vigil_tracker_reports', reports => ({ ...reports, [domain]: report }));
+      await atomicUpdateStorage('scan_coverage', reports => ({
+        ...reports,
+        [domain]: {
+          domain,
+          capturedAt: Date.now(),
+          dom: reports?.[domain]?.dom ?? false,
+          threatIntel: reports?.[domain]?.threatIntel ?? false,
+          network: true,
+          cookies: true,
+          dynamicEvents: reports?.[domain]?.dynamicEvents ?? false,
+          storage: false,
+          crossSite: false
+        }
+      }));
       console.log(`[Vigil Service Worker] Tracker report for ${domain}: ${report.trackerCount} found, ${report.trackersBlocked} blocked`);
       return { success: true };
     }

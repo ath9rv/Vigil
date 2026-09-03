@@ -8,11 +8,16 @@ export interface DimensionScore {
 }
 
 export interface CoverageState {
+  /** Existing fields retained for caller compatibility. */
   pageBehavior: boolean;
   threatIntel: boolean;
   thirdPartyRequests: boolean;
   legalReviewed: boolean;
   strictPrivacyEnabled: boolean;
+  cookies?: boolean;
+  storage?: boolean;
+  dynamicEvents?: boolean;
+  crossSite?: boolean;
 }
 
 export interface SiteAssessment {
@@ -24,6 +29,8 @@ export interface SiteAssessment {
   overall?: number; // UI convenience
   confidence: ConfidenceLevel;
   coverage: CoverageState;
+  coveragePercent: number;
+  unassessedSurfaces: string[];
 
   threatStatus: ThreatStatus;
 

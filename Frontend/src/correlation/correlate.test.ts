@@ -61,6 +61,24 @@ describe('Correlation Engine & Finding Normalization', () => {
     expect(assessment.fairness.score).toBeLessThan(100);
   });
 
+  it('reports missing scan surfaces instead of calling an incomplete scan safe', () => {
+    const assessment = correlateFindings([], {
+      pageBehavior: true,
+      threatIntel: true,
+      thirdPartyRequests: false,
+      legalReviewed: false,
+      strictPrivacyEnabled: false,
+      cookies: false,
+      storage: false,
+      dynamicEvents: true,
+      crossSite: false
+    });
+
+    expect(assessment.coveragePercent).toBe(38);
+    expect(assessment.unassessedSurfaces).toContain('Cross-site correlation');
+    expect(assessment.confidence).toBe('LOW');
+  });
+
   it('normalizes M2 threat findings into SECURITY category and heavily docks security dimension', () => {
     const raw = {
       id: 'sec-1',

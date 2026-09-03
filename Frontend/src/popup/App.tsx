@@ -14,7 +14,7 @@ import { correlateFindings } from '../correlation/correlate';
 import { DetailedCookie, classifyCookie, parseDocumentCookies } from '../network/cookie-classifier';
 import { recordCookieObservation } from '../network/behavioral-store';
 import { Finding } from '../evidence/evidence';
-import type { TrackerReport } from '../shared/types';
+import type { ScanCoverageReport, TrackerReport } from '../shared/types';
 
 type NavigationTab = 'OVERVIEW' | 'COOKIES' | 'LEGAL';
 
@@ -37,6 +37,7 @@ export default function App() {
   const [trackersBlockedCount, setTrackersBlockedCount] = useState<number>(0);
   const [thirdPartyTrackers, setThirdPartyTrackers] = useState<{ domain: string; category: string; count: number }[]>([]);
   const [trackerReport, setTrackerReport] = useState<TrackerReport | null>(null);
+  const [scanCoverage, setScanCoverage] = useState<ScanCoverageReport | null>(null);
   const [isAuditing, setIsAuditing] = useState<boolean>(false);
 
   // Helper to fetch cookies via chrome.cookies or content script fallback
@@ -153,6 +154,10 @@ export default function App() {
 
       try {
         const domain = new URL(url).hostname;
+        // Clear the preceding tab's transient assessment while this domain's
+        // reports are loading from storage.
+        setScanCoverage(null);
+        setTrackerReport(null);
         setCurrentDomain(domain);
 
         // 1. Initial document
@@ -203,7 +208,7 @@ export default function App() {
         loadCookiesForDomain(domain, targetTab.id);
 
         // 4. Load findings cache for active tab domain
-        chrome.storage.local.get(['findings_cache', 'vigil_tracker_reports', 'vigil_tracker_report'], (res) => {
+        chrome.storage.local.get(['findings_cache', 'vigil_tracker_reports', 'vigil_tracker_report', 'scan_coverage'], (res) => {
           if (res.findings_cache && res.findings_cache[domain]) {
             setRawFindings(res.findings_cache[domain]);
           } else {
@@ -214,6 +219,7 @@ export default function App() {
           const report: TrackerReport | null = res.vigil_tracker_reports?.[domain]
             || (res.vigil_tracker_report?.domain === domain ? res.vigil_tracker_report : null);
           setTrackerReport(report);
+          setScanCoverage(res.scan_coverage?.[domain] || null);
           if (report) {
             setTrackersBlockedCount(report.trackersBlocked || 0);
             if (report.trackerDomains) {
@@ -239,6 +245,29 @@ export default function App() {
       }
     });
   }, [loadCookiesForDomain]);
+
+  // A scan continues after the popup opens. Reflect the completed DOM/network
+  // stages immediately instead of leaving users with a stale coverage label.
+  useEffect(() => {
+    if (!currentDomain) return;
+    const listener = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
+      if (area !== 'local') return;
+      if (changes.findings_cache) {
+        setRawFindings(changes.findings_cache.newValue?.[currentDomain] || []);
+      }
+      if (changes.scan_coverage) {
+        setScanCoverage(changes.scan_coverage.newValue?.[currentDomain] || null);
+      }
+      if (changes.vigil_tracker_reports) {
+        const report: TrackerReport | null = changes.vigil_tracker_reports.newValue?.[currentDomain] || null;
+        setTrackerReport(report);
+        setTrackersBlockedCount(report?.trackersBlocked || 0);
+        setThirdPartyTrackers((report?.trackerDomains || []).map(domain => ({ domain, category: 'TRACKER', count: 1 })));
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, [currentDomain]);
 
   // Deep Audit Execution Logic
   const handleAuditDocument = async (targetUrl: string) => {
@@ -499,41 +528,45 @@ export default function App() {
 
   // Run correlation engine
   const assessment = correlateFindings(rawFindings, {
-    pageBehavior: true, 
-    threatIntel: true,
-    thirdPartyRequests: true,
-    legalReviewed: rawFindings.some(f => f.category === 'LEGAL'),
+    pageBehavior: scanCoverage?.dom ?? false,
+    threatIntel: scanCoverage?.threatIntel ?? false,
+    thirdPartyRequests: scanCoverage?.network ?? false,
+    cookies: scanCoverage?.cookies ?? false,
+    storage: scanCoverage?.storage ?? false,
+    dynamicEvents: scanCoverage?.dynamicEvents ?? false,
+    crossSite: scanCoverage?.crossSite ?? false,
+    legalReviewed: rawFindings.some(f => f.category === 'LEGAL' && f.ruleId !== 'LEGAL-AUDIT_NOTICE'),
     strictPrivacyEnabled: isStrictProtected
   });
 
   const legalFindings = rawFindings.filter(f => f.category === 'LEGAL');
 
   return (
-    <div className="bg-gray-50 min-h-[480px] w-[380px] flex flex-col text-gray-800 font-sans relative">
+    <div className="bg-slate-50 min-h-[520px] w-[380px] flex flex-col text-slate-800 font-sans relative shadow-2xl overflow-hidden rounded-xl border border-slate-200/60">
       {/* Header */}
-      <header className="flex justify-between items-center px-4 py-3 bg-white border-b border-gray-200 sticky top-0 z-20">
+      <header className="flex justify-between items-center px-4 py-3 bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-20 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)]">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🛡️</span>
-          <h1 className="text-sm font-bold tracking-tight">VIGIL</h1>
+          <span className="text-xl drop-shadow-sm">🛡️</span>
+          <h1 className="text-sm font-extrabold tracking-widest bg-gradient-to-r from-indigo-600 to-sky-500 bg-clip-text text-transparent">VIGIL</h1>
         </div>
         
         {/* Navigation Tabs */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-bold">
+        <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg text-[11px] font-bold shadow-inner border border-slate-200/50">
           <button
             onClick={() => setActiveTab('OVERVIEW')}
-            className={`px-2 py-1 rounded-md transition-colors ${activeTab === 'OVERVIEW' ? 'bg-white shadow-xs text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-2.5 py-1 rounded-md transition-all duration-200 ${activeTab === 'OVERVIEW' ? 'bg-white shadow-premium text-indigo-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('COOKIES')}
-            className={`px-2 py-1 rounded-md transition-colors ${activeTab === 'COOKIES' ? 'bg-white shadow-xs text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-2.5 py-1 rounded-md transition-all duration-200 ${activeTab === 'COOKIES' ? 'bg-white shadow-premium text-sky-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
             Cookies {cookies.length > 0 && `(${cookies.length})`}
           </button>
           <button
             onClick={() => setActiveTab('LEGAL')}
-            className={`px-2 py-1 rounded-md transition-colors ${activeTab === 'LEGAL' ? 'bg-white shadow-xs text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-2.5 py-1 rounded-md transition-all duration-200 ${activeTab === 'LEGAL' ? 'bg-white shadow-premium text-purple-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
           >
             Terms {legalFindings.length > 0 && `(${legalFindings.length})`}
           </button>
@@ -541,7 +574,7 @@ export default function App() {
 
         <button 
           onClick={() => setShowSettings(true)}
-          className="text-gray-400 hover:text-gray-800 transition-colors ml-1"
+          className="text-slate-400 hover:text-slate-800 transition-all hover:rotate-45 duration-300 ml-1"
           title="Settings"
         >
           <span className="text-base">⚙️</span>
@@ -555,26 +588,27 @@ export default function App() {
             <AssessmentGauge assessment={assessment} domain={currentDomain} trackerReport={trackerReport} />
 
             {/* Feature Triggers */}
-            <div className="grid grid-cols-2 gap-2 mt-4 mb-5">
+            <div className="grid grid-cols-2 gap-3 mt-5 mb-6">
               <button 
                 onClick={() => isStrictProtected ? alert('Strict Privacy is already active on this origin.') : setShowStrictJIT(true)}
-                className={`flex flex-col items-start p-3 rounded-xl border text-left transition-colors ${isStrictProtected ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200 hover:border-gray-300'}`}
+                className={`relative flex flex-col items-start p-3.5 rounded-2xl border text-left transition-all duration-300 overflow-hidden ${isStrictProtected ? 'bg-indigo-50/50 border-indigo-200 shadow-sm' : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-premium'}`}
               >
-                <span className="text-lg mb-1">{isStrictProtected ? '🛡️' : '🔓'}</span>
-                <span className="font-bold text-sm text-gray-900 leading-tight mb-1">Strict Privacy</span>
-                <span className={`text-xs font-semibold ${isStrictProtected ? 'text-blue-600' : 'text-gray-500'}`}>
+                {isStrictProtected && <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-indigo-100 to-transparent rounded-bl-3xl"></div>}
+                <span className="text-xl mb-1.5 drop-shadow-sm">{isStrictProtected ? '🛡️' : '🔓'}</span>
+                <span className="font-extrabold text-sm text-slate-900 leading-tight mb-0.5">Strict Privacy</span>
+                <span className={`text-[11px] font-bold tracking-wide uppercase ${isStrictProtected ? 'text-indigo-600' : 'text-slate-400'}`}>
                   {isStrictProtected ? 'Active' : 'OFF'}
                 </span>
               </button>
               
               <button 
                 onClick={() => setActiveTab('LEGAL')}
-                className="flex flex-col items-start p-3 rounded-xl bg-white border border-gray-200 hover:border-gray-300 text-left transition-colors"
+                className="relative flex flex-col items-start p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-sky-300 hover:shadow-premium text-left transition-all duration-300 overflow-hidden"
               >
-                <span className="text-lg mb-1">⚖️</span>
-                <span className="font-bold text-sm text-gray-900 leading-tight mb-1">Deep Audit</span>
-                <span className="text-xs text-gray-500 font-semibold">
-                  {legalDocsFound.length} Policies Found
+                <span className="text-xl mb-1.5 drop-shadow-sm">⚖️</span>
+                <span className="font-extrabold text-sm text-slate-900 leading-tight mb-0.5">Deep Audit</span>
+                <span className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">
+                  {legalDocsFound.length} Policies
                 </span>
               </button>
             </div>

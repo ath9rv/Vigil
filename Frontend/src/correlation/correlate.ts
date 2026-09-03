@@ -1,4 +1,5 @@
 import { Finding, FindingCategory, ConfidenceLevel, SeverityLevel } from '../evidence/evidence';
+import { createForensicAnalysis } from '../evidence/forensics';
 import { ThreatStatus } from '../threat-intel/types';
 import { SiteAssessment, CoverageState, DimensionScore } from './types';
 
@@ -38,6 +39,8 @@ export function normalizeFinding(raw: any): Finding {
   // Normalize interpretation
   const interpretation = raw.interpretation || raw.explanation || raw.ruleName || 'Flagged activity detected.';
 
+  const reviewStatus = raw.reviewStatus || (confidence === 'HIGH' ? 'CONFIRMED' : 'REVIEW_NEEDED');
+
   // Normalize evidence
   const evidence = raw.evidence ? {
     sourceType: raw.evidence.sourceType || 'DOM',
@@ -47,7 +50,8 @@ export function normalizeFinding(raw: any): Finding {
       : (raw.detectedAt ? new Date(raw.detectedAt).getTime() : Date.now()),
     documentHash: raw.evidence.documentHash,
     excerpt: raw.evidence.excerpt || raw.explanation || raw.ruleName,
-    context: raw.evidence.context || raw.statuteRef
+    context: raw.evidence.context || raw.statuteRef,
+    forensics: raw.evidence.forensics
   } : {
     sourceType: 'DOM' as const,
     sourceUrl: raw.pageUrl || '',
@@ -56,12 +60,30 @@ export function normalizeFinding(raw: any): Finding {
     context: raw.statuteRef || ''
   };
 
+  if (!evidence.forensics) {
+    evidence.forensics = createForensicAnalysis({
+      confidence,
+      reviewStatus,
+      observed: [raw.evidence?.excerpt || interpretation],
+      supportingEvidence: raw.ruleId ? [`Detector rule: ${raw.ruleId}.`] : [],
+      assumptions: reviewStatus === 'CONFIRMED' ? [] : ['This finding has not yet been corroborated by an independent signal.'],
+      capturedAt: evidence.capturedAt,
+      coverage: {
+        dom: evidence.sourceType === 'DOM',
+        network: evidence.sourceType === 'NETWORK' || evidence.sourceType === 'THREAT_INTEL',
+        cookies: evidence.sourceType === 'STORAGE',
+        storage: evidence.sourceType === 'STORAGE',
+        scripts: false
+      }
+    });
+  }
+
   return {
     id: raw.id || crypto.randomUUID(),
     category,
     severity,
     confidence,
-    reviewStatus: raw.reviewStatus || (confidence === 'HIGH' ? 'CONFIRMED' : 'REVIEW_NEEDED'),
+    reviewStatus,
     ruleId: raw.ruleId,
     ruleName: raw.ruleName,
     interpretation,
@@ -185,16 +207,23 @@ export function correlateFindings(
 
   const totalScore = Math.round((security.score + privacy.score + fairness.score + legal.score) / 4);
 
-  let coverageScore = 0;
-  if (coverage.pageBehavior) coverageScore++;
-  if (coverage.threatIntel) coverageScore++;
-  if (coverage.thirdPartyRequests) coverageScore++;
-  if (coverage.legalReviewed) coverageScore++;
-  if (coverage.strictPrivacyEnabled) coverageScore++;
+  const coverageSurfaces: Array<[string, boolean]> = [
+    ['DOM', coverage.pageBehavior],
+    ['Threat intelligence', coverage.threatIntel],
+    ['Network requests', coverage.thirdPartyRequests],
+    ['Cookies', coverage.cookies ?? false],
+    ['Storage', coverage.storage ?? false],
+    ['Legal content', coverage.legalReviewed],
+    ['Dynamic events', coverage.dynamicEvents ?? false],
+    ['Cross-site correlation', coverage.crossSite ?? false]
+  ];
+  const coverageScore = coverageSurfaces.filter(([, assessed]) => assessed).length;
+  const coveragePercent = Math.round((coverageScore / coverageSurfaces.length) * 100);
+  const unassessedSurfaces = coverageSurfaces.filter(([, assessed]) => !assessed).map(([name]) => name);
   
   let overallConfidence: ConfidenceLevel = 'LOW';
-  if (coverageScore >= 4) overallConfidence = 'HIGH';
-  else if (coverageScore >= 2) overallConfidence = 'MEDIUM';
+  if (coveragePercent >= 75) overallConfidence = 'HIGH';
+  else if (coveragePercent >= 40) overallConfidence = 'MEDIUM';
 
   return {
     security,
@@ -204,6 +233,8 @@ export function correlateFindings(
     overall: totalScore,
     confidence: overallConfidence,
     coverage,
+    coveragePercent,
+    unassessedSurfaces,
     threatStatus,
     findingCount: correlated.length,
     generatedAt: Date.now(),

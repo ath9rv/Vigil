@@ -27,6 +27,7 @@ export function FindingCard({ finding }: Props) {
   const isThreat = finding.evidence?.sourceType === 'THREAT_INTEL';
   const headerColor = SEVERITY_COLORS[finding.severity] || SEVERITY_COLORS.INFO;
   const icon = SEVERITY_ICONS[finding.severity] || SEVERITY_ICONS.INFO;
+  const forensics = finding.evidence?.forensics;
 
   // Threat card rendering (Critical priority)
   if (isThreat) {
@@ -79,6 +80,11 @@ export function FindingCard({ finding }: Props) {
               REVIEW NEEDED
             </span>
           )}
+          {forensics && (
+            <span className={`text-[10px] font-bold px-2 py-1 rounded ${forensics.verdict === 'CONFIRMED' ? 'bg-green-100 text-green-800' : forensics.verdict === 'INCONCLUSIVE' ? 'bg-gray-100 text-gray-700' : 'bg-amber-100 text-amber-800'}`}>
+              {forensics.level} · {forensics.verdict.replace('_', ' ')}
+            </span>
+          )}
         </div>
         
         <p className="text-sm text-gray-800 font-medium mb-3">
@@ -119,6 +125,36 @@ export function FindingCard({ finding }: Props) {
                 {finding.evidence?.excerpt || finding.evidence?.context || finding.interpretation || 'No excerpt available.'}
               </div>
             </div>
+
+            {forensics && (
+              <div className="space-y-2 border-t border-gray-200 pt-3 mt-3">
+                <div>
+                  <span className="font-bold block mb-1">What Vigil observed</span>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {forensics.observed.map((item, index) => <li key={`observed-${index}`}>{item}</li>)}
+                  </ul>
+                </div>
+                {forensics.supportingEvidence.length > 0 && (
+                  <div>
+                    <span className="font-bold block mb-1">Why it may matter</span>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      {forensics.supportingEvidence.map((item, index) => <li key={`support-${index}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {(forensics.contradictingEvidence.length > 0 || forensics.assumptions.length > 0) && (
+                  <div className="bg-amber-50 border border-amber-100 rounded p-2 text-amber-900">
+                    <span className="font-bold block mb-1">What could disprove this</span>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      {[...forensics.contradictingEvidence, ...forensics.assumptions].map((item, index) => <li key={`counter-${index}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+                <div className="text-gray-500">
+                  Seen {forensics.temporal.observationCount} time{forensics.temporal.observationCount === 1 ? '' : 's'} · evidence coverage: {Object.entries(forensics.coverage).filter(([, covered]) => covered).map(([surface]) => surface).join(', ') || 'none'}
+                </div>
+              </div>
+            )}
             
             <div className="flex justify-between items-center text-gray-400 mt-2">
               <div>

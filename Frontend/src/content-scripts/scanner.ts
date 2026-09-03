@@ -4,6 +4,7 @@ import { getStorageValue, setStorageValue } from '../shared/storage';
 import { loadM1Rules, loadM2Rules, loadM3Rules, loadM4Rules, loadM5Rules } from './rules-loader';
 import { isRelevantForM2 } from './relevance-gate';
 import { showAmbientAlert } from './ambient-shield';
+import { createForensicAnalysis } from '../evidence/forensics';
 import {
   extractActivityCounter,
   hasCommerceContext,
@@ -80,6 +81,17 @@ function querySelectorAllDeep(selector: string, root: Document | Element | Shado
 
 const repeatedModals = new WeakSet<Element>();
 const activityCounterHistory = new WeakMap<Element, number>();
+const observationTimeline = new Map<string, { firstSeen: number; lastSeen: number; observationCount: number }>();
+
+function temporalEvidence(key: string) {
+  const now = Date.now();
+  const existing = observationTimeline.get(key);
+  const next = existing
+    ? { firstSeen: existing.firstSeen, lastSeen: now, observationCount: existing.observationCount + 1 }
+    : { firstSeen: now, lastSeen: now, observationCount: 1 };
+  observationTimeline.set(key, next);
+  return next;
+}
 
 // ─── Main Scanner ───────────────────────────────────────────────────────────
 
@@ -126,6 +138,19 @@ export async function scanPage(): Promise<void> {
 
     const id = crypto.randomUUID();
     findingElements.set(id, element);
+    const capturedAt = Date.now();
+    const forensics = createForensicAnalysis({
+      confidence: confidenceState === 'confirmed' ? 'HIGH' : 'MEDIUM',
+      reviewStatus,
+      observed: [`DOM rule ${rule.id} matched ${selectorPath}.`],
+      supportingEvidence: [`Matched rule: ${rule.name}.`],
+      assumptions: reviewStatus === 'CONFIRMED'
+        ? []
+        : ['The page structure can be observed, but the publisher\'s intent cannot be inferred from this signal alone.'],
+      capturedAt,
+      coverage: { dom: true }
+    });
+    forensics.temporal = temporalEvidence(`${rule.id}|${selectorPath}`);
 
     findings.push({
       id,
@@ -137,6 +162,14 @@ export async function scanPage(): Promise<void> {
       reviewStatus,
       statuteRef: rule.statute_ref,
       explanation,
+      evidence: {
+        sourceType: 'DOM',
+        sourceUrl: window.location.href,
+        capturedAt,
+        excerpt: (element.textContent || '').trim().slice(0, 240),
+        context: rule.statute_ref,
+        forensics
+      },
       elementSelector: selectorPath,
       elementRect: {
         top: rect.top,
@@ -420,6 +453,24 @@ export async function scanPage(): Promise<void> {
                 explanation: corroborated
                   ? 'A password form submits to an unrelated, insecure, or lookalike host. This is a strong credential-theft indicator.'
                   : 'This password form submits to a different organisation. Review the destination before entering credentials; some legitimate services use an external identity provider.',
+                evidence: {
+                  sourceType: 'DOM',
+                  sourceUrl: window.location.href,
+                  capturedAt: Date.now(),
+                  excerpt: `Password form action: ${actionUrl.href}`,
+                  context: `Page host: ${window.location.hostname}; action host: ${actionUrl.hostname}`,
+                  forensics: createForensicAnalysis({
+                    confidence: corroborated ? 'HIGH' : 'MEDIUM',
+                    reviewStatus: corroborated ? 'CONFIRMED' : 'REVIEW_NEEDED',
+                    observed: ['A form containing a password field has an external action URL.', `Destination: ${actionUrl.hostname}`],
+                    supportingEvidence: corroborated
+                      ? ['The destination is insecure, a raw IP address, or the page is a brand lookalike.']
+                      : ['The destination does not share the page\'s registrable domain.'],
+                    contradictingEvidence: corroborated ? [] : ['The scan cannot establish whether the external service is an approved identity provider.'],
+                    assumptions: corroborated ? [] : ['No network request body was inspected; no password value was observed leaving the page.'],
+                    coverage: { dom: true, network: false, scripts: false }
+                  })
+                },
                 elementSelector: generateSelector(form),
                 elementRect: form.getBoundingClientRect(),
                 pageUrl: window.location.href,

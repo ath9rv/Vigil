@@ -232,32 +232,32 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
                 {isExpanded && (() => {
                   const riskInfo = getPlainEnglishRiskExplanation(cookie.category, cookie.risk, cookie.name);
                   return (
-                    <div className="px-3 pb-3 pt-1 border-t border-gray-100 bg-gray-50/60 text-xs flex flex-col gap-2">
+                    <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-100 bg-slate-50/60 text-xs flex flex-col gap-2.5">
                       {/* Plain-English Meaning & Risk Card */}
-                      <div className={`p-2.5 rounded-lg border text-xs leading-relaxed ${
+                      <div className={`p-3 rounded-xl border text-xs leading-relaxed shadow-sm ${
                         riskInfo.isSafe 
-                          ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' 
-                          : 'bg-rose-50/90 border-rose-200 text-rose-950'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                          : 'bg-rose-50 border-rose-200 text-rose-900'
                       }`}>
-                        <span className="font-bold block mb-1 text-[11px] flex items-center gap-1">
+                        <span className="font-extrabold block mb-1 text-[11px] flex items-center gap-1">
                           {riskInfo.title}
                         </span>
-                        <p className="text-[11px] leading-relaxed">
+                        <p className="text-[11px] font-medium leading-relaxed">
                           {riskInfo.explanation}
                         </p>
                       </div>
 
                       {/* Behavioral DNA & Explainability Panel */}
                       {cookie.dna && (
-                        <div className="p-2.5 rounded-lg border border-indigo-200 bg-indigo-50/70 text-indigo-950 flex flex-col gap-2">
+                        <div className="p-3 rounded-xl border border-indigo-200/60 bg-gradient-to-br from-indigo-50/80 to-sky-50/80 text-indigo-950 flex flex-col gap-2.5 shadow-sm">
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-[11px] flex items-center gap-1 text-indigo-900">
-                              <span>🧬</span> Behavioral DNA Signature:
+                            <span className="font-extrabold text-[11px] flex items-center gap-1.5 text-indigo-900">
+                              <span className="drop-shadow-sm">🧬</span> Behavioral DNA Signature:
                             </span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              cookie.dna.score >= 80 ? 'bg-red-100 text-red-800' :
+                            <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest ${
+                              cookie.dna.score >= 80 ? 'bg-rose-100 text-rose-800' :
                               cookie.dna.score >= 60 ? 'bg-amber-100 text-amber-800' :
-                              cookie.dna.score >= 30 ? 'bg-blue-100 text-blue-800' :
+                              cookie.dna.score >= 30 ? 'bg-sky-100 text-sky-800' :
                               'bg-emerald-100 text-emerald-800'
                             }`}>
                               {cookie.dna.score >= 80 ? 'High-Risk Tracker' :
@@ -268,28 +268,28 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
                           </div>
 
                           {/* Metric Chips */}
-                          <div className="grid grid-cols-3 gap-1 text-[9px] font-mono">
-                            <div className="bg-white/80 p-1.5 rounded border border-indigo-100">
-                              <span className="text-gray-400 block uppercase text-[8px]">Entropy</span>
-                              <span className="font-bold text-indigo-900">{cookie.dna.entropy.toFixed(2)} bits/b</span>
+                          <div className="grid grid-cols-3 gap-2 text-[9px] font-mono">
+                            <div className="bg-white p-2 rounded-lg border border-indigo-100 shadow-sm flex flex-col items-center">
+                              <span className="text-slate-400 font-extrabold block uppercase tracking-widest text-[8px] mb-0.5">Entropy</span>
+                              <span className="font-bold text-indigo-900 text-[10px]">{cookie.dna.entropy.toFixed(2)} b/B</span>
                             </div>
-                            <div className="bg-white/80 p-1.5 rounded border border-indigo-100">
-                              <span className="text-gray-400 block uppercase text-[8px]">Encoding</span>
-                              <span className="font-bold text-indigo-900 uppercase truncate">{cookie.dna.charsetProfile}</span>
+                            <div className="bg-white p-2 rounded-lg border border-indigo-100 shadow-sm flex flex-col items-center">
+                              <span className="text-slate-400 font-extrabold block uppercase tracking-widest text-[8px] mb-0.5">Encoding</span>
+                              <span className="font-bold text-indigo-900 text-[10px] uppercase truncate">{cookie.dna.charsetProfile}</span>
                             </div>
-                            <div className="bg-white/80 p-1.5 rounded border border-indigo-100">
-                              <span className="text-gray-400 block uppercase text-[8px]">Confidence</span>
-                              <span className="font-bold text-indigo-900">{Math.round(cookie.dna.confidence * 100)}%</span>
+                            <div className="bg-white p-2 rounded-lg border border-indigo-100 shadow-sm flex flex-col items-center">
+                              <span className="text-slate-400 font-extrabold block uppercase tracking-widest text-[8px] mb-0.5">Confidence</span>
+                              <span className="font-bold text-indigo-900 text-[10px]">{Math.round(cookie.dna.confidence * 100)}%</span>
                             </div>
                           </div>
 
                           {/* Explainable Reasons */}
                           {cookie.dna.reasons && cookie.dna.reasons.length > 0 && (
-                            <div className="mt-0.5">
-                              <span className="text-[10px] font-bold text-indigo-900 block mb-1">
+                            <div className="mt-1">
+                              <span className="text-[10px] font-extrabold text-indigo-900 block mb-1">
                                 Why Vigil scored this ({cookie.dna.score}/100):
                               </span>
-                              <ul className="space-y-1 text-[10px] text-indigo-900/90 pl-3 list-disc">
+                              <ul className="space-y-1 text-[10.5px] text-indigo-900/90 pl-3 list-disc font-medium">
                                 {cookie.dna.reasons.map((reason, idx) => (
                                   <li key={idx} className="leading-tight">{reason}</li>
                                 ))}

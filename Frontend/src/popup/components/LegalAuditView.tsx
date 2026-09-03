@@ -172,40 +172,40 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
 
       {/* Summary Scoreboard */}
       {legalFindings.length > 0 && (
-        <div className="grid grid-cols-3 gap-1.5 text-center">
+        <div className="grid grid-cols-3 gap-2 mt-4 text-center">
           <div 
             onClick={() => setActiveCategoryFilter(activeCategoryFilter === 'TRICKY' ? 'ALL' : 'TRICKY')}
-            className={`p-2 rounded-xl border cursor-pointer transition-all ${activeCategoryFilter === 'TRICKY' ? 'ring-2 ring-rose-500' : ''} bg-rose-50 border-rose-200`}
+            className={`p-3 rounded-2xl border cursor-pointer transition-all duration-300 hover:shadow-premium ${activeCategoryFilter === 'TRICKY' ? 'ring-2 ring-rose-500 shadow-md' : 'shadow-sm'} bg-gradient-to-b from-rose-50 to-white border-rose-200/60`}
           >
-            <span className="text-lg font-bold text-rose-700 block">{trickyCount}</span>
-            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-tight">Tricky Terms</span>
+            <span className="text-2xl font-mono font-extrabold text-rose-600 block mb-0.5">{trickyCount}</span>
+            <span className="text-[9px] font-extrabold text-rose-500 uppercase tracking-widest">Tricky Terms</span>
           </div>
           <div 
             onClick={() => setActiveCategoryFilter(activeCategoryFilter === 'COOKIES' ? 'ALL' : 'COOKIES')}
-            className={`p-2 rounded-xl border cursor-pointer transition-all ${activeCategoryFilter === 'COOKIES' ? 'ring-2 ring-blue-500' : ''} bg-blue-50 border-blue-200`}
+            className={`p-3 rounded-2xl border cursor-pointer transition-all duration-300 hover:shadow-premium ${activeCategoryFilter === 'COOKIES' ? 'ring-2 ring-indigo-500 shadow-md' : 'shadow-sm'} bg-gradient-to-b from-indigo-50 to-white border-indigo-200/60`}
           >
-            <span className="text-lg font-bold text-blue-700 block">
+            <span className="text-2xl font-mono font-extrabold text-indigo-600 block mb-0.5">
               {legalFindings.filter(f => f.ruleId?.includes('COOKIE') || f.ruleName?.toLowerCase().includes('cookie')).length}
             </span>
-            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Cookie Clauses</span>
+            <span className="text-[9px] font-extrabold text-indigo-500 uppercase tracking-widest">Cookie Clauses</span>
           </div>
           <div 
             onClick={() => setActiveCategoryFilter(activeCategoryFilter === 'FAIR' ? 'ALL' : 'FAIR')}
-            className={`p-2 rounded-xl border cursor-pointer transition-all ${activeCategoryFilter === 'FAIR' ? 'ring-2 ring-emerald-500' : ''} bg-emerald-50 border-emerald-200`}
+            className={`p-3 rounded-2xl border cursor-pointer transition-all duration-300 hover:shadow-premium ${activeCategoryFilter === 'FAIR' ? 'ring-2 ring-emerald-500 shadow-md' : 'shadow-sm'} bg-gradient-to-b from-emerald-50 to-white border-emerald-200/60`}
           >
-            <span className="text-lg font-bold text-emerald-700 block">{fairCount}</span>
-            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight">Fair Terms</span>
+            <span className="text-2xl font-mono font-extrabold text-emerald-600 block mb-0.5">{fairCount}</span>
+            <span className="text-[9px] font-extrabold text-emerald-500 uppercase tracking-widest">Fair Terms</span>
           </div>
         </div>
       )}
 
       {/* Clause Findings List */}
-      <div className="flex flex-col gap-2 mt-1">
+      <div className="flex flex-col gap-3 mt-4">
         {filteredFindings.length === 0 ? (
-          <div className="bg-white p-5 rounded-xl border border-gray-200 text-center text-gray-500">
-            <span className="text-xl block mb-1">⚖️</span>
-            <p className="text-xs font-semibold text-gray-700">No legal clauses audited yet</p>
-            <p className="text-[11px] text-gray-400 mt-1">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center text-slate-500">
+            <span className="text-3xl block mb-2 drop-shadow-sm">⚖️</span>
+            <p className="text-sm font-extrabold text-slate-800">No legal clauses audited yet</p>
+            <p className="text-[11.5px] font-medium text-slate-500 mt-2 leading-relaxed">
               Select a policy above and click "Deep Audit" to inspect terms and conditions in detail.
             </p>
           </div>
