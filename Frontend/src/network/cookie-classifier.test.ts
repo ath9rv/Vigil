@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { classifyCookie, parseDocumentCookies } from './cookie-classifier';
 
 describe('Cookie & Tracker Classification Engine', () => {
@@ -47,5 +47,20 @@ describe('Cookie & Tracker Classification Engine', () => {
     expect(cookies.find(c => c.name === '_ga')?.category).toBe('ANALYTICS');
     expect(cookies.find(c => c.name === 'PHPSESSID')?.category).toBe('ESSENTIAL');
     expect(cookies.find(c => c.name === '_fbp')?.category).toBe('MARKETING');
+  });
+
+  it('should accurately classify Amazon cookies including csm-hit, session-id, and ubid', () => {
+    const csm = classifyCookie('csm-hit', 'tb:s-12345|67890', 'www.amazon.in');
+    expect(csm.category).toBe('ANALYTICS');
+    expect(csm.provider).toContain('Amazon');
+    expect(csm.purpose).toContain('performance');
+
+    const sess = classifyCookie('session-id', '261-1234567-8901234', 'www.amazon.in');
+    expect(sess.category).toBe('ESSENTIAL');
+    expect(sess.provider).toBe('Amazon');
+
+    const ubid = classifyCookie('ubid-acbin', '260-1234567-8901234', 'www.amazon.in');
+    expect(ubid.category).toBe('FUNCTIONAL');
+    expect(ubid.provider).toContain('Amazon');
   });
 });

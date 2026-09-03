@@ -233,11 +233,273 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
     risk: 'LOW',
     provider: 'Matomo (Privacy-Friendly)',
     purpose: 'Self-hosted privacy-respecting web analytics tracking site visits without cross-domain commercial data sale.'
+  },
+
+  // ─── Amazon & AWS Ecosystem ───────────────────────────────────────────────
+  {
+    pattern: /^csm-hit$/i,
+    category: 'ANALYTICS',
+    risk: 'LOW',
+    provider: 'Amazon Client-Side Metrics (CSM)',
+    purpose: 'Amazon performance monitoring cookie. Measures page load speed, latency, render timing, and interaction telemetry to maintain high website availability.'
+  },
+  {
+    pattern: /^session-id$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Primary shopping session identifier linking your page views, shopping cart contents, and search queries across Amazon.'
+  },
+  {
+    pattern: /^session-id-time$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Amazon session creation timestamp used to validate active session duration and prevent session hijacking or replay attacks.'
+  },
+  {
+    pattern: /^session-token$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Encrypted cryptographic authorization token verifying your signed-in customer account session.'
+  },
+  {
+    pattern: /^ubid-(main|acbin|tacb|[a-z0-9]+)$/i,
+    category: 'FUNCTIONAL',
+    risk: 'MEDIUM',
+    provider: 'Amazon Unique Browser ID',
+    purpose: 'Amazon Unique Browser ID (UBID). Persists across visits to recognize your device, preserve shopping cart state, and detect fraudulent account activity.'
+  },
+  {
+    pattern: /^at-(main|acbin|[a-z0-9]+)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Amazon customer authentication verification token required for account access and one-click purchasing.'
+  },
+  {
+    pattern: /^x-(main|acbin|wl-uid)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Amazon cross-site routing and wishlist identifier maintaining your shopping preferences across regional domains.'
+  },
+  {
+    pattern: /^(i18n-prefs|lc-(main|acbin|[a-z0-9]+))$/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Remembers localization preferences including shopping currency (e.g. INR/USD), language, and delivery region.'
+  },
+  {
+    pattern: /^sp-cdn$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Amazon CloudFront CDN',
+    purpose: 'Routes content delivery requests to the closest Amazon edge server to accelerate product image and page loading.'
+  },
+  {
+    pattern: /^skin$/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Remembers user interface styling preferences and responsive design layout modes.'
+  },
+  {
+    pattern: /^appstore-dev-sid$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Amazon',
+    purpose: 'Session identifier for Amazon Appstore and Developer Console operations.'
+  },
+
+  // ─── Google & YouTube Ecosystem ───────────────────────────────────────────
+  {
+    pattern: /^(VISITOR_INFO1_LIVE|YSC|GPS)$/i,
+    category: 'ANALYTICS',
+    risk: 'MEDIUM',
+    provider: 'YouTube / Google',
+    purpose: 'Measures video streaming bandwidth, playback performance, view counts, and video recommendations.'
+  },
+  {
+    pattern: /^PREF$/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'YouTube / Google',
+    purpose: 'Remembers playback preferences including volume, autoplay, caption language, and video resolution.'
+  },
+  {
+    pattern: /^(__Secure-)?(3P)?(AP)?(S)?SID$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Google Account',
+    purpose: 'Secure authentication cookie verifying your signed-in Google account and protecting against fraudulent sign-ins.'
+  },
+  {
+    pattern: /^(NID|1P_JAR|AEC|OGPC)$/i,
+    category: 'MARKETING',
+    risk: 'HIGH',
+    provider: 'Google',
+    purpose: 'User profiling and ad targeting cookie remembering search queries to serve personalized advertising.'
+  },
+  {
+    pattern: /^SOCS$/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'Google',
+    purpose: 'Stores your cookie consent choice regarding Google services and personalized ads.'
+  },
+
+  // ─── Twitter / X Ecosystem ────────────────────────────────────────────────
+  {
+    pattern: /^(guest_id|guest_id_marketing|guest_id_ads)$/i,
+    category: 'MARKETING',
+    risk: 'HIGH',
+    provider: 'Twitter / X',
+    purpose: 'Visitor tracking identifier assigned to non-logged-in users to build an ad profile based on viewed tweets.'
+  },
+  {
+    pattern: /^(auth_token|twid)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Twitter / X',
+    purpose: 'Authentication key proving your active sign-in status on Twitter / X.'
+  },
+  {
+    pattern: /^ct0$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Twitter / X',
+    purpose: 'Cross-Site Request Forgery (CSRF) protection token securing your account against unauthorized actions.'
+  },
+  {
+    pattern: /^personalization_id$/i,
+    category: 'MARKETING',
+    risk: 'HIGH',
+    provider: 'Twitter / X',
+    purpose: 'Records visits across external websites embedding Twitter widgets to build ad personalization profiles.'
+  },
+
+  // ─── Meta / Facebook / Instagram ──────────────────────────────────────────
+  {
+    pattern: /^(c_user|xs)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Meta / Facebook',
+    purpose: 'Facebook user account ID and encrypted session token maintaining your active login.'
+  },
+  {
+    pattern: /^datr$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Meta / Facebook',
+    purpose: 'Browser verification security cookie used to recognize trusted devices and block malicious login takeovers.'
+  },
+  {
+    pattern: /^(sb|wd|dpr)$/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'Meta / Facebook',
+    purpose: 'Stores browser window dimensions and device pixel ratio for proper interface scaling.'
+  },
+
+  // ─── Shopify & E-Commerce ─────────────────────────────────────────────────
+  {
+    pattern: /^(_shopify_s|_shopify_y|_shopify_m|_shopify_sa_p|_shopify_sa_t)$/i,
+    category: 'ANALYTICS',
+    risk: 'MEDIUM',
+    provider: 'Shopify',
+    purpose: 'Shopify store analytics cookie tracking shopping funnel progression, visit duration, and marketing source.'
+  },
+  {
+    pattern: /^(cart|cart_sig|cart_ts|checkout_token)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'E-Commerce Store',
+    purpose: 'Stores your shopping cart items, quantities, and checkout state throughout the purchasing flow.'
+  },
+
+  // ─── Stripe & PayPal ──────────────────────────────────────────────────────
+  {
+    pattern: /^__stripe_(mid|sid)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Stripe',
+    purpose: 'Fraud prevention and device telemetry cookie required to verify payments securely and prevent credit card fraud.'
+  },
+  {
+    pattern: /^(nsid|ts|ts_c|paypal)$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'PayPal',
+    purpose: 'PayPal authentication, transaction verification, and fraud detection cookie for secure payment checkout.'
+  },
+
+  // ─── Customer Data & Analytics Platforms ──────────────────────────────────
+  {
+    pattern: /^(ajs_anonymous_id|ajs_user_id)$/i,
+    category: 'ANALYTICS',
+    risk: 'MEDIUM',
+    provider: 'Segment (Twilio)',
+    purpose: 'Customer Data Platform (CDP) client identifier tracking user interactions and funnel events.'
+  },
+  {
+    pattern: /^mp_.*_mixpanel$/i,
+    category: 'ANALYTICS',
+    risk: 'MEDIUM',
+    provider: 'Mixpanel',
+    purpose: 'Product telemetry cookie tracking feature usage and application event sequences.'
+  },
+  {
+    pattern: /^amplitude_id/i,
+    category: 'ANALYTICS',
+    risk: 'MEDIUM',
+    provider: 'Amplitude',
+    purpose: 'Product intelligence cookie tracking user behavior cohorts and feature adoption.'
+  },
+
+  // ─── CMS, Frameworks & CDNs ───────────────────────────────────────────────
+  {
+    pattern: /^wordpress_(logged_in|sec|test_cookie)/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'WordPress',
+    purpose: 'WordPress authentication and cookie capability test verification.'
+  },
+  {
+    pattern: /^wp-settings/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'WordPress',
+    purpose: 'Customizes the WordPress administrative interface and editor display settings.'
+  },
+  {
+    pattern: /^__next/i,
+    category: 'FUNCTIONAL',
+    risk: 'LOW',
+    provider: 'Next.js',
+    purpose: 'Next.js frontend framework state cookie preserving routing data and hydration state.'
+  },
+  {
+    pattern: /^_cfuvid$/i,
+    category: 'ESSENTIAL',
+    risk: 'LOW',
+    provider: 'Cloudflare',
+    purpose: 'Cloudflare rate limiting cookie used to apply Web Application Firewall (WAF) rules per visitor.'
+  },
+  {
+    pattern: /^(aka-cdn|RT)$/i,
+    category: 'ANALYTICS',
+    risk: 'LOW',
+    provider: 'Akamai / Boomerang',
+    purpose: 'Real User Monitoring (RUM) measuring page load speed and asset download latency.'
   }
 ];
 
 /**
- * Classifies a cookie based on its name, value, and origin.
+ * Classifies a cookie based on its name, value, and origin using an extensive knowledge base
+ * and multi-stage semantic heuristics.
  */
 export function classifyCookie(name: string, value: string, domain: string): {
   category: CookieCategory;
@@ -257,38 +519,108 @@ export function classifyCookie(name: string, value: string, domain: string): {
     }
   }
 
-  // Heuristics for unknown cookies
+  // ─── Supercharged Semantic Heuristic Classifier ───────────────────────────
   const lower = cleanName.toLowerCase();
-  if (lower.includes('token') || lower.includes('auth') || lower.includes('id') && cleanName.length > 20) {
+
+  // 1. Performance & Telemetry (e.g. csm, hit, perf, metric, ping, log, stats)
+  if (
+    lower.includes('csm') || 
+    lower.includes('hit') || 
+    lower.includes('metric') || 
+    lower.includes('telemetry') || 
+    lower.includes('stat') || 
+    lower.includes('perf') || 
+    lower.includes('event') || 
+    lower.includes('ping') || 
+    lower.includes('rum') || 
+    lower.includes('timing') ||
+    lower.includes('speed') ||
+    lower.includes('beacon')
+  ) {
     return {
-      category: 'ESSENTIAL',
+      category: 'ANALYTICS',
       risk: 'LOW',
-      provider: domain,
-      purpose: 'Identifier or authorization token used by the site to maintain state or verify requests.'
-    };
-  }
-  if (lower.includes('lang') || lower.includes('theme') || lower.includes('pref') || lower.includes('mode')) {
-    return {
-      category: 'FUNCTIONAL',
-      risk: 'LOW',
-      provider: domain,
-      purpose: 'Remembers user preferences such as display language, color scheme, or localization.'
-    };
-  }
-  if (lower.includes('track') || lower.includes('ad') || lower.includes('pixel')) {
-    return {
-      category: 'MARKETING',
-      risk: 'HIGH',
-      provider: domain,
-      purpose: 'Likely advertising or behavioral tracking identifier.'
+      provider: `${domain} (Telemetry)`,
+      purpose: 'Performance and telemetry cookie measuring page load times, click events, or server response latency.'
     };
   }
 
+  // 2. Advertising & Cross-Site Tracking (e.g. track, ad, pixel, campaign, utm, affiliate)
+  if (
+    lower.includes('track') || 
+    lower.includes('ad') || 
+    lower.includes('pixel') || 
+    lower.includes('campaign') || 
+    lower.includes('utm') || 
+    lower.includes('affiliate') || 
+    lower.includes('retarget') || 
+    lower.includes('audience') || 
+    lower.includes('bid') || 
+    lower.includes('partner') ||
+    lower.includes('sync')
+  ) {
+    return {
+      category: 'MARKETING',
+      risk: 'HIGH',
+      provider: `${domain} (Marketing)`,
+      purpose: 'Advertising or cross-site tracking identifier used to profile your browsing behavior and target advertisements.'
+    };
+  }
+
+  // 3. Essential Session, Security & Checkout (e.g. session, auth, token, csrf, cart, order)
+  if (
+    lower.includes('token') || 
+    lower.includes('auth') || 
+    lower.includes('sess') || 
+    lower.includes('login') || 
+    lower.includes('csrf') || 
+    lower.includes('xsrf') || 
+    lower.includes('secure') || 
+    lower.includes('cart') || 
+    lower.includes('basket') || 
+    lower.includes('bag') || 
+    lower.includes('order') || 
+    lower.includes('checkout') || 
+    lower.includes('pay') || 
+    lower.includes('gate') || 
+    (lower.includes('id') && cleanName.length > 15)
+  ) {
+    return {
+      category: 'ESSENTIAL',
+      risk: 'LOW',
+      provider: `${domain} (Session)`,
+      purpose: 'Session security or checkout state cookie maintaining your authenticated status and cart items.'
+    };
+  }
+
+  // 4. Functional Preferences (e.g. lang, theme, dark, pref, mode, currency)
+  if (
+    lower.includes('lang') || 
+    lower.includes('theme') || 
+    lower.includes('pref') || 
+    lower.includes('mode') || 
+    lower.includes('locale') || 
+    lower.includes('curr') || 
+    lower.includes('font') || 
+    lower.includes('layout') || 
+    lower.includes('skin') || 
+    lower.includes('view') ||
+    lower.includes('dismiss')
+  ) {
+    return {
+      category: 'FUNCTIONAL',
+      risk: 'LOW',
+      provider: `${domain} (Preferences)`,
+      purpose: 'Remembers user display settings, regional language, preferred currency, or interface customization.'
+    };
+  }
+
+  // 5. General Application Cookie
   return {
-    category: 'UNKNOWN',
+    category: 'FUNCTIONAL',
     risk: 'LOW',
     provider: domain,
-    purpose: 'First-party cookie set by this domain for site functionality or internal preferences.'
+    purpose: 'First-party application cookie managing site features or internal session state.'
   };
 }
 
