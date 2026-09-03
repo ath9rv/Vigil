@@ -1,4 +1,5 @@
 import type { CookieBehavioralDNA } from './behavioral-dna';
+import { inspectJwtClaims } from './jwt-inspector';
 
 export type BehavioralVerdictCategory = 
   | 'benign' 
@@ -146,8 +147,18 @@ export function scoreCookieBehavior(dna: CookieBehavioralDNA): ScoredBehavioralD
   }
 
   if (dna.charsetProfile === 'jwt') {
-    rawScore -= 25;
-    reasons.push('Cryptographic JWT payload detected (Common user authorization bearer token).');
+    const jwtAnalysis = inspectJwtClaims(dna.value);
+    if (jwtAnalysis.overrideDampener) {
+      rawScore += 20; // Penalize for weaponized JWT
+      reasons.push('SEVERE: Weaponized JWT detected (Contains high-entropy tracking claims inside an authentication container).');
+      reasons.push(...jwtAnalysis.signals);
+    } else {
+      rawScore -= 25;
+      reasons.push('Cryptographic JWT payload detected (Common user authorization bearer token).');
+      if (jwtAnalysis.signals.length > 0) {
+        reasons.push(...jwtAnalysis.signals);
+      }
+    }
   }
 
   if (isAuthLikeName && dna.isHttpOnly) {

@@ -39,6 +39,7 @@ export interface RuntimeContext {
 
 export interface CookieBehavioralDNA {
   name: string;
+  value: string;
   domain: string;
   entropy: number;
   length: number;
@@ -193,6 +194,7 @@ export function extractCookieDNA(
 
   return {
     name: cookie.name,
+    value: cookie.value,
     domain: cookie.domain,
     entropy,
     length,

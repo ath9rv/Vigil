@@ -213,13 +213,15 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
           filteredFindings.map((finding) => {
             const isTricky = finding.interpretation.includes('TRICKY') || finding.interpretation.includes('WARNING') || finding.interpretation.includes('UNFAIR');
             const isFair = finding.interpretation.includes('FAIR') || finding.interpretation.includes('HARMLESS');
+            const isReview = finding.interpretation.includes('REVIEW');
             const isExpanded = expandedClauseId === finding.id;
 
             const badgeBg = isTricky ? 'bg-rose-100 text-rose-800 border-rose-200' : 
                             isFair ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
-                            'bg-yellow-100 text-yellow-800 border-yellow-200';
+                            isReview ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                            'bg-amber-100 text-amber-800 border-amber-200';
 
-            const statusIcon = isTricky ? '🚨' : isFair ? '🛡️' : '⚠️';
+            const statusIcon = isTricky ? '🚨' : isFair ? '🛡️' : isReview ? '🤔' : '⚠️';
             const categoryKey = finding.ruleId?.replace('LEGAL-', '') || '';
             const catIcon = CATEGORY_ICONS[categoryKey] || '📝';
 
@@ -252,7 +254,7 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
 
                 {/* Excerpt Details */}
                 {isExpanded && (() => {
-                  const legalPlain = getPlainEnglishLegalExplanation(categoryKey, isTricky, isFair);
+                  const legalPlain = getPlainEnglishLegalExplanation(categoryKey, isTricky, isFair, isReview);
                   return (
                     <div className="px-3 pb-3 pt-1 border-t border-gray-100 bg-gray-50/60 text-xs flex flex-col gap-2">
                       {/* Plain English "Why is this tricky / fair?" Card */}
@@ -261,7 +263,9 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
                           ? 'bg-rose-50/90 border-rose-200 text-rose-950' 
                           : isFair 
                           ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' 
-                          : 'bg-yellow-50/90 border-yellow-200 text-yellow-950'
+                          : isReview
+                          ? 'bg-purple-50/90 border-purple-200 text-purple-950'
+                          : 'bg-amber-50/90 border-amber-200 text-amber-950'
                       }`}>
                         <span className="font-bold block mb-1 text-[11px] flex items-center gap-1">
                           {legalPlain.title}

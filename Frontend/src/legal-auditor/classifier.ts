@@ -1,4 +1,5 @@
 import { SegmentedClause, ClauseAssessment, LegalClauseCategory } from './types';
+import { findClauseNegation } from './negation-parser';
 
 /**
  * High-precision regex patterns for filtering candidate clauses.
@@ -41,63 +42,9 @@ export function filterCandidateClauses(clauses: SegmentedClause[]): SegmentedCla
  * across both global sentence patterns and prefix windows.
  */
 export function isNegated(text: string, keywordOrPattern: string | RegExp): boolean {
-  const clean = text.toLowerCase();
-
-  // 1. Global explicit negation patterns for data selling
-  const globalNoSalePatterns = [
-    /\bnot\s+in\s+the\s+business\s+of\s+selling\b/,
-    /\bdo\s+not\s+sell\b/,
-    /\bdoes\s+not\s+sell\b/,
-    /\bwill\s+not\s+sell\b/,
-    /\bwe\s+never\s+sell\b/,
-    /\bnever\s+sell\b/,
-    /\bno\s+sale\s+of\b/,
-    /\bnot\s+sell[,\s]+rent[,\s]+or\s+lease\b/,
-    /\bdo\s+not\s+rent\s+or\s+sell\b/,
-    /\bwe\s+don'?t\s+sell\b/,
-    /\bneither\s+sell\s+nor\b/,
-    /\bwithout\s+selling\b/,
-    /\bprohibit(ed|s)?\s+from\s+selling\b/,
-    /\bdo\s+not\s+monetize\b/,
-    /\bdo\s+not\s+trade\b/,
-    /\bnot\s+sold\s+to\s+third\s+parties\b/,
-    /\bdo\s+not\s+share.*for\s+money\b/
-  ];
-
-  if (typeof keywordOrPattern === 'string' && keywordOrPattern.toLowerCase() === 'sell') {
-    if (globalNoSalePatterns.some(p => p.test(clean))) {
-      return true;
-    }
-  }
-
-  // 2. Locate keyword match index for windowed prefix analysis
-  let matchIndex = -1;
-  if (typeof keywordOrPattern === 'string') {
-    // Search with word boundary to avoid partial substring false positives
-    const regex = new RegExp(`\\b${keywordOrPattern}\\b`, 'i');
-    const match = regex.exec(clean);
-    matchIndex = match ? match.index : -1;
-  } else {
-    const match = keywordOrPattern.exec(clean);
-    matchIndex = match ? match.index : -1;
-  }
-
-  if (matchIndex === -1) return false;
-
-  // Inspect 60-character prefix window
-  const windowStart = Math.max(0, matchIndex - 60);
-  const prefix = clean.substring(windowStart, matchIndex);
-
-  const prefixNegationTerms = [
-    'do not', "don't", 'does not', "doesn't", 'will not', "won't",
-    'never', 'not applicable to', 'shall not', 'no right to',
-    'prohibited from', 'except as required by law', 'not sell',
-    'without your consent', 'without consent', 'is not', 'are not',
-    'not permitted to', 'restricted from', 'not intended to',
-    'no obligation to', 'opt-out of', 'exempt from', 'neither', 'nor'
-  ];
-
-  return prefixNegationTerms.some(term => prefix.includes(term));
+  const pattern = typeof keywordOrPattern === 'string' ? new RegExp(`\\b${keywordOrPattern}\\b`, 'i') : keywordOrPattern;
+  const findings = findClauseNegation(text, pattern);
+  return findings.some(f => f.negated);
 }
 
 /**
@@ -123,11 +70,22 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     const isBusinessTransferContext = /\b(business\s+transfers?|merger|acquisition|transferred\s+business\s+assets?|sell\s+or\s+buy\s+other\s+businesses)\b/i.test(lower);
 
     if (isSaleVerbPresent && isPersonalDataPresent && !isBusinessTransferContext) {
-      // Check if it's explicitly negated (e.g. Amazon's "not in the business of selling")
-      if (isNegated(lower, 'sell')) {
+      const negationFindings = findClauseNegation(text, /\b(sell|selling|sale\s+of|monetiz(e|ing)|commercializ(e|ing))\b/i);
+      
+      if (negationFindings.length > 0) {
+        const finding = negationFindings[0];
         category = 'DATA_SALE';
-        confidence = 'HIGH';
-        rationale = 'FAIR: Site explicitly confirms that it DOES NOT sell customer personal information to third parties.';
+        
+        if (finding.classification === 'FAIR') {
+          confidence = 'HIGH';
+          rationale = 'FAIR: Site explicitly confirms that it DOES NOT sell customer personal information to third parties.';
+        } else if (finding.classification === 'REVIEW') {
+          confidence = 'MEDIUM';
+          rationale = 'REVIEW: Site states it does not sell data, but includes a hedge or reservation of rights that may invalidate this promise.';
+        } else {
+          confidence = 'HIGH';
+          rationale = 'WARNING: Site explicitly reserves the right to sell or commercialize personal consumer data.';
+        }
       } else if (/\b(we|may|reserves?\s+the\s+right\s+to)\s+(sell|monetiz(e|ing)|commercializ(e|ing))\b/i.test(lower) || /\b(is|are)\s+sold\s+to\b/i.test(lower)) {
         category = 'DATA_SALE';
         confidence = 'HIGH';
@@ -137,7 +95,8 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
 
     // ─── 2. Forced Arbitration & Trial Waivers ────────────────────────────────
     else if (/\b(arbitrat(e|ion|or)|jury\s+trial|trial\s+by\s+jury)\b/i.test(lower)) {
-      const isCarveOut = isNegated(lower, 'arbitration') || /\b(does\s+not\s+apply\s+to|opt[- ]out\s+of\s+arbitration|small\s+claims\s+court\s+exception)\b/i.test(lower);
+      const negationFindings = findClauseNegation(text, /\b(arbitrat(e|ion|or)|jury\s+trial|trial\s+by\s+jury)\b/i);
+      const isCarveOut = negationFindings.some(f => f.negated) || /\b(does\s+not\s+apply\s+to|opt[- ]out\s+of\s+arbitration|small\s+claims\s+court\s+exception)\b/i.test(lower);
       category = 'ARBITRATION';
 
       if (isCarveOut) {
@@ -154,7 +113,8 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
 
     // ─── 3. Class Action Lawsuit Waiver ───────────────────────────────────────
     else if (/\bclass\s+action\b/i.test(lower) && /\b(waiv(e|er|ing)|prohibit(ed)?|solely\s+in\s+individual\s+capacity|cannot\s+be\s+brought\s+as\s+a\s+class)\b/i.test(lower)) {
-      if (!isNegated(lower, 'class action')) {
+      const caNegation = findClauseNegation(text, /\bclass action\b/i);
+      if (!caNegation.some(f => f.classification === 'FAIR')) {
         category = 'CLASS_ACTION';
         confidence = 'HIGH';
         rationale = 'TRICKY: Explicit class-action lawsuit waiver. Requires all disputes to be handled strictly as individual proceedings.';
@@ -188,9 +148,12 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     ) {
       category = 'DATA_SHARING';
 
-      if (isNegated(lower, 'share') || isNegated(lower, 'disclose')) {
+      if (findClauseNegation(text, /\b(share|disclose)\b/i).some(f => f.classification === 'FAIR')) {
         confidence = 'HIGH';
         rationale = 'FAIR: Platform restricts third-party disclosures and commits not to share personal data without affirmative consent.';
+      } else if (findClauseNegation(text, /\b(share|disclose)\b/i).some(f => f.classification === 'REVIEW')) {
+        confidence = 'MEDIUM';
+        rationale = 'REVIEW: Platform claims it does not share data, but includes a hedge or exception that weakens this commitment.';
       } else if (isBusinessTransferContext) {
         confidence = 'HIGH';
         rationale = 'NOTICE: Customer information may be transferred as a business asset during a merger, acquisition, or sale of assets, subject to pre-existing privacy notice commitments.';
@@ -253,7 +216,9 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(perpetual|irrevocable)\b/i.test(lower) && 
              /\blicense\b/i.test(lower) && 
              /\b(user\s+content|submissions?|reviews?|feedback|materials?)\b/i.test(lower)) {
-      if (!isNegated(lower, 'license')) {
+      const licenseNegation = findClauseNegation(text, /\blicense\b/i);
+      
+      if (!licenseNegation.some(f => f.classification === 'FAIR')) {
         category = 'CONTENT_LICENSE';
         confidence = 'HIGH';
         rationale = 'TRICKY: Grants the platform an irrevocable, perpetual, royalty-free license to reproduce, adapt, and distribute your submitted content or reviews.';
@@ -264,9 +229,14 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(train|training)\b/i.test(lower) && 
              /\b(artificial\s+intelligence|machine\s+learning|ai\s+models?|llms?|generative\s+ai)\b/i.test(lower)) {
       category = 'AI_TRAINING';
-      if (isNegated(lower, 'train')) {
+      const trainNegation = findClauseNegation(text, /\btrain\b/i);
+      
+      if (trainNegation.some(f => f.classification === 'FAIR')) {
         confidence = 'HIGH';
         rationale = 'FAIR: Platform confirms user content is NOT ingested or used to train artificial intelligence or machine learning models.';
+      } else if (trainNegation.some(f => f.classification === 'REVIEW')) {
+        confidence = 'MEDIUM';
+        rationale = 'REVIEW: Platform states it does not train AI on your data, but includes a hedge or exception.';
       } else {
         confidence = 'HIGH';
         rationale = 'TRICKY: Platform reserves the right to use your personal submissions, chats, or communications to train machine learning models.';
@@ -353,7 +323,14 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
 /**
  * Returns plain-English explanations of why a legal clause is tricky or fair for normal people.
  */
-export function getPlainEnglishLegalExplanation(category: string, isTricky: boolean, isFair: boolean): { title: string; explanation: string } {
+export function getPlainEnglishLegalExplanation(category: string, isTricky: boolean, isFair: boolean, isReview: boolean = false): { title: string; explanation: string } {
+  if (isReview) {
+    return {
+      title: '🤔 Needs Human Review (Hedged Language):',
+      explanation: 'The policy appears to make a consumer-friendly promise (e.g., not selling data), but it immediately includes a loophole, exception, or "reservation of rights" that might weaken or invalidate that promise.'
+    };
+  }
+
   if (isFair) {
     switch (category) {
       case 'DATA_SALE':

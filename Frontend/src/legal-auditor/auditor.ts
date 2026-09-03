@@ -64,7 +64,7 @@ export async function processLegalDocument(extraction: DocumentExtractionResult)
       mappedSeverity = 'HIGH';
     } else if (assessment.rationale.startsWith('FAIR:') || assessment.rationale.startsWith('HARMLESS:')) {
       mappedSeverity = 'LOW';
-    } else if (assessment.rationale.startsWith('NOTICE:')) {
+    } else if (assessment.rationale.startsWith('NOTICE:') || assessment.rationale.startsWith('REVIEW:')) {
       mappedSeverity = 'MEDIUM';
     }
 
