@@ -63,4 +63,59 @@ describe('Cookie & Tracker Classification Engine', () => {
     expect(ubid.category).toBe('FUNCTIONAL');
     expect(ubid.provider).toContain('Amazon');
   });
+
+  it('should accurately classify YouTube and Google cookies', () => {
+    const ysc = classifyCookie('YSC', 'abc123ysc', 'youtube.com');
+    expect(ysc.category).toBe('ANALYTICS');
+    expect(ysc.provider).toContain('YouTube');
+
+    const visitor = classifyCookie('VISITOR_INFO1_LIVE', 'unique_vid', 'youtube.com');
+    expect(visitor.category).toBe('ANALYTICS');
+    expect(visitor.provider).toContain('YouTube');
+
+    const jar = classifyCookie('1P_JAR', '2026-09-04-02', 'google.com');
+    expect(jar.category).toBe('MARKETING');
+    expect(jar.provider).toContain('Google');
+  });
+
+  it('should accurately classify Twitter and Meta social cookies', () => {
+    const guest = classifyCookie('guest_id', 'v1%3A12345', 'twitter.com');
+    expect(guest.category).toBe('MARKETING');
+    expect(guest.provider).toContain('Twitter');
+
+    const datr = classifyCookie('datr', 'hash_datr_123', 'facebook.com');
+    expect(datr.category).toBe('ESSENTIAL');
+    expect(datr.provider).toContain('Meta');
+
+    const cUser = classifyCookie('c_user', '10001234567', 'facebook.com');
+    expect(cUser.category).toBe('ESSENTIAL');
+  });
+
+  it('should accurately classify payment and e-commerce cookies (Stripe, Shopify)', () => {
+    const stripe = classifyCookie('__stripe_mid', 'mid_hash_123', 'merchant.com');
+    expect(stripe.category).toBe('ESSENTIAL');
+    expect(stripe.provider).toContain('Stripe');
+
+    const shopify = classifyCookie('_shopify_s', 'sess_hash_123', 'store.com');
+    expect(shopify.category).toBe('ANALYTICS');
+    expect(shopify.provider).toContain('Shopify');
+
+    const cart = classifyCookie('cart', 'cart_token_123', 'store.com');
+    expect(cart.category).toBe('ESSENTIAL');
+  });
+
+  it('should intelligently classify unseen cookies using the semantic heuristic classifier', () => {
+    // Unseen telemetry cookie
+    const telemetry = classifyCookie('custom_perf_ping_metric', '123', 'unknown-domain.com');
+    expect(telemetry.category).toBe('ANALYTICS');
+
+    // Unseen ad conversion cookie
+    const adClick = classifyCookie('partner_ad_click_track_id', 'xyz999', 'unknown-domain.com');
+    expect(adClick.category).toBe('MARKETING');
+    expect(adClick.risk).toBe('HIGH');
+
+    // Unseen user display preference cookie
+    const pref = classifyCookie('client_theme_dark_mode_pref', 'true', 'unknown-domain.com');
+    expect(pref.category).toBe('FUNCTIONAL');
+  });
 });

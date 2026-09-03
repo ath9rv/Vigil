@@ -168,4 +168,42 @@ describe('Vigil V3 — Behavioral DNA & Explainable Scoring Engine', () => {
       expect(serialized).not.toContain(secretValue);
     });
   });
+
+  describe('6. Extreme Lifecycle & Cross-Site Observation Scaling', () => {
+    it('elevates tracking score monotonically as identifier recurs across more distinct websites', () => {
+      const baseCookie = {
+        name: 'cross_net_uid',
+        value: '4f9a3c2b-81e0-4781-9dfc-112c8ab12345',
+        domain: '.trackernet.com',
+        httpOnly: false,
+        session: false,
+        expirationDate: Date.now() / 1000 + (365 * 24 * 3600)
+      };
+
+      const dna1Site = extractCookieDNA(baseCookie, { activeDomain: 'store1.com', crossSiteCount: 1 });
+      const dna3Sites = extractCookieDNA(baseCookie, { activeDomain: 'store2.com', crossSiteCount: 3 });
+      const dna10Sites = extractCookieDNA(baseCookie, { activeDomain: 'store3.com', crossSiteCount: 10 });
+
+      const score1 = scoreCookieBehavior(dna1Site).score;
+      const score3 = scoreCookieBehavior(dna3Sites).score;
+      const score10 = scoreCookieBehavior(dna10Sites).score;
+
+      expect(score3).toBeGreaterThan(score1);
+      expect(score10).toBeGreaterThanOrEqual(score3);
+    });
+
+    it('penalizes extreme persistent lifespans (>5 years)', () => {
+      const extremeCookie = extractCookieDNA({
+        name: 'super_cookie',
+        value: '9a8b7c6d5e4f3a2b1c',
+        domain: '.ads.com',
+        session: false,
+        expirationDate: Date.now() / 1000 + (10 * 365 * 24 * 3600) // 10 years!
+      }, { activeDomain: 'news.com' });
+
+      expect(extremeCookie.lifespanDays).toBeGreaterThan(3600);
+      const scored = scoreCookieBehavior(extremeCookie);
+      expect(scored.reasons.some(r => r.includes('Long-term persistence'))).toBe(true);
+    });
+  });
 });

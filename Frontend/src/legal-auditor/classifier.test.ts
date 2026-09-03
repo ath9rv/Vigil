@@ -130,5 +130,85 @@ describe('Legal Auditor Classifier & Precision Negation Engine', () => {
       expect(results[0].rationale).toContain('HARMLESS');
       expect(results[1].rationale).toContain('WARNING');
     });
+
+    it('accurately verifies Google and Apple no-sale commitments as FAIR', async () => {
+      const candidates = [
+        { id: 'goog-01', text: 'We do not sell your personal information under any circumstances.', startOffset: 0, endOffset: 65, context: '' },
+        { id: 'appl-01', text: 'Apple does not sell your personal data, including as sale is defined under applicable statutory privacy laws.', startOffset: 0, endOffset: 105, context: '' }
+      ];
+
+      const results = await executeLocalSLM(candidates);
+      expect(results.length).toBe(2);
+      expect(results[0].category).toBe('DATA_SALE');
+      expect(results[0].rationale).toContain('FAIR');
+      expect(results[1].category).toBe('DATA_SALE');
+      expect(results[1].rationale).toContain('FAIR');
+    });
+
+    it('differentiates predatory AI model training from protected AI commitments', async () => {
+      const trickyAi = {
+        id: 'ai-01',
+        text: 'You agree that your submissions, prompts, and uploaded content may be used to train artificial intelligence and machine learning models.',
+        startOffset: 0,
+        endOffset: 135,
+        context: ''
+      };
+      const fairAi = {
+        id: 'ai-02',
+        text: 'We confirm that customer communications and submitted files are not used to train generative AI or public machine learning models.',
+        startOffset: 0,
+        endOffset: 130,
+        context: ''
+      };
+
+      const results = await executeLocalSLM([trickyAi, fairAi]);
+      expect(results.length).toBe(2);
+      expect(results[0].category).toBe('AI_TRAINING');
+      expect(results[0].rationale).toContain('TRICKY');
+      expect(results[1].category).toBe('AI_TRAINING');
+      expect(results[1].rationale).toContain('FAIR');
+    });
+
+    it('detects unilateral account termination in sole discretion without notice', async () => {
+      const termClause = {
+        id: 'term-01',
+        text: 'We reserve the right in our sole discretion to terminate or suspend your account without prior notice for any reason.',
+        startOffset: 0,
+        endOffset: 115,
+        context: ''
+      };
+
+      const results = await executeLocalSLM([termClause]);
+      expect(results[0].category).toBe('TERMINATION');
+      expect(results[0].rationale).toContain('UNFAIR');
+    });
+
+    it('accurately identifies DPDP/GDPR User Rights to access and delete records', async () => {
+      const rightsClause = {
+        id: 'dpdp-01',
+        text: 'Under data protection regulations, you retain the explicit right to access, rectify, or request deletion of your personal data at any time.',
+        startOffset: 0,
+        endOffset: 135,
+        context: ''
+      };
+
+      const results = await executeLocalSLM([rightsClause]);
+      expect(results[0].category).toBe('USER_RIGHTS');
+      expect(results[0].rationale).toContain('FAIR');
+    });
+
+    it('identifies statutory government and law enforcement disclosures', async () => {
+      const govtClause = {
+        id: 'govt-01',
+        text: 'We will disclose customer account records and communications to law enforcement authorities when required to comply with a valid court order or subpoena.',
+        startOffset: 0,
+        endOffset: 155,
+        context: ''
+      };
+
+      const results = await executeLocalSLM([govtClause]);
+      expect(results[0].category).toBe('GOVERNMENT_DISCLOSURE');
+      expect(results[0].rationale).toContain('NOTICE');
+    });
   });
 });

@@ -52,4 +52,55 @@ describe('Privacy Grade & Moral Hazard Defense', () => {
     expect(result.verdict).toBe('SUSPICIOUS');
     expect(['C', 'C-', 'D', 'F']).toContain(result.protectedGrade);
   });
+
+  it('demonstrates measurable protection uplift when Vigil shields the user from trackers', () => {
+    const result = calculatePrivacyGrade({
+      httpsUpgrade: true,
+      trackersFound: 25,
+      trackersBlocked: 25,
+      trackerPrevalence: 80,
+      tosdrGrade: 'B',
+      cookieConsentAutoHandled: true,
+      darkPatternsFound: 0,
+      phishingRisk: false
+    });
+
+    // Reputation without protection should be low (e.g. D or C)
+    // But protectedGrade after blocking 25 trackers should be significantly improved!
+    expect(result.protectedGrade).not.toBe(result.reputationGrade);
+    expect(['A+', 'A', 'A-', 'B+', 'B']).toContain(result.protectedGrade);
+  });
+
+  it('penalizes sites with terrible ToS;DR Grade E policies', () => {
+    const result = calculatePrivacyGrade({
+      httpsUpgrade: false,
+      trackersFound: 0,
+      trackersBlocked: 0,
+      trackerPrevalence: 0,
+      tosdrGrade: 'E',
+      cookieConsentAutoHandled: false,
+      darkPatternsFound: 0,
+      phishingRisk: false
+    });
+
+    // Grade E imposes significant point deduction
+    expect(result.protectedGrade).not.toBe('A+');
+  });
+
+  it('accurately evaluates a standard commercial e-commerce site with mixed telemetry', () => {
+    const result = calculatePrivacyGrade({
+      httpsUpgrade: false,
+      trackersFound: 6,
+      trackersBlocked: 6,
+      trackerPrevalence: 30,
+      tosdrGrade: 'C',
+      cookieConsentAutoHandled: true,
+      darkPatternsFound: 1,
+      phishingRisk: false
+    });
+
+    expect(result.verdict).toBeDefined();
+    expect(result.reputationGrade).toBeDefined();
+    expect(result.protectedGrade).toBeDefined();
+  });
 });
