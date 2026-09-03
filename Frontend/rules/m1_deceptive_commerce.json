@@ -4,7 +4,7 @@
   "rules": [
     {
       "id": "M1-001",
-      "name": "false_urgency",
+      "name": "checkout_countdown_pressure",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Creating a false sense of urgency",
       "severity": "medium",
@@ -20,7 +20,7 @@
         ],
         "case_insensitive": true
       },
-      "explanation_template": "This site uses aggressive countdown timers or pressure language. Genuine limited stock is fine, but artificial timers are a dark pattern."
+      "explanation_template": "A checkout-related countdown or pressure message is present. Its authenticity cannot be established from the page alone."
     },
     {
       "id": "M1-002",
@@ -130,7 +130,7 @@
     },
     {
       "id": "M1-007",
-      "name": "bait_and_switch",
+      "name": "checkout_price_change_notice",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Bait and switch",
       "severity": "high",
@@ -144,11 +144,11 @@
         ],
         "case_insensitive": true
       },
-      "explanation_template": "The price appears to have changed between the listing and checkout."
+      "explanation_template": "The checkout reports a price change. Review the item and order summary; the scanner cannot determine whether the change was disclosed earlier."
     },
     {
       "id": "M1-008",
-      "name": "drip_pricing",
+      "name": "checkout_fee_disclosure",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Drip pricing",
       "severity": "high",
@@ -161,7 +161,7 @@
         ],
         "case_insensitive": true
       },
-      "explanation_template": "Extra fees appeared at checkout that weren't shown upfront."
+      "explanation_template": "A fee is disclosed in the checkout. The scanner cannot determine whether it was shown before checkout."
     }
   ]
 }

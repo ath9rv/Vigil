@@ -60,6 +60,9 @@ export async function aggregateScores(findings: Finding[], domain: string): Prom
   let totalPenalty = 0;
 
   findings.forEach(finding => {
+    // A review signal is intentionally not a score-bearing verdict. Keep the
+    // toolbar badge in lockstep with the popup's evidence policy.
+    if (finding.reviewStatus !== 'CONFIRMED' && finding.confidenceState !== 'confirmed') return;
     const penalty = SEVERITY_PENALTIES[finding.severity] || 0;
     totalPenalty += penalty;
     

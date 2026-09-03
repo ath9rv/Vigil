@@ -16,6 +16,8 @@ const STORAGE_DEFAULTS: StorageSchema = {
   rules_m5: null,
   vigil_cookie_action: null,
   vigil_tracker_report: null,
+  vigil_tracker_reports: {},
+  scan_coverage: {},
 };
 
 // ─── Typed Storage Access ───────────────────────────────────────────────────

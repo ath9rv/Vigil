@@ -3,6 +3,7 @@ import { getStorageValue, setStorageValue, atomicUpdateStorage } from '../shared
 import { aggregateScores } from './service-worker';
 import { handleFastLaneAlert } from './fast-lane';
 import { performLiveVerification } from './live-scanner';
+import { getBlockedTrackerStats } from '../network/tracker-stats';
 
 /**
  * Registers chrome.runtime.onMessage listeners and dispatches messages to the appropriate handlers.
@@ -39,7 +40,9 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
       const allFindings = [...message.findings, ...liveFindings];
       
       // Fast-lane integration: trigger alert if there is any severe finding
-      const severeFinding = allFindings.find(f => f.severity === 'severe');
+      const severeFinding = allFindings.find(f =>
+        f.severity === 'severe' && (f.reviewStatus === 'CONFIRMED' || f.confidenceState === 'confirmed')
+      );
       if (severeFinding && sender.tab?.id) {
         await handleFastLaneAlert(severeFinding, sender.tab.id);
       }
@@ -137,8 +140,16 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
     }
 
     case 'VIGIL_TRACKER_REPORT': {
-      await setStorageValue('vigil_tracker_report', message.payload);
-      console.log(`[Vigil Service Worker] Tracker report for ${message.pageUrl}: ${message.payload?.trackerCount || 0} trackers found`);
+      const domain = new URL(message.pageUrl).hostname;
+      const blocked = await getBlockedTrackerStats(sender.tab?.id);
+      const report = {
+        ...message.payload,
+        domain,
+        trackersBlocked: blocked.total,
+        capturedAt: Date.now()
+      };
+      await atomicUpdateStorage('vigil_tracker_reports', reports => ({ ...reports, [domain]: report }));
+      console.log(`[Vigil Service Worker] Tracker report for ${domain}: ${report.trackerCount} found, ${report.trackersBlocked} blocked`);
       return { success: true };
     }
 

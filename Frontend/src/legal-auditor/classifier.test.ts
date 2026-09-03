@@ -210,5 +210,96 @@ describe('Legal Auditor Classifier & Precision Negation Engine', () => {
       expect(results[0].category).toBe('GOVERNMENT_DISCLOSURE');
       expect(results[0].rationale).toContain('NOTICE');
     });
+
+    it('detects extreme indemnification and liability shifts', async () => {
+      const indemnClause = {
+        id: 'ind-01',
+        text: 'You agree to indemnify, defend, and hold us harmless from any claims, damages, or legal fees arising from your use of the service.',
+        startOffset: 0,
+        endOffset: 132,
+        context: ''
+      };
+      const results = await executeLocalSLM([indemnClause]);
+      expect(results[0].category).toBe('INDEMNIFICATION');
+      expect(results[0].rationale).toContain('TRICKY');
+    });
+
+    it('detects governing law and venue restrictions', async () => {
+      const govLawClause = {
+        id: 'govlaw-01',
+        text: 'These terms shall be governed by the laws of the State of Delaware, and any disputes will be resolved in the courts of Delaware.',
+        startOffset: 0,
+        endOffset: 128,
+        context: ''
+      };
+      const results = await executeLocalSLM([govLawClause]);
+      expect(results[0].category).toBe('GOVERNING_LAW');
+      expect(results[0].rationale).toContain('NOTICE');
+    });
+
+    it('detects unilateral price changes', async () => {
+      const priceClause = {
+        id: 'price-01',
+        text: 'We reserve the right to change our subscription rates or modify our fees at any time.',
+        startOffset: 0,
+        endOffset: 85,
+        context: ''
+      };
+      const results = await executeLocalSLM([priceClause]);
+      expect(results[0].category).toBe('PRICE_CHANGE');
+      expect(results[0].rationale).toContain('UNFAIR');
+    });
+
+    it('detects auto-renewal traps', async () => {
+      const renewClause = {
+        id: 'renew-01',
+        text: 'Your subscription will automatically renew and you will incur a recurring charge unless you cancel before the billing date.',
+        startOffset: 0,
+        endOffset: 121,
+        context: ''
+      };
+      const results = await executeLocalSLM([renewClause]);
+      expect(results[0].category).toBe('AUTO_RENEWAL');
+      expect(results[0].rationale).toContain('WARNING');
+    });
+
+    it('detects data breach disclaimers', async () => {
+      const breachClause = {
+        id: 'breach-01',
+        text: 'We cannot guarantee absolute security, and shall not be liable for any unauthorized access or data breach.',
+        startOffset: 0,
+        endOffset: 104,
+        context: ''
+      };
+      const results = await executeLocalSLM([breachClause]);
+      expect(results[0].category).toBe('DATA_BREACH');
+      expect(results[0].rationale).toContain('TRICKY');
+    });
+
+    it('detects sensitive data collection', async () => {
+      const dataClause = {
+        id: 'data-01',
+        text: 'We may collect your precise geolocation and biometric data for identity verification purposes.',
+        startOffset: 0,
+        endOffset: 92,
+        context: ''
+      };
+      const results = await executeLocalSLM([dataClause]);
+      expect(results[0].category).toBe('DATA_COLLECTION');
+      expect(results[0].rationale).toContain('WARNING');
+    });
+
+    it('detects browsewrap unilateral modification (termination logic)', async () => {
+      const modClause = {
+        id: 'mod-01',
+        text: 'We reserve the right to modify these terms at any time by posting revisions online.',
+        startOffset: 0,
+        endOffset: 83,
+        context: ''
+      };
+      const results = await executeLocalSLM([modClause]);
+      expect(results[0].category).toBe('TERMINATION');
+      expect(results[0].rationale).toContain('UNFAIR');
+    });
   });
 });

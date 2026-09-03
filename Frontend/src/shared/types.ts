@@ -1,3 +1,5 @@
+import type { ForensicAnalysis } from '../evidence/evidence';
+
 // ─── Module & Severity Enums ────────────────────────────────────────────────
 
 export type ModuleId = 'M1' | 'M2' | 'M3' | 'M4' | 'M5';
@@ -78,6 +80,7 @@ export interface Evidence {
   documentHash?: string;
   excerpt?: string;
   context?: string;
+  forensics?: ForensicAnalysis;
 }
 
 export interface Finding {
@@ -148,8 +151,32 @@ export interface VigilCookieActionMessage {
 
 export interface VigilTrackerReportMessage {
   type: 'VIGIL_TRACKER_REPORT';
-  payload: any;
+  payload: TrackerReport;
   pageUrl: string;
+}
+
+/** A report belongs to one site only; never reuse it for another active tab. */
+export interface TrackerReport {
+  domain: string;
+  capturedAt: number;
+  trackerCount: number;
+  trackersBlocked: number;
+  trackersByCategory: Record<string, number>;
+  trackerDomains: string[];
+  trackingCookies: string[];
+  httpsUpgraded: boolean;
+}
+
+export interface ScanCoverageReport {
+  domain: string;
+  capturedAt: number;
+  dom: boolean;
+  threatIntel: boolean;
+  network: boolean;
+  cookies: boolean;
+  dynamicEvents: boolean;
+  storage: boolean;
+  crossSite: boolean;
 }
 
 export interface VigilCapabilitiesChangedMessage {
@@ -254,7 +281,11 @@ export interface StorageSchema {
     cmp: string | null;
     timestamp: number;
   } | null;
-  vigil_tracker_report?: any | null;
+  /** Legacy single-page report, retained only to read old installations. */
+  vigil_tracker_report?: TrackerReport | null;
+  /** Per-domain tracker reports used by the popup and assessment. */
+  vigil_tracker_reports?: Record<string, TrackerReport>;
+  scan_coverage?: Record<string, ScanCoverageReport>;
   vigil_threat_prefixes?: any;
   vigil_threat_state?: any;
   vigil_threat_confirm_cache?: any;

@@ -21,7 +21,7 @@ describe('Correlation Engine & Finding Normalization', () => {
     expect(normalized.evidence.sourceType).toBe('DOM');
   });
 
-  it('should calculate dimension scores and penalize dark patterns', () => {
+  it('keeps uncorroborated dark-pattern observations out of the score', () => {
     const rawFindings = [
       {
         id: 'f1',
@@ -45,10 +45,20 @@ describe('Correlation Engine & Finding Normalization', () => {
       strictPrivacyEnabled: false
     });
 
-    // M1 mappings should reduce fairness (DARK_PATTERN) score
-    expect(assessment.fairness.score).toBeLessThan(100);
+    // A DOM-only assertion without corroboration remains visible, but is not
+    // a verdict that should damage the site's fairness score.
+    expect(assessment.fairness.score).toBe(100);
     expect(assessment.fairness.evidenceCount).toBe(2);
     expect(assessment.findingCount).toBe(2);
+  });
+
+  it('penalizes corroborated findings', () => {
+    const assessment = correlateFindings([{
+      id: 'f-confirmed', module: 'M1', severity: 'high',
+      confidenceState: 'confirmed', explanation: 'Pre-selected warranty in checkout'
+    }], { pageBehavior: true, threatIntel: true, thirdPartyRequests: false, legalReviewed: false, strictPrivacyEnabled: false });
+
+    expect(assessment.fairness.score).toBeLessThan(100);
   });
 
   it('normalizes M2 threat findings into SECURITY category and heavily docks security dimension', () => {

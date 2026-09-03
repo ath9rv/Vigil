@@ -74,6 +74,10 @@ function calculateDimension(findings: Finding[], category: FindingCategory): Dim
   
   let score = 100;
   for (const f of cats) {
+    // Review-only observations are deliberately visible but never treated as
+    // a verdict against a site. They become score-bearing only when the
+    // scanner has corroborating evidence or threat intelligence confirms it.
+    if (f.reviewStatus !== 'CONFIRMED') continue;
     if (f.severity === 'CRITICAL') score -= 50;
     else if (f.severity === 'HIGH') score -= 30;
     else if (f.severity === 'MEDIUM') score -= 15;

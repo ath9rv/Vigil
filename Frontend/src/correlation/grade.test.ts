@@ -56,7 +56,9 @@ describe('Privacy Grade & Moral Hazard Defense', () => {
   it('demonstrates measurable protection uplift when Vigil shields the user from trackers', () => {
     const result = calculatePrivacyGrade({
       httpsUpgrade: true,
-      trackersFound: 25,
+      // These were blocked before they loaded, so they are attempts rather
+      // than active page resources.
+      trackersFound: 0,
       trackersBlocked: 25,
       trackerPrevalence: 80,
       tosdrGrade: 'B',
@@ -69,6 +71,24 @@ describe('Privacy Grade & Moral Hazard Defense', () => {
     // But protectedGrade after blocking 25 trackers should be significantly improved!
     expect(result.protectedGrade).not.toBe(result.reputationGrade);
     expect(['A+', 'A', 'A-', 'B+', 'B']).toContain(result.protectedGrade);
+  });
+
+  it('does not treat blocked and loaded trackers as the same request', () => {
+    const result = calculatePrivacyGrade({
+      httpsUpgrade: true,
+      trackersFound: 3,
+      trackersBlocked: 7,
+      trackerPrevalence: 60,
+      tosdrGrade: null,
+      cookieConsentAutoHandled: false,
+      darkPatternsFound: 0,
+      phishingRisk: false
+    });
+
+    // Seven separate attempts were blocked, but three trackers still loaded.
+    // The protected grade must retain the remaining exposure.
+    expect(result.reputationGrade).not.toBe(result.protectedGrade);
+    expect(result.protectedGrade).not.toBe('A+');
   });
 
   it('penalizes sites with terrible ToS;DR Grade E policies', () => {

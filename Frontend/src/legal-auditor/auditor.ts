@@ -59,10 +59,19 @@ export async function processLegalDocument(extraction: DocumentExtractionResult)
     const sourceClause = extraction.clauses.find(c => c.id === assessment.clauseId);
     if (!sourceClause) continue; // Safety check
     
+    let mappedSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'INFO' = 'MEDIUM';
+    if (assessment.rationale.startsWith('TRICKY:') || assessment.rationale.startsWith('UNFAIR:') || assessment.rationale.startsWith('WARNING:')) {
+      mappedSeverity = 'HIGH';
+    } else if (assessment.rationale.startsWith('FAIR:') || assessment.rationale.startsWith('HARMLESS:')) {
+      mappedSeverity = 'LOW';
+    } else if (assessment.rationale.startsWith('NOTICE:')) {
+      mappedSeverity = 'MEDIUM';
+    }
+
     findings.push({
       id: crypto.randomUUID(),
       category: 'LEGAL',
-      severity: 'MEDIUM',
+      severity: mappedSeverity,
       confidence: assessment.confidence,
       reviewStatus: 'REVIEW_NEEDED',
       

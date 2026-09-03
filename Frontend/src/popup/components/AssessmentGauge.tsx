@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { SiteAssessment } from '../../correlation/types';
 import { calculatePrivacyGrade } from '../../correlation/grade';
+import type { TrackerReport } from '../../shared/types';
 
 interface Props {
   assessment: SiteAssessment;
+  domain: string;
+  trackerReport: TrackerReport | null;
 }
 
 interface CookieAction {
@@ -13,30 +16,17 @@ interface CookieAction {
   timestamp: number;
 }
 
-interface TrackerReport {
-  trackerCount: number;
-  trackersBlocked: number;
-  trackersByCategory: Record<string, number>;
-  trackerDomains: string[];
-}
-
-export function AssessmentGauge({ assessment }: Props) {
+export function AssessmentGauge({ assessment, domain, trackerReport }: Props) {
   const [cookieAction, setCookieAction] = useState<CookieAction | null>(null);
-  const [trackerReport, setTrackerReport] = useState<TrackerReport | null>(null);
   const [tosdrGrade, setTosdrGrade] = useState<string | null>(null);
 
   useEffect(() => {
     // Pull real cookie action from storage
     chrome.storage.local.get(['vigil_cookie_action'], (res) => {
-      if (res.vigil_cookie_action) {
+      if (res.vigil_cookie_action?.domain === domain) {
         setCookieAction(res.vigil_cookie_action);
-      }
-    });
-
-    // Pull real tracker report from storage  
-    chrome.storage.local.get(['vigil_tracker_report'], (res) => {
-      if (res.vigil_tracker_report) {
-        setTrackerReport(res.vigil_tracker_report);
+      } else {
+        setCookieAction(null);
       }
     });
 
@@ -44,8 +34,8 @@ export function AssessmentGauge({ assessment }: Props) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.url) {
         try {
-          const domain = new URL(tabs[0].url).hostname;
-          const cacheKey = `tosdr_${domain}`;
+          const activeDomain = new URL(tabs[0].url).hostname;
+          const cacheKey = `tosdr_${activeDomain}`;
           chrome.storage.local.get([cacheKey], (res) => {
             if (res[cacheKey]?.data?.rating) {
               setTosdrGrade(res[cacheKey].data.rating);
@@ -54,12 +44,13 @@ export function AssessmentGauge({ assessment }: Props) {
         } catch {}
       }
     });
-  }, []);
+  }, [domain]);
 
-  const trackersFound = trackerReport?.trackerCount ?? Math.max(0, 20 - Math.round(assessment.privacy.score / 5));
-  const trackersBlocked = trackerReport?.trackersBlocked ?? Math.max(0, trackersFound - 2);
+  const trackersFound = trackerReport?.trackerCount ?? 0;
+  const trackersBlocked = trackerReport?.trackersBlocked ?? 0;
   const cookieAutoHandled = cookieAction?.action === 'AUTO_REJECTED';
-  const darkPatternsFound = assessment.correlatedFindings.filter(f => f.category === 'DARK_PATTERN').length;
+  const darkPatternsFound = assessment.correlatedFindings.filter(f => f.category === 'DARK_PATTERN' && f.reviewStatus === 'CONFIRMED').length;
+  const reviewSignals = assessment.correlatedFindings.filter(f => f.reviewStatus === 'REVIEW_NEEDED').length;
   const phishingRisk = assessment.security.score < 50;
   
   const factors = {
@@ -111,8 +102,8 @@ export function AssessmentGauge({ assessment }: Props) {
         return {
           bg: 'bg-green-600 text-white',
           icon: '🛡️',
-          label: 'PROTECTED BY VIGIL',
-          desc: 'Ambient Cognitive Shield active'
+          label: 'NO CONFIRMED HIGH RISK',
+          desc: 'Coverage shown below'
         };
     }
   };
@@ -154,7 +145,19 @@ export function AssessmentGauge({ assessment }: Props) {
         {trackersFound > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-green-600 font-bold">✓</span>
-            <span><b>{trackersBlocked}</b> surveillance trackers neutralized (out of {trackersFound})</span>
+            <span><b>{trackersFound}</b> tracker resource{trackersFound > 1 ? 's' : ''} loaded on this page</span>
+          </div>
+        )}
+        {trackersBlocked > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-green-600 font-bold">✓</span>
+            <span><b>{trackersBlocked}</b> tracker request{trackersBlocked > 1 ? 's' : ''} blocked by Vigil</span>
+          </div>
+        )}
+        {!trackerReport && (
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 font-bold">…</span>
+            <span>Tracker inventory is still being collected for this page</span>
           </div>
         )}
         {cookieAutoHandled && (
@@ -181,16 +184,22 @@ export function AssessmentGauge({ assessment }: Props) {
             <span><b>{darkPatternsFound}</b> deceptive design pattern{darkPatternsFound > 1 ? 's' : ''} flagged</span>
           </div>
         )}
+        {reviewSignals > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-amber-500 font-bold">⌕</span>
+            <span><b>{reviewSignals}</b> observed signal{reviewSignals > 1 ? 's' : ''} needs review and does not affect this score</span>
+          </div>
+        )}
         {phishingRisk && (
           <div className="flex items-center gap-2">
             <span className="text-red-600 font-bold">⛔</span>
             <span className="text-red-700 font-bold">High phishing / credential risk detected on this host</span>
           </div>
         )}
-        {trackersFound === 0 && !cookieAutoHandled && !factors.tosdrGrade && darkPatternsFound === 0 && !phishingRisk && (
+        {trackerReport && trackersFound === 0 && !cookieAutoHandled && !factors.tosdrGrade && darkPatternsFound === 0 && !phishingRisk && (
           <div className="flex items-center gap-2">
             <span className="text-green-600 font-bold">✓</span>
-            <span>All behavioral and network parameters within safe thresholds</span>
+            <span>No confirmed behavioral or network risks observed in this scan</span>
           </div>
         )}
       </div>

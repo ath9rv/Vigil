@@ -121,6 +121,15 @@ export function scoreCookieBehavior(dna: CookieBehavioralDNA): ScoredBehavioralD
     WEIGHTS.beaconCorrelation * beaconFactor +
     WEIGHTS.knownIntel * intelFactor;
 
+  // ─── Security Flags & Transmission Penalties ───────────────────────────────
+  if (dna.sameSite === 'none' && !dna.isSecure) {
+    rawScore += 40;
+    reasons.push('SEVERE: Cookie is permitted in cross-site requests (SameSite=None) but lacks Secure flag, exposing it to interception over HTTP.');
+  } else if (!dna.isSecure) {
+    rawScore += 10;
+    reasons.push('Insecure transmission: Cookie is sent over unencrypted HTTP connections.');
+  }
+
   // ─── Safeguard Dampeners (Preventing False Positives on Auth/CSRF) ─────────
   const lowerName = dna.name.toLowerCase();
   const isAuthLikeName = 

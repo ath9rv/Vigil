@@ -1,13 +1,7 @@
 import { analyzeThirdPartyResources, detectTrackingBehavior } from './third-party-monitor';
+import type { TrackerReport } from '../shared/types';
 
-export interface PageTrackerReport {
-  trackerCount: number;
-  trackersBlocked: number;
-  trackersByCategory: Record<string, number>;
-  trackerDomains: string[];
-  trackingCookies: string[];
-  httpsUpgraded: boolean;
-}
+export type PageTrackerReport = TrackerReport;
 
 /**
  * Runs a full third-party analysis of the current page and reports
@@ -21,6 +15,8 @@ export function runTrackerAnalysis(): PageTrackerReport {
   const isHTTPS = window.location.protocol === 'https:';
   
   const report: PageTrackerReport = {
+    domain: window.location.hostname,
+    capturedAt: Date.now(),
     trackerCount: resources.total,
     trackersBlocked: 0, // Will be filled by service worker from DNR stats
     trackersByCategory: resources.byCategory,

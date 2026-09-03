@@ -18,7 +18,7 @@
     },
     {
       "id": "M2-002",
-      "name": "pre_consent_tracking",
+      "name": "pre_consent_tracking_requires_timing_evidence",
       "module": "M2",
       "statute_ref": "DPDP Act 2023 §6 — Consent requirement; IT Rules 2021 Intermediary Guidelines",
       "severity": "high",
@@ -46,7 +46,7 @@
         ],
         "case_insensitive": true
       },
-      "explanation_template": "Tracking script '{script_name}' was loaded before any consent interaction was detected on this page. Under DPDP Act 2023, personal data processing requires valid prior consent."
+      "explanation_template": "Pre-consent tracking requires timing evidence. Script presence alone is not sufficient to establish a consent violation."
     },
     {
       "id": "M2-003",

@@ -20,7 +20,12 @@ const CANDIDATE_PATTERNS: RegExp[] = [
   /\b(right\s+to\s+(access|delete|erasure|portability)|request\s+deletion|opt[- ]out)\b/i,
   /\b(law\s+enforcement|subpoena|court\s+order|government\s+agenc(y|ies)|legal\s+process)\b/i,
   /\b(retain|retention\s+period)\b.*\b(indefinitely|as\s+long\s+as\s+necessary|years)\b/i,
-  /\b(children|minor|under\s+(13|16|18)|coppa)\b/i
+  /\b(children|minor|under\s+(13|16|18)|coppa)\b/i,
+  /\b(indemnify|hold\s+harmless|defend\s+us)\b/i,
+  /\b(governing\s+law|jurisdiction|venue|resolved\s+in\s+the\s+courts\s+of)\b/i,
+  /\b(prices?|fees?|subscription\s+rates?|charges?)\b.*\b(change|increase|modify)\b/i,
+  /\b(data\s+breach|security\s+breach|unauthorized\s+access)\b/i,
+  /\b(biometric|precise\s+geolocation|health\s+information|financial\s+information)\b/i
 ];
 
 export function filterCandidateClauses(clauses: SegmentedClause[]): SegmentedClause[] {
@@ -269,11 +274,12 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     }
 
     // ─── 12. Unilateral Modification & Termination ────────────────────────────
-    else if (/\bsole\s+discretion\b/i.test(lower) && 
-             /\b(terminat(e|ion)|suspend|without\s+prior\s+notice|modify\s+these\s+terms)\b/i.test(lower)) {
-      category = 'TERMINATION';
-      confidence = 'MEDIUM';
-      rationale = 'UNFAIR: Reserves unconstrained authority to alter terms, suspend accounts, or terminate access without prior notice.';
+    else if (/\b(terminat(e|ion)|suspend|without\s+prior\s+notice|modify\s+these\s+terms|update\s+these\s+terms|reserves?\s+the\s+right\s+to\s+modify)\b/i.test(lower)) {
+      if (/\bsole\s+discretion\b/i.test(lower) || /\bwithout\s+(prior\s+)?notice\b/i.test(lower) || /\b(at\s+any\s+time)\b/i.test(lower)) {
+        category = 'TERMINATION';
+        confidence = 'HIGH';
+        rationale = 'UNFAIR: Reserves unconstrained authority to alter terms, suspend accounts, or terminate access without prior notice.';
+      }
     }
 
     // ─── 13. Broad Liability & Warranty Disclaimers ───────────────────────────
@@ -282,6 +288,53 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       category = 'LIABILITY';
       confidence = 'MEDIUM';
       rationale = 'NOTICE: Broad disclaimer of warranties and standard cap on liability for service interruptions or platform downtime.';
+    }
+
+    // ─── 14. Auto-Renewal & Negative Option Billing ───────────────────────────
+    else if (/\b(auto[- ]renew|automatic\s+renewal|recurring\s+charge|automatically\s+renew)\b/i.test(lower)) {
+      category = 'AUTO_RENEWAL';
+      confidence = 'HIGH';
+      rationale = 'WARNING: Subscription automatically renews with recurring charges unless affirmatively canceled.';
+    }
+
+    // ─── 15. Indemnification ──────────────────────────────────────────────────
+    else if (/\b(indemnify|hold\s+harmless|defend\s+us)\b/i.test(lower)) {
+      category = 'INDEMNIFICATION';
+      confidence = 'HIGH';
+      rationale = 'TRICKY: Extreme liability shift. You agree to pay the company\'s legal fees and defend them in court if they are sued due to your usage.';
+    }
+
+    // ─── 16. Governing Law & Venue ────────────────────────────────────────────
+    else if (/\b(governing\s+law|jurisdiction|venue|resolved\s+in\s+the\s+courts\s+of|shall\s+be\s+governed\s+by)\b/i.test(lower)) {
+      category = 'GOVERNING_LAW';
+      confidence = 'MEDIUM';
+      rationale = 'NOTICE: Forces disputes to be resolved under the laws and courts of a specific, potentially distant jurisdiction.';
+    }
+
+    // ─── 17. Unilateral Price Changes ─────────────────────────────────────────
+    else if (/\b(prices?|fees?|subscription\s+rates?|charges?)\b/i.test(lower) && /\b(change|increase|modify|at\s+any\s+time|sole\s+discretion)\b/i.test(lower)) {
+      category = 'PRICE_CHANGE';
+      confidence = 'HIGH';
+      rationale = 'UNFAIR: Platform reserves the right to increase subscription fees or prices at any time without affirmative re-consent.';
+    }
+
+    // ─── 18. Data Breach Notification & Liability ──────────────────────────────
+    else if (/\b(data\s+breach|security\s+breach|unauthorized\s+access|security\s+incident)\b/i.test(lower)) {
+      category = 'DATA_BREACH';
+      if (/\b(shall\s+not\s+be\s+liable|no\s+guarantee|cannot\s+guarantee)\b/i.test(lower)) {
+        confidence = 'HIGH';
+        rationale = 'TRICKY: Disclaims liability for unauthorized access or data breaches involving your personal information.';
+      } else {
+        confidence = 'MEDIUM';
+        rationale = 'NOTICE: Defines procedures or disclaimers regarding security incidents and data breach notifications.';
+      }
+    }
+
+    // ─── 19. Sensitive Data Collection ─────────────────────────────────────────
+    else if (/\b(biometric|precise\s+geolocation|health\s+information|financial\s+information)\b/i.test(lower)) {
+      category = 'DATA_COLLECTION';
+      confidence = 'HIGH';
+      rationale = 'WARNING: Explicitly collects highly sensitive personal data such as biometrics, precise location, or health information.';
     }
 
     if (category) {

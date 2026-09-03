@@ -14,6 +14,7 @@ import { correlateFindings } from '../correlation/correlate';
 import { DetailedCookie, classifyCookie, parseDocumentCookies } from '../network/cookie-classifier';
 import { recordCookieObservation } from '../network/behavioral-store';
 import { Finding } from '../evidence/evidence';
+import type { TrackerReport } from '../shared/types';
 
 type NavigationTab = 'OVERVIEW' | 'COOKIES' | 'LEGAL';
 
@@ -35,6 +36,7 @@ export default function App() {
   const [cookies, setCookies] = useState<DetailedCookie[]>([]);
   const [trackersBlockedCount, setTrackersBlockedCount] = useState<number>(0);
   const [thirdPartyTrackers, setThirdPartyTrackers] = useState<{ domain: string; category: string; count: number }[]>([]);
+  const [trackerReport, setTrackerReport] = useState<TrackerReport | null>(null);
   const [isAuditing, setIsAuditing] = useState<boolean>(false);
 
   // Helper to fetch cookies via chrome.cookies or content script fallback
@@ -201,16 +203,21 @@ export default function App() {
         loadCookiesForDomain(domain, targetTab.id);
 
         // 4. Load findings cache for active tab domain
-        chrome.storage.local.get(['findings_cache', 'vigil_tracker_report'], (res) => {
+        chrome.storage.local.get(['findings_cache', 'vigil_tracker_reports', 'vigil_tracker_report'], (res) => {
           if (res.findings_cache && res.findings_cache[domain]) {
             setRawFindings(res.findings_cache[domain]);
           } else {
             setRawFindings([]);
           }
-          if (res.vigil_tracker_report) {
-            setTrackersBlockedCount(res.vigil_tracker_report.trackerCount || 0);
-            if (res.vigil_tracker_report.trackerDomains) {
-              const mapped = (res.vigil_tracker_report.trackerDomains as string[]).map(d => ({
+          // Do not display a previous tab's report. Old single-report storage
+          // is accepted only when it declares that it belongs to this domain.
+          const report: TrackerReport | null = res.vigil_tracker_reports?.[domain]
+            || (res.vigil_tracker_report?.domain === domain ? res.vigil_tracker_report : null);
+          setTrackerReport(report);
+          if (report) {
+            setTrackersBlockedCount(report.trackersBlocked || 0);
+            if (report.trackerDomains) {
+              const mapped = report.trackerDomains.map(d => ({
                 domain: d,
                 category: 'TRACKER',
                 count: 1
@@ -545,7 +552,7 @@ export default function App() {
       <main className="flex-1 p-4 overflow-y-auto pb-8">
         {activeTab === 'OVERVIEW' && (
           <>
-            <AssessmentGauge assessment={assessment} />
+            <AssessmentGauge assessment={assessment} domain={currentDomain} trackerReport={trackerReport} />
 
             {/* Feature Triggers */}
             <div className="grid grid-cols-2 gap-2 mt-4 mb-5">

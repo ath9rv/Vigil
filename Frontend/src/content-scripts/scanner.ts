@@ -4,6 +4,14 @@ import { getStorageValue, setStorageValue } from '../shared/storage';
 import { loadM1Rules, loadM2Rules, loadM3Rules, loadM4Rules, loadM5Rules } from './rules-loader';
 import { isRelevantForM2 } from './relevance-gate';
 import { showAmbientAlert } from './ambient-shield';
+import {
+  extractActivityCounter,
+  hasCommerceContext,
+  isFakeCaptchaNotificationScam,
+  isRecognizedIdentityProvider,
+  isVisuallySuppressedComparedToAccept,
+  sameSiteOrSubdomain
+} from './finding-quality';
 
 // ─── Levenshtein for M2-001 ─────────────────────────────────────────────────
 
@@ -71,6 +79,7 @@ function querySelectorAllDeep(selector: string, root: Document | Element | Shado
 }
 
 const repeatedModals = new WeakSet<Element>();
+const activityCounterHistory = new WeakMap<Element, number>();
 
 // ─── Main Scanner ───────────────────────────────────────────────────────────
 
@@ -96,7 +105,13 @@ export async function scanPage(): Promise<void> {
   const matchedRuleIds = new Set<string>(); // ONE finding per rule per page
   const findingElements = new Map<string, Element>(); // Map finding ID to actual DOM element for console
 
-  const addFinding = (rule: Rule, element: Element, extras: Record<string, string> = {}) => {
+  const addFinding = (
+    rule: Rule,
+    element: Element,
+    extras: Record<string, string> = {},
+    confidenceState: Finding['confidenceState'] = 'under_review',
+    reviewStatus: Finding['reviewStatus'] = 'REVIEW_NEEDED'
+  ) => {
     // Per-rule dedup: only the FIRST match for each rule gets reported
     if (matchedRuleIds.has(rule.id)) return;
     matchedRuleIds.add(rule.id);
@@ -118,7 +133,8 @@ export async function scanPage(): Promise<void> {
       ruleName: rule.name,
       module: rule.module,
       severity: rule.severity,
-      confidenceState: 'under_review',
+      confidenceState,
+      reviewStatus,
       statuteRef: rule.statute_ref,
       explanation,
       elementSelector: selectorPath,
@@ -134,7 +150,9 @@ export async function scanPage(): Promise<void> {
   };
 
   // ─── General Rules (M1, M3, M4, M5) ───────────────────────────────────────
-  const generalRules = [...m1Rules, ...m3Rules, ...m4Rules, ...m5Rules];
+  const customEvidenceRules = new Set(['M1-001', 'M1-004', 'M1-005', 'M1-007', 'M1-008', 'M4-002', 'M5-001']);
+  const generalRules = [...m1Rules, ...m3Rules, ...m4Rules, ...m5Rules]
+    .filter(rule => !customEvidenceRules.has(rule.id));
   for (const rule of generalRules) {
     if (matchedRuleIds.has(rule.id)) continue;
 
@@ -205,9 +223,10 @@ export async function scanPage(): Promise<void> {
           }
           
           if (textMatch) {
-            const style = window.getComputedStyle(el);
-            if (parseFloat(style.opacity) < (check.threshold || 0.5) || style.display === 'none' || style.visibility === 'hidden') {
-              addFinding(rule, el);
+            const container = el.closest('[role="dialog"], [class*="modal"], [class*="cookie"], [class*="consent"]');
+            const buttons = container ? querySelectorAllDeep('button, [role="button"], input[type="button"]', container) : [];
+            if (buttons.length > 0 && isVisuallySuppressedComparedToAccept(el, buttons)) {
+              addFinding(rule, el, {}, 'confirmed', 'CONFIRMED');
             }
           }
         } else if (check.type === 'repeated_modal') {
@@ -231,11 +250,50 @@ export async function scanPage(): Promise<void> {
     }
   }
 
+  // ─── Evidence-gated behavioural signals ────────────────────────────────
+  // These signals are useful nitpicks, but the DOM cannot prove intent or
+  // whether an earlier price was disclosed. Keep them out of the trust score.
+  const urgencyRule = m1Rules.find(rule => rule.id === 'M1-001');
+  if (urgencyRule) {
+    const candidates = querySelectorAllDeep(urgencyRule.match.target);
+    const matchesUrgency = urgencyRule.match.text_patterns?.map(pattern => new RegExp(pattern, 'i')) || [];
+    const element = candidates.find(candidate =>
+      hasCommerceContext(candidate) && matchesUrgency.some(pattern => pattern.test(candidate.textContent || ''))
+    );
+    if (element) addFinding(urgencyRule, element, {}, 'under_review', 'REVIEW_NEEDED');
+  }
+
+  const autoplayRule = m4Rules.find(rule => rule.id === 'M4-002');
+  if (autoplayRule && document.querySelector('video[autoplay], audio[autoplay]')) {
+    const patterns = autoplayRule.match.text_patterns?.map(pattern => new RegExp(pattern, 'i')) || [];
+    const element = querySelectorAllDeep(autoplayRule.match.target)
+      .find(candidate => patterns.some(pattern => pattern.test(candidate.textContent || '')));
+    if (element) addFinding(autoplayRule, element, {}, 'under_review', 'REVIEW_NEEDED');
+  }
+
+  const activityRule = m5Rules.find(rule => rule.id === 'M5-001');
+  if (activityRule) {
+    const element = querySelectorAllDeep('span, div, p').find(candidate => {
+      const count = extractActivityCounter(candidate.textContent || '');
+      if (count === null) return false;
+      const previous = activityCounterHistory.get(candidate);
+      activityCounterHistory.set(candidate, count);
+      return previous !== undefined && previous !== count;
+    });
+    if (element) addFinding(activityRule, element, {}, 'under_review', 'REVIEW_NEEDED');
+  }
+
   // ─── M2: Always runs (security threats matter everywhere) ─────────────
   let m2001Match = false;
   if (isRelevantForM2()) {
     for (const rule of m2Rules) {
       if (matchedRuleIds.has(rule.id)) continue;
+
+      // Script presence alone cannot establish that processing happened before
+      // consent: a banner may be decorative, consent may be persisted, and a
+      // content script cannot reconstruct an earlier navigation.  We retain a
+      // clearly-labelled review observation below instead of alleging a breach.
+      if (rule.id === 'M2-002') continue;
 
       if (rule.id === 'M2-001') {
         // Skip if we're ON a known domain (exact match = legit)
@@ -339,24 +397,29 @@ export async function scanPage(): Promise<void> {
         if (action && action.startsWith('http')) {
           try {
             const actionUrl = new URL(action);
-            if (actionUrl.hostname !== window.location.hostname) {
+            if (!sameSiteOrSubdomain(window.location.hostname, actionUrl.hostname)
+              && !isRecognizedIdentityProvider(actionUrl.hostname)) {
               matchedRuleIds.add('M2-005');
-              showAmbientAlert({
-                id: 'm2-005-alert',
-                type: 'CRITICAL_SECURITY',
-                title: 'Phishing Warning: External Form Action',
-                message: `This login form submits your credentials to an external host (${actionUrl.hostname}) instead of ${window.location.hostname}.`,
-                details: `Action URL: ${actionUrl.href}`
-              });
+              const corroborated = m2001Match || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(actionUrl.hostname) || actionUrl.protocol === 'http:';
+              if (corroborated) {
+                showAmbientAlert({
+                  id: 'm2-005-alert', type: 'CRITICAL_SECURITY', title: 'Credential submission warning',
+                  message: `This password form submits to ${actionUrl.hostname}, which is not part of ${window.location.hostname}.`,
+                  details: `Action URL: ${actionUrl.href}`
+                });
+              }
               findings.push({
                 id: crypto.randomUUID(),
                 ruleId: 'M2-005',
                 ruleName: 'form_action_mismatch',
                 module: 'M2',
-                severity: 'severe',
-                confidenceState: 'confirmed',
+                severity: corroborated ? 'severe' : 'medium',
+                confidenceState: corroborated ? 'confirmed' : 'under_review',
+                reviewStatus: corroborated ? 'CONFIRMED' : 'REVIEW_NEEDED',
                 statuteRef: '',
-                explanation: 'Login form submits data to a different domain. This is a strong phishing indicator.',
+                explanation: corroborated
+                  ? 'A password form submits to an unrelated, insecure, or lookalike host. This is a strong credential-theft indicator.'
+                  : 'This password form submits to a different organisation. Review the destination before entering credentials; some legitimate services use an external identity provider.',
                 elementSelector: generateSelector(form),
                 elementRect: form.getBoundingClientRect(),
                 pageUrl: window.location.href,
@@ -371,7 +434,7 @@ export async function scanPage(): Promise<void> {
     }
 
     // M2-006: Urgency Language Detector
-    if (!matchedRuleIds.has('M2-006') && passwordInputs.length > 0) {
+    if (!matchedRuleIds.has('M2-006') && passwordInputs.length > 0 && m2001Match) {
       const text = document.body.textContent || '';
       const urgencyPatterns = [
         /your account (has been|will be|is) (suspended|locked|compromised|restricted)/i,
@@ -396,6 +459,7 @@ export async function scanPage(): Promise<void> {
           module: 'M2',
           severity: 'high',
           confidenceState: 'confirmed',
+          reviewStatus: 'CONFIRMED',
           statuteRef: '',
           explanation: 'Urgency language detected alongside a login form. Phishing sites often use urgency to manipulate users.',
           elementSelector: 'body',
@@ -409,7 +473,7 @@ export async function scanPage(): Promise<void> {
     // M2-007: Fake CAPTCHA / Notification Scam
     if (!matchedRuleIds.has('M2-007')) {
       const text = document.body.textContent || '';
-      if (/verify you are (human|not a robot)/i.test(text)) {
+      if (isFakeCaptchaNotificationScam(text)) {
         matchedRuleIds.add('M2-007');
         findings.push({
           id: crypto.randomUUID(),
@@ -419,7 +483,7 @@ export async function scanPage(): Promise<void> {
           severity: 'high',
           confidenceState: 'under_review',
           statuteRef: '',
-          explanation: 'Fake CAPTCHA pattern detected. This may trick you into enabling notifications or downloading malware.',
+          explanation: 'CAPTCHA copy is paired with instructions to grant notifications or run a command, a known notification-scam pattern.',
           elementSelector: 'body',
           elementRect: { top: 0, left: 0, width: 0, height: 0 },
           pageUrl: window.location.href,
@@ -429,7 +493,7 @@ export async function scanPage(): Promise<void> {
     }
   }
 
-  // ─── Illegal Pre-Consent Tracking (M3 Extension) ─────────────────────────
+  // ─── Tracking while consent UI is visible ─────────────────────────────────
   const trackers = ['_ga', '_fbp', '_gid', '_tt_enable_cookie', 'fr', 'tr', 'ads'];
   const hasTrackers = trackers.some(t => document.cookie.includes(t + '='));
   const hasBanner = querySelectorAllDeep('[id*="cookie"], [class*="cookie"], [id*="consent"], [class*="consent"]').length > 0;
@@ -439,12 +503,13 @@ export async function scanPage(): Promise<void> {
     findings.push({
       id,
       ruleId: 'M3-003',
-      ruleName: 'illegal_pre_consent_cookies',
+      ruleName: 'tracking_with_visible_consent_ui',
       module: 'M3',
-      severity: 'high',
-      confidenceState: 'confirmed',
-      statuteRef: 'DPDP Act / GDPR — Pre-consent tracking',
-      explanation: 'The site dropped marketing/tracking cookies onto your browser BEFORE you clicked accept on the cookie banner. This is illegal.',
+      severity: 'low',
+      confidenceState: 'under_review',
+      reviewStatus: 'REVIEW_NEEDED',
+      statuteRef: 'DPDP Act 2023 §6 — consent timing requires verification',
+      explanation: 'Tracking cookies are present while a consent interface is visible. This scan cannot establish whether they were set before consent or persisted from an earlier visit.',
       elementSelector: 'html',
       elementRect: { top: 0, left: 0, width: 0, height: 0 },
       pageUrl: window.location.href,

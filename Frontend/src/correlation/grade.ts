@@ -58,8 +58,12 @@ export function calculatePrivacyGrade(factors: PrivacyGrade['factors']): Privacy
   const dpPenalty = Math.min(factors.darkPatternsFound * 10, 40);
   rawScore -= dpPenalty;
 
-  // Trackers found penalty
-  rawScore -= Math.min(factors.trackersFound * 2, 30);
+  // A loaded tracker and a DNR-blocked request are different observations.
+  // Both show that the site attempted surveillance, while only loaded trackers
+  // remain exposure after Vigil's protection. Do not subtract one from the
+  // other: they cannot be paired reliably from browser feedback alone.
+  const trackerAttempts = factors.trackersFound + factors.trackersBlocked;
+  rawScore -= Math.min(trackerAttempts * 2, 30);
   if (factors.trackerPrevalence > 50) rawScore -= 10;
 
   // ToS;DR penalty
@@ -72,7 +76,7 @@ export function calculatePrivacyGrade(factors: PrivacyGrade['factors']): Privacy
   // Rule: Blocking trackers CANNOT elevate an inherently fraudulent/phishing site!
   let protectedScore = 100;
 
-  const activeTrackers = Math.max(0, factors.trackersFound - factors.trackersBlocked);
+  const activeTrackers = factors.trackersFound;
   protectedScore -= activeTrackers * 2;
 
   // Even with mitigations, active deceptive patterns cannot be erased

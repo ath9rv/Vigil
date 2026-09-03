@@ -101,7 +101,7 @@ export interface TrackerStats {
 /**
  * Retrieves statistics about blocked trackers from declarativeNetRequest.
  */
-export async function getBlockedTrackerStats(): Promise<TrackerStats> {
+export async function getBlockedTrackerStats(tabId?: number): Promise<TrackerStats> {
   const stats: TrackerStats = {
     total: 0,
     categories: {
@@ -122,6 +122,9 @@ export async function getBlockedTrackerStats(): Promise<TrackerStats> {
       // For detailed counting, we might need to map rule IDs to categories, 
       // but if we just want raw rule hits:
       for (const rule of matchedRules.rulesMatchedInfo) {
+        // DNR feedback is global. Where Chromium provides a tab ID, do not
+        // attribute another tab's blocked request to the page being assessed.
+        if (tabId !== undefined && rule.tabId !== undefined && rule.tabId !== tabId) continue;
         const id = rule.rule.ruleId;
         
         // Match rule ID to category based on our tracker_blocklist.json logic

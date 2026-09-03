@@ -15,7 +15,9 @@ export type LegalClauseCategory =
   | 'PRICE_CHANGE' 
   | 'TERMINATION' 
   | 'LIABILITY' 
-  | 'GOVERNING_LAW';
+  | 'GOVERNING_LAW'
+  | 'INDEMNIFICATION'
+  | 'DATA_BREACH';
 
 export interface SegmentedClause {
   id: string; // Deterministic ID, e.g., 'CLAUSE_12'

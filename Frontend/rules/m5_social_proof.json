@@ -4,7 +4,7 @@
   "rules": [
     {
       "id": "M5-001",
-      "name": "monotonic_counters",
+      "name": "changing_activity_counter",
       "module": "M5",
       "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
       "severity": "medium",
@@ -18,7 +18,7 @@
         ],
         "case_insensitive": true
       },
-      "explanation_template": "Displays metrics claiming high current activity. These are often artificially generated to create herd-mentality pressure."
+      "explanation_template": "An activity counter changed while this page was open. This is a pressure signal, not proof that the underlying activity is fabricated."
     },
     {
       "id": "M5-002",
