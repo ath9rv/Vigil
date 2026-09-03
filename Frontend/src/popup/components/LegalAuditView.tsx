@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Finding } from '../../evidence/evidence';
 import { getPlainEnglishLegalExplanation } from '../../legal-auditor/classifier';
 
@@ -8,6 +8,7 @@ interface Props {
   isAuditing: boolean;
   onRunAudit: (url: string) => void;
   domain: string;
+  currentUrl?: string;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -26,10 +27,16 @@ const CATEGORY_ICONS: Record<string, string> = {
   LIABILITY: '📜'
 };
 
-export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRunAudit, domain }: Props) {
+export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRunAudit, domain, currentUrl }: Props) {
   const [selectedDocUrl, setSelectedDocUrl] = useState<string>(discoveredDocs[0]?.url || '');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('ALL');
   const [expandedClauseId, setExpandedClauseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedDocUrl && discoveredDocs.length > 0) {
+      setSelectedDocUrl(discoveredDocs[0].url);
+    }
+  }, [discoveredDocs, selectedDocUrl]);
 
   // Derive counts
   const trickyCount = legalFindings.filter(f => f.interpretation.includes('TRICKY') || f.interpretation.includes('WARNING') || f.interpretation.includes('UNFAIR')).length;
@@ -70,9 +77,9 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
             </select>
             
             <button
-              onClick={() => onRunAudit(selectedDocUrl || discoveredDocs[0]?.url)}
+              onClick={() => onRunAudit(selectedDocUrl || discoveredDocs[0]?.url || currentUrl || domain)}
               disabled={isAuditing}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
             >
               {isAuditing ? (
                 <>
@@ -91,9 +98,9 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
               No direct policy links found in footer. You can audit the current page directly.
             </p>
             <button
-              onClick={() => onRunAudit(window.location.href)}
+              onClick={() => onRunAudit(currentUrl || domain)}
               disabled={isAuditing}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors"
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
             >
               {isAuditing ? 'Analyzing Page...' : '🔍 Audit Current Page'}
             </button>
