@@ -11,7 +11,7 @@ export interface CorrectionSubmission {
   proposedVerdict: "FAIR" | "WARNING";
   domain: string;
   sourceUrl: string;            // Needed for backend verification crawl
-  installationId: string;       // Stable, anonymous ID to build Sybil-resistant reputation
+  reputationId: string;         // Bounded, 30-day rotating ID (not permanent)
   submittedAt: number;
 }
 
@@ -21,7 +21,7 @@ export interface PatternLedgerEntry {
   category: "FAIR" | "WARNING" | "REVIEW";
   evidenceCount: number;
   distinctDomains: Set<string>;
-  distinctInstallations: Set<string>;
+  distinctReputationIds: Set<string>;
   firstSeen: number;
   lastConfirmed: number;
   status: "review" | "auto-resolved";
@@ -31,7 +31,7 @@ export interface PatternLedgerEntry {
  * Normalizes a legal clause to remove PII, specific company names, or dates,
  * leaving only the structural legal language.
  */
-export function normalizeClauseSignature(rawText: string): string {
+export function normalizeClauseSignature(rawText: string, siteName?: string): string {
   let sig = rawText.toLowerCase();
   
   // Strip dates, emails, and URLs to prevent PII leakage, but RETAIN numbers 
@@ -40,11 +40,32 @@ export function normalizeClauseSignature(rawText: string): string {
   sig = sig.replace(/\b[\w.-]+@[\w.-]+\.\w+\b/g, '<EMAIL>');
   sig = sig.replace(/https?:\/\/[^\s]+/g, '<URL>');
   
+  if (siteName) {
+    sig = sig.replace(new RegExp(`\\b${siteName.toLowerCase()}\\b`, 'g'), '<ORG>');
+  }
+  
   // Strip common filler and punctuation for a stable hash
+  // A true NER pass is needed eventually for textual dates ("March 2024")
   sig = sig.replace(/[.,;:'"()\[\]{}]/g, '');
   sig = sig.replace(/\s+/g, ' ').trim();
   
   return sig;
+}
+
+const ROTATION_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
+
+async function getReputationId(): Promise<string> {
+  const { vigil_rep_id, vigil_rep_id_created } = await chrome.storage.local.get([
+    "vigil_rep_id", "vigil_rep_id_created"
+  ]);
+  const expired = !vigil_rep_id_created || Date.now() - vigil_rep_id_created > ROTATION_INTERVAL_MS;
+
+  if (expired) {
+    const fresh = crypto.randomUUID();
+    await chrome.storage.local.set({ vigil_rep_id: fresh, vigil_rep_id_created: Date.now() });
+    return fresh; // Old ID's history becomes unlinkable to the new one going forward
+  }
+  return vigil_rep_id;
 }
 
 /**
@@ -55,29 +76,27 @@ export async function submitCorrection(
   rawClauseText: string, 
   domain: string, 
   sourceUrl: string,
-  proposedVerdict: "FAIR" | "WARNING"
+  proposedVerdict: "FAIR" | "WARNING",
+  siteName?: string
 ): Promise<void> {
-  // Retrieve or generate a stable, anonymous installation ID.
-  // A stable ID is mathematically required for the backend to build a Sybil-resistant
-  // reputation score (install age, past fraud flags) for this client.
-  const storage = await chrome.storage.local.get('vigil_installation_id');
-  let installationId = storage.vigil_installation_id;
-  if (!installationId) {
-    installationId = crypto.randomUUID();
-    await chrome.storage.local.set({ vigil_installation_id: installationId });
+  const { vigil_telemetry_enabled } = await chrome.storage.local.get("vigil_telemetry_enabled");
+  
+  // Explicit consent gate: defaults to OFF. Vigil doesn't send data without permission.
+  if (!vigil_telemetry_enabled) {
+    return;
   }
 
+  const reputationId = await getReputationId();
+
   const submission: CorrectionSubmission = {
-    clauseSignature: normalizeClauseSignature(rawClauseText),
+    clauseSignature: normalizeClauseSignature(rawClauseText, siteName),
     proposedVerdict,
     domain,
     sourceUrl,
-    installationId,
+    reputationId,
     submittedAt: Date.now()
   };
 
-  // Here, we would dispatch to the backend:
+  // Here, we would dispatch to the backend (currently stubbed):
   // await fetch('https://api.vigil-privacy.org/v1/consensus/submit', { ... })
-  
-  console.log('Vigil Telemetry: Submitted community correction for consensus pipeline', submission);
 }
