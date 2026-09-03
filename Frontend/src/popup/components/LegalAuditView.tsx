@@ -31,12 +31,74 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
   const [selectedDocUrl, setSelectedDocUrl] = useState<string>(discoveredDocs[0]?.url || '');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('ALL');
   const [expandedClauseId, setExpandedClauseId] = useState<string | null>(null);
+  const [locatingFindingId, setLocatingFindingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedDocUrl && discoveredDocs.length > 0) {
       setSelectedDocUrl(discoveredDocs[0].url);
     }
   }, [discoveredDocs, selectedDocUrl]);
+
+  const handleLocateOnPage = (finding: Finding) => {
+    const excerpt = finding.evidence?.excerpt || finding.interpretation;
+    const sourceUrl = finding.evidence?.sourceUrl;
+    const ruleName = finding.ruleName;
+
+    setLocatingFindingId(finding.id);
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs && tabs[0];
+      if (!activeTab || !activeTab.id) {
+        setLocatingFindingId(null);
+        return;
+      }
+
+      const activeUrl = activeTab.url || '';
+      const isAlreadyOnSource = Boolean(sourceUrl && (
+        activeUrl === sourceUrl ||
+        activeUrl.split('#')[0] === sourceUrl.split('#')[0] ||
+        activeUrl.split('?')[0] === sourceUrl.split('?')[0]
+      ));
+
+      if (isAlreadyOnSource) {
+        chrome.tabs.sendMessage(activeTab.id, {
+          type: 'VIGIL_HIGHLIGHT_TEXT',
+          text: excerpt,
+          ruleName
+        });
+        setTimeout(() => setLocatingFindingId(null), 1500);
+      } else if (sourceUrl && sourceUrl.startsWith('http')) {
+        // Navigate active tab to source policy page, then scroll and highlight as soon as it loads!
+        chrome.tabs.update(activeTab.id, { url: sourceUrl }, (updatedTab) => {
+          if (updatedTab?.id) {
+            const listener = (tabId: number, info: chrome.tabs.TabChangeInfo) => {
+              if (tabId === updatedTab.id && info.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+                setTimeout(() => {
+                  chrome.tabs.sendMessage(tabId, {
+                    type: 'VIGIL_HIGHLIGHT_TEXT',
+                    text: excerpt,
+                    ruleName
+                  });
+                  setLocatingFindingId(null);
+                }, 800);
+              }
+            };
+            chrome.tabs.onUpdated.addListener(listener);
+          } else {
+            setLocatingFindingId(null);
+          }
+        });
+      } else {
+        chrome.tabs.sendMessage(activeTab.id, {
+          type: 'VIGIL_HIGHLIGHT_TEXT',
+          text: excerpt,
+          ruleName
+        });
+        setTimeout(() => setLocatingFindingId(null), 1500);
+      }
+    });
+  };
 
   // Derive counts
   const trickyCount = legalFindings.filter(f => f.interpretation.includes('TRICKY') || f.interpretation.includes('WARNING') || f.interpretation.includes('UNFAIR')).length;
@@ -233,20 +295,19 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
                     <div className="flex justify-between items-center pt-1 text-[10px] text-gray-400">
                       <span>Source: {finding.evidence?.sourceType || 'DOCUMENT'}</span>
                       <button 
-                        onClick={() => {
-                          const excerpt = finding.evidence?.excerpt || finding.interpretation;
-                          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                            if (tabs[0]?.id) {
-                              chrome.tabs.sendMessage(tabs[0].id, {
-                                type: 'VIGIL_HIGHLIGHT_TEXT',
-                                text: excerpt
-                              });
-                            }
-                          });
-                        }}
-                        className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-bold text-[10px]"
+                        onClick={() => handleLocateOnPage(finding)}
+                        disabled={locatingFindingId === finding.id}
+                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 text-blue-700 font-bold rounded text-[10px] transition-colors flex items-center gap-1 shadow-xs"
                       >
-                        Locate on Page
+                        {locatingFindingId === finding.id ? (
+                          <>
+                            <span className="animate-spin text-[10px]">⏳</span> Locating...
+                          </>
+                        ) : (
+                          <>
+                            <span>🎯</span> Locate on Page
+                          </>
+                        )}
                       </button>
                     </div>
                     </div>

@@ -71,58 +71,110 @@ chrome.runtime.onMessage.addListener((message) => {
   } else if (message.type === 'CLEAR_HIGHLIGHTS') {
     clearHighlights();
   } else if (message.type === 'VIGIL_HIGHLIGHT_TEXT') {
-    // Find text on page and scroll to it
-    const text = message.text;
-    if (!text) return;
-    
-    // Simple window.find (native browser text search)
-    // Clear selection first
-    window.getSelection()?.removeAllRanges();
-    const win = window as any;
-    const found = typeof win.find === 'function' ? win.find(text, false, false, true, false, true, false) : false;
-    
-    if (!found && typeof win.find === 'function') {
-      // Fallback: try finding a shorter substring if it's too long
-      const excerpt = text.substring(0, 100);
-      win.find(excerpt, false, false, true, false, true, false);
-    }
-    
-    // Highlight the selection
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      
-      const overlay = document.createElement('div');
-      overlay.style.position = 'absolute';
-      overlay.style.top = `${rect.top + window.scrollY - 5}px`;
-      overlay.style.left = `${rect.left + window.scrollX - 5}px`;
-      overlay.style.width = `${rect.width + 10}px`;
-      overlay.style.height = `${rect.height + 10}px`;
-      overlay.style.backgroundColor = 'rgba(255, 215, 0, 0.4)'; // Golden highlight
-      overlay.style.border = '2px solid orange';
-      overlay.style.borderRadius = '4px';
-      overlay.style.zIndex = '2147483647';
-      overlay.style.pointerEvents = 'none';
-      overlay.style.transition = 'opacity 2s';
-      
-      document.body.appendChild(overlay);
-      overlays.push(overlay);
-      
-      // Scroll into view
-      window.scrollTo({
-        top: rect.top + window.scrollY - (window.innerHeight / 2),
-        behavior: 'smooth'
-      });
-      
-      // Fade out after 5 seconds
-      setTimeout(() => {
-        overlay.style.opacity = '0';
-        setTimeout(() => overlay.remove(), 2000);
-      }, 5000);
-    }
+    locateAndHighlightText(message.text, message.ruleName);
   }
 });
+
+function locateAndHighlightText(rawText: string, ruleName?: string): boolean {
+  if (!rawText || !rawText.trim()) return false;
+
+  const cleanTarget = rawText.trim().replace(/\s+/g, ' ');
+  const targetSnippet = cleanTarget.substring(0, Math.min(50, cleanTarget.length)).toLowerCase();
+
+  // 1. Try DOM TreeWalker (most reliable across multi-element nodes)
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let currentNode: Node | null;
+  let matchedElement: HTMLElement | null = null;
+
+  while ((currentNode = walker.nextNode())) {
+    const nodeText = (currentNode.textContent || '').replace(/\s+/g, ' ').toLowerCase();
+    if (nodeText.includes(targetSnippet) || (targetSnippet.length > 25 && targetSnippet.includes(nodeText) && nodeText.length > 20)) {
+      matchedElement = currentNode.parentElement;
+      break;
+    }
+  }
+
+  // 2. If not found via exact snippet, search paragraphs / list items for high word overlap
+  if (!matchedElement) {
+    const searchWords = cleanTarget.toLowerCase().split(' ').filter(w => w.length > 4).slice(0, 6);
+    if (searchWords.length >= 2) {
+      const candidates = Array.from(document.querySelectorAll('p, li, div, dt, dd, section'));
+      for (const el of candidates) {
+        const text = (el.textContent || '').toLowerCase();
+        const matches = searchWords.filter(w => text.includes(w));
+        if (matches.length >= Math.min(3, searchWords.length)) {
+          matchedElement = el as HTMLElement;
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. Fallback to native window.find if available
+  if (!matchedElement && typeof (window as any).find === 'function') {
+    try {
+      window.getSelection()?.removeAllRanges();
+      const win = window as any;
+      const found = win.find(cleanTarget.substring(0, 45), false, false, true, false, true, false);
+      if (found) {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          matchedElement = sel.getRangeAt(0).startContainer.parentElement;
+        }
+      }
+    } catch {}
+  }
+
+  if (!matchedElement) {
+    console.warn('Vigil: Could not locate text excerpt on this page DOM:', targetSnippet);
+    return false;
+  }
+
+  // 4. Highlight and scroll into view
+  matchedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Create high-visibility animated overlay badge
+  const rect = matchedElement.getBoundingClientRect();
+  const overlay = document.createElement('div');
+  overlay.setAttribute('data-vigil-overlay', 'true');
+  overlay.style.position = 'absolute';
+  overlay.style.top = `${rect.top + window.scrollY - 6}px`;
+  overlay.style.left = `${rect.left + window.scrollX - 6}px`;
+  overlay.style.width = `${rect.width + 12}px`;
+  overlay.style.height = `${rect.height + 12}px`;
+  overlay.style.border = '3px solid #f59e0b';
+  overlay.style.backgroundColor = 'rgba(245, 158, 11, 0.20)';
+  overlay.style.borderRadius = '8px';
+  overlay.style.boxShadow = '0 0 25px rgba(245, 158, 11, 0.7)';
+  overlay.style.zIndex = '2147483647';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.transition = 'opacity 1.5s ease-out';
+
+  const badge = document.createElement('div');
+  badge.textContent = `🛡️ Vigil: Flagged Legal Term ${ruleName ? `(${ruleName})` : ''}`;
+  badge.style.position = 'absolute';
+  badge.style.top = '-26px';
+  badge.style.left = '0';
+  badge.style.backgroundColor = '#b45309';
+  badge.style.color = '#ffffff';
+  badge.style.fontSize = '12px';
+  badge.style.fontWeight = 'bold';
+  badge.style.padding = '3px 8px';
+  badge.style.borderRadius = '4px';
+  badge.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+  badge.style.whiteSpace = 'nowrap';
+  overlay.appendChild(badge);
+
+  document.body.appendChild(overlay);
+  overlays.push(overlay);
+
+  setTimeout(() => {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 1500);
+  }, 6000);
+
+  return true;
+}
 
 window.addEventListener('popstate', clearHighlights);
 window.addEventListener('beforeunload', clearHighlights);
