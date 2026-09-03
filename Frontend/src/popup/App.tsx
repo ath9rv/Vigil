@@ -38,7 +38,10 @@ export default function App() {
 
   // Helper to fetch cookies via chrome.cookies or content script fallback
   const loadCookiesForDomain = useCallback((domain: string, tabId?: number) => {
-    if (!domain) return;
+    if (!domain) {
+      setCookies([]);
+      return;
+    }
 
     if (chrome.cookies && chrome.cookies.getAll) {
       chrome.cookies.getAll({ domain }, (cookieList) => {
@@ -73,8 +76,14 @@ export default function App() {
           }).then(([res]) => {
             if (res && res.result) {
               setCookies(parseDocumentCookies(res.result, domain));
+            } else {
+              setCookies([]);
             }
-          }).catch(() => {});
+          }).catch(() => {
+            setCookies([]);
+          });
+        } else {
+          setCookies([]);
         }
       });
     } else if (tabId) {
@@ -84,89 +93,127 @@ export default function App() {
       }).then(([res]) => {
         if (res && res.result) {
           setCookies(parseDocumentCookies(res.result, domain));
+        } else {
+          setCookies([]);
         }
-      }).catch(() => {});
+      }).catch(() => {
+        setCookies([]);
+      });
+    } else {
+      setCookies([]);
     }
   }, []);
 
-  // Main Tab & URL Detection
+  // Main Tab & URL Detection (Always query active tab in current window)
   useEffect(() => {
-    chrome.tabs.query({}, (tabs) => {
-      if (tabs.length > 0) {
-        const targetTab = tabs.find(t => t.url && t.url.startsWith('http')) || tabs.find(t => t.active) || tabs[0];
-        if (targetTab && targetTab.url) {
-          const url = targetTab.url;
-          setCurrentUrl(url);
-          try {
-            const domain = new URL(url).hostname;
-            setCurrentDomain(domain);
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const targetTab = tabs && tabs[0];
+      if (!targetTab || !targetTab.url) {
+        setCurrentDomain('');
+        setCookies([]);
+        setRawFindings([]);
+        setLegalDocsFound([]);
+        return;
+      }
 
-            // 1. Initial document
-            setLegalDocsFound([{ title: 'Terms of Service', url }]);
+      const url = targetTab.url;
+      setCurrentUrl(url);
 
-            // 2. Discover real legal policies on the active tab
-            if (targetTab.id && !url.startsWith('chrome') && !url.startsWith('edge')) {
-              chrome.scripting.executeScript({
-                target: { tabId: targetTab.id },
-                func: () => {
-                  const keywords = [
-                    'privacy policy', 'privacy statement', 'privacy notice', 'privacy',
-                    'terms of service', 'terms & conditions', 'terms of use', 'terms and conditions', 'terms',
-                    'user agreement', 'acceptable use', 'cookie policy', 'cookies', 'use of cookies',
-                    'website policies', 'disclaimer', 'legal notice', 'hyperlinking policy', 'copyright policy',
-                    'data protection', 'legal terms'
-                  ];
-                  const hrefPatterns = [/privacy/i, /terms/i, /cookie/i, /tos/i, /legal/i, /disclaimer/i, /policy/i, /policies/i];
-                  const links = Array.from(document.querySelectorAll('a[href]'));
-                  const found: { title: string; url: string }[] = [];
-                  const unique = new Set<string>();
+      const isRestricted = (
+        url.startsWith('chrome:') || 
+        url.startsWith('edge:') || 
+        url.startsWith('about:') || 
+        url.startsWith('chrome-extension:')
+      );
 
-                  for (const l of links) {
-                    const raw = l.getAttribute('href') || '';
-                    if (!raw || raw.startsWith('#') || raw.startsWith('javascript:')) continue;
-                    try {
-                      const abs = new URL(raw, window.location.href).href;
-                      const text = `${l.textContent || ''} ${l.getAttribute('title') || ''}`.toLowerCase().trim();
-                      if (keywords.some(k => text.includes(k)) || hrefPatterns.some(p => p.test(raw))) {
-                        if (!unique.has(abs)) {
-                          unique.add(abs);
-                          const t = (l.textContent?.trim() || l.getAttribute('title')?.trim() || 'Legal Policy');
-                          found.push({ title: t.length > 40 ? t.substring(0, 37) + '...' : t, url: abs });
-                        }
-                      }
-                    } catch {}
+      if (isRestricted) {
+        setCurrentDomain('');
+        setCookies([]);
+        setRawFindings([]);
+        setLegalDocsFound([]);
+        return;
+      }
+
+      try {
+        const domain = new URL(url).hostname;
+        setCurrentDomain(domain);
+
+        // 1. Initial document
+        setLegalDocsFound([{ title: 'Terms of Service', url }]);
+
+        // 2. Discover real legal policies on the active tab
+        if (targetTab.id) {
+          chrome.scripting.executeScript({
+            target: { tabId: targetTab.id },
+            func: () => {
+              const keywords = [
+                'privacy policy', 'privacy statement', 'privacy notice', 'privacy',
+                'terms of service', 'terms & conditions', 'terms of use', 'terms and conditions', 'terms',
+                'user agreement', 'acceptable use', 'cookie policy', 'cookies', 'use of cookies',
+                'website policies', 'disclaimer', 'legal notice', 'hyperlinking policy', 'copyright policy',
+                'data protection', 'legal terms'
+              ];
+              const hrefPatterns = [/privacy/i, /terms/i, /cookie/i, /tos/i, /legal/i, /disclaimer/i, /policy/i, /policies/i];
+              const links = Array.from(document.querySelectorAll('a[href]'));
+              const found: { title: string; url: string }[] = [];
+              const unique = new Set<string>();
+
+              for (const l of links) {
+                const raw = l.getAttribute('href') || '';
+                if (!raw || raw.startsWith('#') || raw.startsWith('javascript:')) continue;
+                try {
+                  const abs = new URL(raw, window.location.href).href;
+                  const text = `${l.textContent || ''} ${l.getAttribute('title') || ''}`.toLowerCase().trim();
+                  if (keywords.some(k => text.includes(k)) || hrefPatterns.some(p => p.test(raw))) {
+                    if (!unique.has(abs)) {
+                      unique.add(abs);
+                      const t = (l.textContent?.trim() || l.getAttribute('title')?.trim() || 'Legal Policy');
+                      found.push({ title: t.length > 40 ? t.substring(0, 37) + '...' : t, url: abs });
+                    }
                   }
-                  return found;
-                }
-              }).then(([res]) => {
-                if (res && res.result && res.result.length > 0) {
-                  setLegalDocsFound(res.result);
-                }
-              }).catch(() => {});
+                } catch {}
+              }
+              return found;
             }
-
-            // 3. Load cookies
-            loadCookiesForDomain(domain, targetTab.id);
-
-            // 4. Load findings cache
-            chrome.storage.local.get(['findings_cache', 'vigil_tracker_report'], (res) => {
-              if (res.findings_cache && res.findings_cache[domain]) {
-                setRawFindings(res.findings_cache[domain]);
-              }
-              if (res.vigil_tracker_report) {
-                setTrackersBlockedCount(res.vigil_tracker_report.trackerCount || 0);
-                if (res.vigil_tracker_report.trackerDomains) {
-                  const mapped = (res.vigil_tracker_report.trackerDomains as string[]).map(d => ({
-                    domain: d,
-                    category: 'TRACKER',
-                    count: 1
-                  }));
-                  setThirdPartyTrackers(mapped);
-                }
-              }
-            });
-          } catch { /* ignore invalid URLs */ }
+          }).then(([res]) => {
+            if (res && res.result && res.result.length > 0) {
+              setLegalDocsFound(res.result);
+            }
+          }).catch(() => {});
         }
+
+        // 3. Load cookies for active tab domain
+        loadCookiesForDomain(domain, targetTab.id);
+
+        // 4. Load findings cache for active tab domain
+        chrome.storage.local.get(['findings_cache', 'vigil_tracker_report'], (res) => {
+          if (res.findings_cache && res.findings_cache[domain]) {
+            setRawFindings(res.findings_cache[domain]);
+          } else {
+            setRawFindings([]);
+          }
+          if (res.vigil_tracker_report) {
+            setTrackersBlockedCount(res.vigil_tracker_report.trackerCount || 0);
+            if (res.vigil_tracker_report.trackerDomains) {
+              const mapped = (res.vigil_tracker_report.trackerDomains as string[]).map(d => ({
+                domain: d,
+                category: 'TRACKER',
+                count: 1
+              }));
+              setThirdPartyTrackers(mapped);
+            } else {
+              setThirdPartyTrackers([]);
+            }
+          } else {
+            setTrackersBlockedCount(0);
+            setThirdPartyTrackers([]);
+          }
+        });
+      } catch {
+        setCurrentDomain('');
+        setCookies([]);
+        setRawFindings([]);
+        setLegalDocsFound([]);
       }
     });
   }, [loadCookiesForDomain]);
