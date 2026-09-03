@@ -395,3 +395,42 @@ export function generateCookieSummary(cookies: DetailedCookie[], domain: string)
     bulletPoints
   };
 }
+
+/**
+ * Returns plain-English explanations of why a cookie is risky or safe for normal people.
+ */
+export function getPlainEnglishRiskExplanation(category: CookieCategory, risk: CookieRisk, name: string): { title: string; explanation: string; isSafe: boolean } {
+  if (category === 'MARKETING' || risk === 'HIGH') {
+    return {
+      title: '🚨 Why is this risky for you?',
+      explanation: 'This cookie tags your browser with a permanent advertising ID. As you browse other websites across the internet, ad networks read this cookie to follow your trail, remembering what jobs, articles, or products you looked at so they can show you targeted ads.',
+      isSafe: false
+    };
+  }
+  if (category === 'ESSENTIAL') {
+    return {
+      title: '🛡️ Why is this safe?',
+      explanation: 'This is a completely necessary and harmless cookie. It keeps you securely logged into your account or protects the site from automated bots. It does NOT spy on your personal browsing habits on other sites.',
+      isSafe: true
+    };
+  }
+  if (category === 'FUNCTIONAL') {
+    return {
+      title: '⚙️ What this does for you:',
+      explanation: 'This remembers your personal display preferences (like Dark Mode, font size, or language) so the website looks the way you like every time you return.',
+      isSafe: true
+    };
+  }
+  if (category === 'ANALYTICS') {
+    return {
+      title: '📊 What this means for you:',
+      explanation: 'This measures general site traffic (such as how many people visited this page or which buttons are popular). It is low-to-medium risk because it generally measures general site usage rather than selling your private identity.',
+      isSafe: true
+    };
+  }
+  return {
+    title: '❓ Unknown Cookie:',
+    explanation: 'This cookie is not yet cataloged in Vigil\'s dictionary. It is set directly by this website, usually for internal website features or temporary session state.',
+    isSafe: true
+  };
+}

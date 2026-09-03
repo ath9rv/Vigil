@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DetailedCookie, CookieCategory, generateCookieSummary } from '../../network/cookie-classifier';
+import { DetailedCookie, CookieCategory, generateCookieSummary, getPlainEnglishRiskExplanation } from '../../network/cookie-classifier';
 
 interface Props {
   cookies: DetailedCookie[];
@@ -229,12 +229,28 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
                 </div>
 
                 {/* Expanded Details */}
-                {isExpanded && (
-                  <div className="px-3 pb-3 pt-1 border-t border-gray-100 bg-gray-50/60 text-xs flex flex-col gap-2">
-                    <div>
-                      <span className="font-bold text-gray-700 block mb-0.5 text-[11px]">Purpose:</span>
-                      <p className="text-gray-600 leading-relaxed text-xs">{cookie.purpose}</p>
-                    </div>
+                {isExpanded && (() => {
+                  const riskInfo = getPlainEnglishRiskExplanation(cookie.category, cookie.risk, cookie.name);
+                  return (
+                    <div className="px-3 pb-3 pt-1 border-t border-gray-100 bg-gray-50/60 text-xs flex flex-col gap-2">
+                      {/* Plain-English Meaning & Risk Card */}
+                      <div className={`p-2.5 rounded-lg border text-xs leading-relaxed ${
+                        riskInfo.isSafe 
+                          ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' 
+                          : 'bg-rose-50/90 border-rose-200 text-rose-950'
+                      }`}>
+                        <span className="font-bold block mb-1 text-[11px] flex items-center gap-1">
+                          {riskInfo.title}
+                        </span>
+                        <p className="text-[11px] leading-relaxed">
+                          {riskInfo.explanation}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span className="font-bold text-gray-700 block mb-0.5 text-[11px]">Technical Purpose:</span>
+                        <p className="text-gray-600 leading-relaxed text-xs">{cookie.purpose}</p>
+                      </div>
 
                     <div className="grid grid-cols-2 gap-1.5 text-[10px] bg-white p-2 rounded-lg border border-gray-200 font-mono">
                       <div>
@@ -267,7 +283,8 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
                       </div>
                     )}
                   </div>
-                )}
+                );
+              })()}
               </div>
             );
           })

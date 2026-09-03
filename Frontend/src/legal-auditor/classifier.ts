@@ -1,4 +1,4 @@
-﻿import { SegmentedClause, ClauseAssessment, LegalClauseCategory } from './types';
+import { SegmentedClause, ClauseAssessment, LegalClauseCategory } from './types';
 
 const RISK_KEYWORDS = [
   'arbitration', 'class action', 'jury', 'dispute',
@@ -212,4 +212,103 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
   }
   
   return assessments;
+}
+
+/**
+ * Returns plain-English explanations of why a legal clause is tricky or fair for normal people.
+ */
+export function getPlainEnglishLegalExplanation(category: string, isTricky: boolean, isFair: boolean): { title: string; explanation: string } {
+  if (isFair) {
+    switch (category) {
+      case 'DATA_SALE':
+        return {
+          title: '🛡️ Fair Promise (No Data Selling):',
+          explanation: 'Good news! The company explicitly promises they will NOT sell your personal browsing or account data to third-party ad brokers.'
+        };
+      case 'USER_RIGHTS':
+        return {
+          title: '🛡️ Your Legal Privacy Rights Protected:',
+          explanation: 'You have the right to request a complete copy of all personal data they have collected about you, and demand they delete it permanently.'
+        };
+      case 'AI_TRAINING':
+        return {
+          title: '🛡️ Your Content Protected from AI:',
+          explanation: 'The company explicitly confirms they will NOT feed your posts, files, or personal messages into AI or machine learning models.'
+        };
+      default:
+        return {
+          title: '🛡️ Consumer-Friendly Term:',
+          explanation: 'This clause protects your rights and promises not to exploit your personal data.'
+        };
+    }
+  }
+
+  // Tricky or notice terms
+  switch (category) {
+    case 'ARBITRATION':
+      return {
+        title: '🚨 Why this is tricky for you (Forced Arbitration):',
+        explanation: 'If this company breaks their promises, overcharges your card, or loses your sensitive data in a hack, you CANNOT take them to a public court of law. You are forced into private arbitration where companies pick the rules and win most disputes.'
+      };
+    case 'CLASS_ACTION':
+      return {
+        title: '🚨 Why this is tricky for you (No Group Lawsuits):',
+        explanation: 'You waive your right to team up with thousands of other cheated users in a class action lawsuit. If the company commits fraud, you must fight them completely alone at your own expense.'
+      };
+    case 'DATA_SALE':
+      return {
+        title: '🚨 Why this is tricky for you (Commercial Data Sale):',
+        explanation: 'The company claims the right to sell or license your personal profile, email, or browsing habits to outside marketing companies and data brokers for money.'
+      };
+    case 'AI_TRAINING':
+      return {
+        title: '🤖 What this means for you (AI Model Training):',
+        explanation: 'Anything you post, write, or upload to this site can be fed into their Artificial Intelligence / Machine Learning models without paying you, crediting you, or asking for your permission again.'
+      };
+    case 'DATA_SHARING':
+      return {
+        title: '👥 Why to be careful (Third-Party Sharing):',
+        explanation: 'Your personal information is shared with their corporate affiliates, sponsors, and advertising partners.'
+      };
+    case 'CONTENT_LICENSE':
+      return {
+        title: '📄 Why this is tricky (Broad Content License):',
+        explanation: 'You give them an irrevocable, worldwide license to use, display, reproduce, and monetize any photos, comments, or content you submit.'
+      };
+    case 'TERMINATION':
+      return {
+        title: '⚠️ Why this is tricky (Account Termination):',
+        explanation: 'The company can delete your account, wipe all your stored data, and ban you at any time for any reason without warning, appeal, or refund.'
+      };
+    case 'LIABILITY':
+      return {
+        title: '📜 What this means for you (Zero Guarantee):',
+        explanation: 'The company disclaims all liability. If their service crashes, loses your files, or causes you financial loss, they owe you zero or only a tiny refund (often limited to what you paid in the last month).'
+      };
+    case 'DATA_RETENTION':
+      return {
+        title: '⏳ What this means for you (Indefinite Storage):',
+        explanation: 'The company may keep your personal information on their servers even after you delete your account or stop using the service.'
+      };
+    case 'CHILDREN_DATA':
+      return {
+        title: '👶 Children\'s Data Protection Notice:',
+        explanation: 'Notice regarding whether minors are permitted to use this site and how parental consent is handled under law.'
+      };
+    case 'GOVERNMENT_DISCLOSURE':
+      return {
+        title: '🏛️ Government Disclosure Terms:',
+        explanation: 'The company will hand over your private chats, logs, and account records to government agencies or law enforcement without notifying you if they receive a subpoena.'
+      };
+    case 'COOKIE_POLICY':
+      return {
+        title: '🍪 Cookie & Tracking Notice:',
+        explanation: 'The company discloses that it stores tracking tags and cookies on your browser to identify you and record your site usage.'
+      };
+    default:
+      return {
+        title: isTricky ? '🚨 Why this is tricky for you:' : '⚠️ Important Notice:',
+        explanation: 'This legal clause restricts your rights, limits the company’s responsibility, or expands what they can do with your information.'
+      };
+  }
 }

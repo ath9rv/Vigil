@@ -1,5 +1,6 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Finding } from '../../evidence/evidence';
+import { getPlainEnglishLegalExplanation } from '../../legal-auditor/classifier';
 
 interface Props {
   legalFindings: Finding[];
@@ -181,9 +182,27 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
                 </div>
 
                 {/* Excerpt Details */}
-                {isExpanded && (
-                  <div className="px-3 pb-3 pt-1 border-t border-gray-100 bg-gray-50/60 text-xs flex flex-col gap-2">
-                    {finding.evidence?.sourceUrl && (
+                {isExpanded && (() => {
+                  const legalPlain = getPlainEnglishLegalExplanation(categoryKey, isTricky, isFair);
+                  return (
+                    <div className="px-3 pb-3 pt-1 border-t border-gray-100 bg-gray-50/60 text-xs flex flex-col gap-2">
+                      {/* Plain English "Why is this tricky / fair?" Card */}
+                      <div className={`p-2.5 rounded-lg border text-xs leading-relaxed shadow-xs ${
+                        isTricky 
+                          ? 'bg-rose-50/90 border-rose-200 text-rose-950' 
+                          : isFair 
+                          ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' 
+                          : 'bg-yellow-50/90 border-yellow-200 text-yellow-950'
+                      }`}>
+                        <span className="font-bold block mb-1 text-[11px] flex items-center gap-1">
+                          {legalPlain.title}
+                        </span>
+                        <p className="text-[11px] leading-relaxed">
+                          {legalPlain.explanation}
+                        </p>
+                      </div>
+
+                      {finding.evidence?.sourceUrl && (
                       <div className="text-[11px] text-gray-500 truncate">
                         <span className="font-bold text-gray-700">Source:</span>{' '}
                         <a 
@@ -223,8 +242,9 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
                         Locate on Page
                       </button>
                     </div>
-                  </div>
-                )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })
