@@ -9,6 +9,11 @@ export function startObserver(scanCallback: () => void): void {
   }
 
   observer = new MutationObserver((mutations) => {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.id) {
+      stopObserver();
+      return;
+    }
+
     let shouldScan = false;
     for (const mutation of mutations) {
       if (mutation.target instanceof HTMLElement && mutation.target.hasAttribute('data-vigil-overlay')) {

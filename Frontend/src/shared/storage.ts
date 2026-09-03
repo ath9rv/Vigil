@@ -22,16 +22,23 @@ const STORAGE_DEFAULTS: StorageSchema = {
 
 /**
  * Get a typed value from chrome.storage.local.
- * Returns the default value if the key doesn't exist.
+ * Returns the default value if the key doesn't exist or extension context is invalidated.
  */
 export async function getStorageValue<K extends keyof StorageSchema>(
   key: K
 ): Promise<StorageSchema[K]> {
-  const result = await chrome.storage.local.get(key);
-  if (result[key] !== undefined) {
-    return result[key] as StorageSchema[K];
+  try {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.id || !chrome.storage?.local) {
+      return STORAGE_DEFAULTS[key];
+    }
+    const result = await chrome.storage.local.get(key);
+    if (result && result[key] !== undefined) {
+      return result[key] as StorageSchema[K];
+    }
+    return STORAGE_DEFAULTS[key];
+  } catch {
+    return STORAGE_DEFAULTS[key];
   }
-  return STORAGE_DEFAULTS[key];
 }
 
 /**
@@ -40,14 +47,24 @@ export async function getStorageValue<K extends keyof StorageSchema>(
 export async function getStorageValues<K extends keyof StorageSchema>(
   keys: K[]
 ): Promise<Pick<StorageSchema, K>> {
-  const result = await chrome.storage.local.get(keys);
   const output = {} as Pick<StorageSchema, K>;
   for (const key of keys) {
-    output[key] = result[key] !== undefined
-      ? (result[key] as StorageSchema[K])
-      : STORAGE_DEFAULTS[key];
+    output[key] = STORAGE_DEFAULTS[key];
   }
-  return output;
+  try {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.id || !chrome.storage?.local) {
+      return output;
+    }
+    const result = await chrome.storage.local.get(keys);
+    for (const key of keys) {
+      if (result && result[key] !== undefined) {
+        output[key] = result[key] as StorageSchema[K];
+      }
+    }
+    return output;
+  } catch {
+    return output;
+  }
 }
 
 /**
@@ -57,7 +74,14 @@ export async function setStorageValue<K extends keyof StorageSchema>(
   key: K,
   value: StorageSchema[K]
 ): Promise<void> {
-  await chrome.storage.local.set({ [key]: value });
+  try {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.id || !chrome.storage?.local) {
+      return;
+    }
+    await chrome.storage.local.set({ [key]: value });
+  } catch {
+    // Suppress context invalidated errors during extension reload
+  }
 }
 
 /**
@@ -66,7 +90,14 @@ export async function setStorageValue<K extends keyof StorageSchema>(
 export async function setStorageValues(
   values: Partial<StorageSchema>
 ): Promise<void> {
-  await chrome.storage.local.set(values);
+  try {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.id || !chrome.storage?.local) {
+      return;
+    }
+    await chrome.storage.local.set(values);
+  } catch {
+    // Suppress context invalidated errors during extension reload
+  }
 }
 
 /**
