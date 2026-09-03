@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Vigil — Web Trust & Safety Shield",
   "description": "Detects dark patterns, phishing, and deceptive design on any website. Grounded in CCPA & DPDP law.",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "icons": {
     "16": "public/icons/icon-16.png",
     "48": "public/icons/icon-48.png",
