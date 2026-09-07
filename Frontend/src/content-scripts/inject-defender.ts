@@ -137,13 +137,17 @@ let DefenderInternals: {
     function applyHardwareNormalization(targetNav: Navigator, targetScreen: Screen) {
       if (!policy.hardwareNormalization) return;
       try {
-        const navProto = Object.getPrototypeOf(targetNav) || targetNav;
-        const screenProto = Object.getPrototypeOf(targetScreen) || targetScreen;
+        const rawNavProto = Object.getPrototypeOf(targetNav);
+        const navProto = (rawNavProto && rawNavProto !== Object.prototype) ? rawNavProto : targetNav;
+
+        const rawScreenProto = Object.getPrototypeOf(targetScreen);
+        const screenProto = (rawScreenProto && rawScreenProto !== Object.prototype) ? rawScreenProto : targetScreen;
 
         const getHardwareConcurrency = makeNative(() => 8, 'hardwareConcurrency', true, 0);
         try {
           Object.defineProperty(navProto, 'hardwareConcurrency', {
             get: getHardwareConcurrency,
+            set: () => {},
             configurable: true,
             enumerable: true
           });
@@ -151,6 +155,7 @@ let DefenderInternals: {
           try {
             Object.defineProperty(targetNav, 'hardwareConcurrency', {
               get: getHardwareConcurrency,
+              set: () => {},
               configurable: true,
               enumerable: true
             });
@@ -161,6 +166,7 @@ let DefenderInternals: {
         try {
           Object.defineProperty(navProto, 'deviceMemory', {
             get: getDeviceMemory,
+            set: () => {},
             configurable: true,
             enumerable: true
           });
@@ -168,6 +174,7 @@ let DefenderInternals: {
           try {
             Object.defineProperty(targetNav, 'deviceMemory', {
               get: getDeviceMemory,
+              set: () => {},
               configurable: true,
               enumerable: true
             });
@@ -178,6 +185,7 @@ let DefenderInternals: {
         try {
           Object.defineProperty(screenProto, 'colorDepth', {
             get: getColorDepth,
+            set: () => {},
             configurable: true,
             enumerable: true
           });
@@ -185,6 +193,7 @@ let DefenderInternals: {
           try {
             Object.defineProperty(targetScreen, 'colorDepth', {
               get: getColorDepth,
+              set: () => {},
               configurable: true,
               enumerable: true
             });
@@ -195,6 +204,7 @@ let DefenderInternals: {
         try {
           Object.defineProperty(screenProto, 'pixelDepth', {
             get: getPixelDepth,
+            set: () => {},
             configurable: true,
             enumerable: true
           });
@@ -202,6 +212,7 @@ let DefenderInternals: {
           try {
             Object.defineProperty(targetScreen, 'pixelDepth', {
               get: getPixelDepth,
+              set: () => {},
               configurable: true,
               enumerable: true
             });
