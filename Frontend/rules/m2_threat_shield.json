@@ -7,7 +7,7 @@
       "name": "domain_similarity",
       "module": "M2",
       "statute_ref": "IT Act 2000 §66D — Cheating by personation using computer resources",
-      "severity": "severe",
+      "severity": "CRITICAL",
       "selector_strategy": "domain_analysis",
       "match": {
         "target": "_document_location",
@@ -21,7 +21,7 @@
       "name": "pre_consent_tracking_requires_timing_evidence",
       "module": "M2",
       "statute_ref": "DPDP Act 2023 §6 — Consent requirement; IT Rules 2021 Intermediary Guidelines",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "timing",
       "match": {
         "target": "script[src]",
@@ -53,7 +53,7 @@
       "name": "phishing_clone",
       "module": "M2",
       "statute_ref": "IT Act 2000 §66C — Identity theft; §66D — Cheating by personation",
-      "severity": "severe",
+      "severity": "CRITICAL",
       "selector_strategy": "structural",
       "match": {
         "target": "form",

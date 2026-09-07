@@ -8,15 +8,15 @@ describe('Correlation Engine & Finding Normalization', () => {
       ruleId: 'M1-001',
       ruleName: 'hidden_costs',
       module: 'M1',
-      severity: 'high',
-      confidenceState: 'confirmed',
+      severity: 'CONFIRMED',
+      confidenceState: 'CONFIRMED',
       explanation: 'Hidden delivery fee added at checkout.'
     };
 
     const normalized = normalizeFinding(raw);
     expect(normalized.category).toBe('DARK_PATTERN');
-    expect(normalized.severity).toBe('HIGH');
-    expect(normalized.confidence).toBe('HIGH');
+    expect(normalized.severity).toBe('CONFIRMED');
+    expect(normalized.confidence).toBe('CONFIRMED');
     expect(normalized.interpretation).toBe('Hidden delivery fee added at checkout.');
     expect(normalized.evidence.sourceType).toBe('DOM');
   });
@@ -26,13 +26,13 @@ describe('Correlation Engine & Finding Normalization', () => {
       {
         id: 'f1',
         module: 'M1',
-        severity: 'severe',
+        severity: 'CRITICAL',
         explanation: 'Forced subscription trap'
       },
       {
         id: 'f2',
         module: 'M1',
-        severity: 'high',
+        severity: 'CONFIRMED',
         explanation: 'Hidden handling charge'
       }
     ];
@@ -54,8 +54,8 @@ describe('Correlation Engine & Finding Normalization', () => {
 
   it('penalizes corroborated findings', () => {
     const assessment = correlateFindings([{
-      id: 'f-confirmed', module: 'M1', severity: 'high',
-      confidenceState: 'confirmed', explanation: 'Pre-selected warranty in checkout'
+      id: 'f-confirmed', module: 'M1', severity: 'CONFIRMED',
+      confidenceState: 'CONFIRMED', explanation: 'Pre-selected warranty in checkout'
     }], { pageBehavior: true, threatIntel: true, thirdPartyRequests: false, legalReviewed: false, strictPrivacyEnabled: false });
 
     expect(assessment.fairness.score).toBeLessThan(100);
@@ -76,7 +76,7 @@ describe('Correlation Engine & Finding Normalization', () => {
 
     expect(assessment.coveragePercent).toBe(38);
     expect(assessment.unassessedSurfaces).toContain('Cross-site correlation');
-    expect(assessment.confidence).toBe('LOW');
+    expect(assessment.confidence).toBe('OBSERVED');
   });
 
   it('normalizes M2 threat findings into SECURITY category and heavily docks security dimension', () => {
@@ -85,8 +85,8 @@ describe('Correlation Engine & Finding Normalization', () => {
       ruleId: 'M2-005',
       ruleName: 'form_action_mismatch',
       module: 'M2',
-      severity: 'severe',
-      confidenceState: 'confirmed',
+      severity: 'CRITICAL',
+      confidenceState: 'CONFIRMED',
       explanation: 'Credential exfiltration to rogue host'
     };
 
@@ -110,8 +110,8 @@ describe('Correlation Engine & Finding Normalization', () => {
     const legalFinding = {
       id: 'leg-1',
       category: 'LEGAL' as const,
-      severity: 'MEDIUM' as const,
-      confidence: 'HIGH' as const,
+      severity: 'SUGGESTIVE' as const,
+      confidence: 'CONFIRMED' as const,
       reviewStatus: 'CONFIRMED' as const,
       ruleId: 'LEGAL-ARBITRATION',
       ruleName: 'Forced Arbitration',

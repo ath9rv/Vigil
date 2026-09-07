@@ -154,10 +154,14 @@ describe('Vigil V3 — Behavioral DNA & Explainable Scoring Engine', () => {
       }, { activeDomain: 'bank.com' });
 
       const scored = scoreCookieBehavior(dna);
-      await recordCookieObservation('session_key', 'bank.com', scored, 'https://bank.com');
+      await recordCookieObservation(
+        { name: 'session_key', domain: 'bank.com', path: '/', secure: true, httpOnly: true, sameSite: 'lax' },
+        scored,
+        'https://bank.com'
+      );
 
       const signatures = await getAllLearnedSignatures();
-      const savedSig = signatures['session_key'];
+      const savedSig = Object.values(signatures)[0];
 
       expect(savedSig).toBeDefined();
       expect(savedSig.entropy).toBe(scored.entropy);

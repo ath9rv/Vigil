@@ -1,5 +1,6 @@
 import { Finding } from '../shared/types';
 import { evaluateUrlThreat } from '../threat-intel/engine';
+import { createForensicAnalysis } from '../evidence/forensics';
 
 /**
  * Performs a privacy-preserving local threat evaluation.
@@ -30,15 +31,26 @@ export async function performLiveVerification(domain: string, url: string, isDee
     
     if (threatMatch.status !== 'NO_KNOWN_THREAT' && threatMatch.status !== 'UNKNOWN') {
       const isMalware = threatMatch.status === 'KNOWN_MALWARE';
+      const confidence = threatMatch.confidence === 'CONFIRMED' ? 'CONFIRMED' as const
+        : threatMatch.confidence === 'SUGGESTIVE' ? 'SUGGESTIVE' as const
+        : 'OBSERVED' as const;
       
+      const analysis = createForensicAnalysis({
+        confidence,
+        reviewStatus: 'CONFIRMED',
+        observed: [threatMatch.details],
+        supportingEvidence: [`Matched local hash prefix: ${threatMatch.hashPrefixHex || 'N/A'}`],
+        coverage: { threatIntel: true }
+      });
+
       findings.push({
         id: crypto.randomUUID(),
         ruleId: isMalware ? 'M6-MALWARE' : 'M6-PHISHING',
         ruleName: isMalware ? 'Malware Distribution' : 'Known Phishing',
-        module: 'M2', // M2 is Threat Shield
+        module: 'M2',
         category: 'SECURITY',
         severity: 'CRITICAL',
-        confidenceState: threatMatch.confidence,
+        confidenceState: confidence,
         reviewStatus: 'CONFIRMED',
         statuteRef: 'Local Threat Intelligence',
         explanation: threatMatch.details,
@@ -46,11 +58,16 @@ export async function performLiveVerification(domain: string, url: string, isDee
         elementSelector: 'html',
         pageUrl: url,
         detectedAt: new Date().toISOString(),
-        evidence: {
-          sourceType: 'THREAT_INTEL',
-          sourceUrl: url,
-          capturedAt: Date.now(),
-          context: `Matched local hash prefix: ${threatMatch.hashPrefixHex || 'N/A'}`
+        context: {
+          scan: { tabId: 0, navigationId: url, origin: url, hostname: domain, startedAt: Date.now() },
+          evidence: [{
+            sourceType: 'THREAT_INTEL',
+            sourceUrl: url,
+            capturedAt: Date.now(),
+            context: `Matched local hash prefix: ${threatMatch.hashPrefixHex || 'N/A'}`,
+            forensics: analysis
+          }],
+          coverage: { dom: false, threatIntel: true, network: false, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
         }
       });
     }
@@ -58,21 +75,25 @@ export async function performLiveVerification(domain: string, url: string, isDee
     console.warn('Vigil: Local threat intelligence scan failed', e);
   }
 
-  // Note: Automated Legal Auditing (M7) has been removed from the background scanner.
-  // It is now an on-demand activeTab feature triggered by the user.
-
   return findings;
 }
 
 function createSecurityFinding(id: string, name: string, explanation: string, severity: Finding['severity'], url: string): Finding {
+  const analysis = createForensicAnalysis({
+    confidence: 'CONFIRMED',
+    reviewStatus: 'CONFIRMED',
+    observed: [explanation],
+    coverage: { network: true }
+  });
+
   return {
     id: crypto.randomUUID(),
     ruleId: id,
     ruleName: name,
-    module: 'M2' as any,
+    module: 'M2',
     category: 'SECURITY',
     severity: severity,
-    confidenceState: 'HIGH',
+    confidenceState: 'CONFIRMED',
     reviewStatus: 'CONFIRMED',
     statuteRef: 'Connection Security',
     explanation,
@@ -80,11 +101,16 @@ function createSecurityFinding(id: string, name: string, explanation: string, se
     elementSelector: 'html',
     pageUrl: url,
     detectedAt: new Date().toISOString(),
-    evidence: {
-      sourceType: 'NETWORK',
-      sourceUrl: url,
-      capturedAt: Date.now(),
-      context: 'Protocol check'
+    context: {
+      scan: { tabId: 0, navigationId: url, origin: url, hostname: new URL(url).hostname, startedAt: Date.now() },
+      evidence: [{
+        sourceType: 'NETWORK',
+        sourceUrl: url,
+        capturedAt: Date.now(),
+        context: 'Protocol check',
+        forensics: analysis
+      }],
+      coverage: { dom: false, threatIntel: false, network: true, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
     }
   };
 }

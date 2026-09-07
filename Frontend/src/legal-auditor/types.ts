@@ -30,7 +30,7 @@ export interface SegmentedClause {
 export interface ClauseAssessment {
   clauseId: string;
   category: LegalClauseCategory;
-  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  confidence: 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED';
   rationale: string;
 }
 

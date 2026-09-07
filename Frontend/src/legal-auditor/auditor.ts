@@ -18,14 +18,14 @@ export async function processLegalDocument(extraction: DocumentExtractionResult)
       for (const point of tosdrData.points) {
         let severity: Finding['severity'] = 'INFO';
         if (point.classification === 'blocker') severity = 'CRITICAL';
-        else if (point.classification === 'bad') severity = 'HIGH';
-        else if (point.classification === 'neutral') severity = 'MEDIUM';
+        else if (point.classification === 'bad') severity = 'CONFIRMED';
+        else if (point.classification === 'neutral') severity = 'SUGGESTIVE';
         
         findings.push({
           id: crypto.randomUUID(),
           category: 'LEGAL',
           severity,
-          confidence: 'HIGH',
+          confidence: 'CONFIRMED',
           reviewStatus: 'CONFIRMED',
           ruleId: `TOSDR-${point.id}`,
           ruleName: point.topic || 'Terms Clause',
@@ -59,13 +59,13 @@ export async function processLegalDocument(extraction: DocumentExtractionResult)
     const sourceClause = extraction.clauses.find(c => c.id === assessment.clauseId);
     if (!sourceClause) continue; // Safety check
     
-    let mappedSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'INFO' = 'MEDIUM';
+    let mappedSeverity: 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED' | 'CRITICAL' | 'INFO' = 'SUGGESTIVE';
     if (assessment.rationale.startsWith('TRICKY:') || assessment.rationale.startsWith('UNFAIR:') || assessment.rationale.startsWith('WARNING:')) {
-      mappedSeverity = 'HIGH';
+      mappedSeverity = 'CONFIRMED';
     } else if (assessment.rationale.startsWith('FAIR:') || assessment.rationale.startsWith('HARMLESS:')) {
-      mappedSeverity = 'LOW';
+      mappedSeverity = 'OBSERVED';
     } else if (assessment.rationale.startsWith('NOTICE:') || assessment.rationale.startsWith('REVIEW:')) {
-      mappedSeverity = 'MEDIUM';
+      mappedSeverity = 'SUGGESTIVE';
     }
 
     findings.push({

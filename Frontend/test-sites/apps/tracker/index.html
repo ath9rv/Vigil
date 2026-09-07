@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracker Site — Vigil Test Lab</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+  </style>
+</head>
+<body>
+  <h1>News Portal</h1>
+  <p>Breaking news and analysis.</p>
+
+  <article>
+    <h2>Today's Headlines</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  </article>
+
+  <!--
+    VIGIL TEST: This site loads third-party tracking scripts.
+    When served from a different origin (e.g., 127.0.0.1:4173),
+    the script tags below simulate cross-origin tracker requests
+    to a tracker origin (e.g., 127.0.0.1:4174).
+  -->
+
+  <!-- Simulated tracker pixel -->
+  <img
+    id="tracker-pixel"
+    src="http://127.0.0.1:4174/collect?uid=abc123&event=pageview"
+    width="1" height="1"
+    style="display:none"
+    alt=""
+  />
+
+  <!-- Simulated analytics script -->
+  <script>
+    // Simulate a tracking beacon sent to a third-party analytics origin
+    (function() {
+      const uid = 'user_' + Math.random().toString(36).substring(2, 10);
+      const beacon = new Image();
+      beacon.src = 'http://127.0.0.1:4175/analytics?uid=' + uid + '&page=' + encodeURIComponent(location.href);
+      document.cookie = '_tracker_id=' + uid + '; path=/; max-age=31536000';
+    })();
+  </script>
+
+  <!-- Simulated fingerprinting script -->
+  <script>
+    (function() {
+      const fp = {
+        screen: screen.width + 'x' + screen.height,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        platform: navigator.platform,
+      };
+      const img = new Image();
+      img.src = 'http://127.0.0.1:4174/fp?data=' + encodeURIComponent(JSON.stringify(fp));
+    })();
+  </script>
+
+  <footer>
+    <p>&copy; 2026 News Portal</p>
+  </footer>
+</body>
+</html>

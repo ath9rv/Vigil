@@ -34,6 +34,14 @@ export const RULE_FILE_PATHS: Record<string, string> = {
 /** Score at or below which the site is considered dangerous */
 export const SCORE_DANGER_THRESHOLD = 40;
 
+export const EVIDENCE_BUDGETS = {
+  MAX_NODES_PER_NAVIGATION: 200,
+  MAX_TEMPORAL_EVENTS_PER_NAVIGATION: 500,
+  MAX_CLAIMS_PER_NAVIGATION: 50,
+  MAX_CORRELATIONS_PER_NAVIGATION: 20,
+  MAX_FINDINGS_PER_NAVIGATION: 15,
+};
+
 /** Score at or below which the site warrants caution */
 export const SCORE_CAUTION_THRESHOLD = 70;
 

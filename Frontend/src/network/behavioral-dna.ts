@@ -8,6 +8,8 @@
  * - Security & Scoping Posture (HttpOnly, Secure, SameSite, Third-Party)
  */
 
+import { isSameSite } from '../shared/domain-intelligence';
+
 export type CharsetProfile = 
   | 'uuid'
   | 'jwt'
@@ -165,7 +167,7 @@ export function isThirdPartyDomain(cookieDomain: string, activeDomain?: string):
   const cleanActiveDomain = activeDomain.replace(/^www\./, '').toLowerCase();
 
   // If activeDomain ends with cookieDomain, it is first-party (e.g. sub.amazon.in on amazon.in)
-  if (cleanActiveDomain.endsWith(cleanCookieDomain) || cleanCookieDomain.endsWith(cleanActiveDomain)) {
+  if (isSameSite(cleanActiveDomain, cleanCookieDomain)) {
     return false;
   }
 

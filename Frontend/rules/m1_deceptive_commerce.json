@@ -7,7 +7,7 @@
       "name": "checkout_countdown_pressure",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Creating a false sense of urgency",
-      "severity": "medium",
+      "severity": "MEDIUM",
       "selector_strategy": "text_pattern",
       "match": {
         "target": "[class*='countdown'], [class*='timer'], [id*='countdown'], [id*='timer']",
@@ -27,7 +27,7 @@
       "name": "basket_sneaking",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Basket sneaking",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "structural",
       "match": {
         "target": "input[type='checkbox']",
@@ -50,7 +50,7 @@
       "name": "confirm_shaming",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Confirmshaming",
-      "severity": "medium",
+      "severity": "MEDIUM",
       "selector_strategy": "text_pattern",
       "match": {
         "target": "button, a[role='button'], [role='button']",
@@ -69,7 +69,7 @@
       "name": "forced_continuity",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Forced continuity",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "structural",
       "match": {
         "target": "button, input[type='submit']",
@@ -91,7 +91,7 @@
       "name": "subscription_trap",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Subscription trap",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "structural",
       "match": {
         "target": "button, input[type='submit']",
@@ -113,7 +113,7 @@
       "name": "interface_interference",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Interface interference",
-      "severity": "medium",
+      "severity": "MEDIUM",
       "selector_strategy": "structural",
       "match": {
         "target": "[role='dialog'] button, [class*='modal'] button, [class*='cookie'] button",
@@ -133,7 +133,7 @@
       "name": "checkout_price_change_notice",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Bait and switch",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "text_pattern",
       "match": {
         "target": "[class*='checkout'] [class*='price'], [class*='checkout'] [class*='total']",
@@ -151,7 +151,7 @@
       "name": "checkout_fee_disclosure",
       "module": "M1",
       "statute_ref": "CCPA Guidelines 2023 — Category: Drip pricing",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "text_pattern",
       "match": {
         "target": "[class*='checkout'] *, [class*='order-summary'] *",

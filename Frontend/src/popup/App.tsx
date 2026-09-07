@@ -62,7 +62,11 @@ export default function App() {
 
             // Record privacy-preserving observation in local store (zero raw secrets)
             if (meta.dna) {
-              recordCookieObservation(c.name, c.domain, meta.dna, domain).catch(() => {});
+              recordCookieObservation(
+                { name: c.name, domain: c.domain, path: c.path, secure: c.secure, httpOnly: c.httpOnly, sameSite: c.sameSite || 'unspecified' },
+                meta.dna,
+                domain
+              ).catch(() => {});
             }
 
             return {
@@ -399,7 +403,7 @@ export default function App() {
           id: crypto.randomUUID(),
           category: 'LEGAL',
           severity: 'INFO',
-          confidence: 'HIGH',
+          confidence: 'CONFIRMED',
           reviewStatus: 'CONFIRMED',
           ruleId: 'LEGAL-AUDIT_COMPLETE',
           ruleName: 'Terms & Conditions Audited',
@@ -437,7 +441,7 @@ export default function App() {
           id: crypto.randomUUID(),
           category: 'LEGAL',
           severity: 'INFO',
-          confidence: 'MEDIUM',
+          confidence: 'SUGGESTIVE',
           reviewStatus: 'REVIEW_NEEDED',
           ruleId: 'LEGAL-AUDIT_NOTICE',
           ruleName: 'Policy Access Restricted',

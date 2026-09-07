@@ -1,5 +1,6 @@
 import { initializeStorage, getStorageValue, setStorageValue, atomicUpdateStorage } from '../shared/storage';
-import { Finding, DomainTrustData, ModuleId, ModuleScore } from '../shared/types';
+import type { ModuleId, Finding, ModuleScore, DomainTrustData } from '../shared/types';
+import type { ScanContext } from '../shared/scan-context';
 import { SEVERITY_PENALTIES, SCORE_EMA_ALPHA, SCORE_CAUTION_THRESHOLD, SCORE_DANGER_THRESHOLD, BADGE_COLORS } from '../shared/constants';
 import { registerMessageHandlers } from './message-router';
 
@@ -53,16 +54,17 @@ registerMessageHandlers();
  * applies EMA smoothing if previous data exists, and updates badge state.
  *
  * @param findings - Array of findings for the domain.
- * @param domain - The domain to aggregate scores for.
+ * @param ctx - The scan context identifying the tab and domain.
  */
-export async function aggregateScores(findings: Finding[], domain: string): Promise<void> {
+export async function aggregateScores(findings: Finding[], ctx: ScanContext): Promise<void> {
+  const domain = ctx.hostname;
   const moduleScoresMap = new Map<ModuleId, { score: number; count: number }>();
   let totalPenalty = 0;
 
   findings.forEach(finding => {
     // A review signal is intentionally not a score-bearing verdict. Keep the
     // toolbar badge in lockstep with the popup's evidence policy.
-    if (finding.reviewStatus !== 'CONFIRMED' && finding.confidenceState !== 'confirmed') return;
+    if (finding.reviewStatus !== 'CONFIRMED' && finding.confidenceState !== 'CONFIRMED') return;
     const penalty = SEVERITY_PENALTIES[finding.severity] || 0;
     totalPenalty += penalty;
     
@@ -109,6 +111,8 @@ export async function aggregateScores(findings: Finding[], domain: string): Prom
     badgeColor = BADGE_COLORS.caution;
   }
   
-  await chrome.action.setBadgeText({ text: newScore.toString() });
-  await chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+  if (ctx.tabId) {
+    await chrome.action.setBadgeText({ text: newScore.toString(), tabId: ctx.tabId });
+    await chrome.action.setBadgeBackgroundColor({ color: badgeColor, tabId: ctx.tabId });
+  }
 }

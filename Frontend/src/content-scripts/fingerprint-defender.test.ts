@@ -1,92 +1,146 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 
-describe('Anti-Fingerprinting Defense & CreepJS Lie Neutralization Engine', () => {
-  describe('1. Function Prototype toString Camouflage', () => {
-    it('ensures hooked defense functions emulate native browser functions perfectly', () => {
-      const nativeToString = Function.prototype.toString;
-      const fakeNative = function getHardwareConcurrency() { return 8; };
-      
-      const patchedFns = new WeakMap<Function, string>();
-      patchedFns.set(fakeNative, 'function get hardwareConcurrency() { [native code] }');
+// Prepare window & navigator mock before importing inject-defender
+if (typeof (globalThis as any).window === 'undefined') {
+  (globalThis as any).window = globalThis;
+}
+if (typeof (globalThis as any).navigator === 'undefined') {
+  (globalThis as any).navigator = {
+    hardwareConcurrency: 8,
+    deviceMemory: 8,
+  };
+}
 
-      const camouflageToString = function(this: Function) {
-        if (patchedFns.has(this)) return patchedFns.get(this)!;
-        return nativeToString.call(this);
+import './inject-defender';
+const DefenderInternals = (globalThis as any).__VIGIL_DEFENDER_INTERNALS__;
+
+describe('Vigil Defender & Anti-Fingerprinting (Real Engine Tests)', () => {
+  beforeAll(() => {
+    // inject-defender executes immediately on import and initializes window properties
+  });
+
+  describe('1. Active Defender Lifecycle & Idempotency Guard', () => {
+    it('sets global protection active and deception policy flags', () => {
+      expect((globalThis as any).__VIGIL_DEFENDER_INITIALIZED__).toBe(true);
+      expect((globalThis as any).__VIGIL_PROTECTION_ACTIVE__).toBe(true);
+      expect((globalThis as any).__VIGIL_DECEPTION_POLICY__).toBeDefined();
+      expect((globalThis as any).__VIGIL_DECEPTION_POLICY__.canvasNoise).toBe(true);
+      expect((globalThis as any).__VIGIL_DECEPTION_POLICY__.telemetryProtection).toBe(true);
+    });
+
+    it('enforces Global Privacy Control (GPC) on navigator', () => {
+      expect(((globalThis as any).navigator as any).globalPrivacyControl).toBe(true);
+    });
+  });
+
+  describe('2. Native Function Camouflage (Neutralizes CreepJS "Lie" Detectors)', () => {
+    it('hooked toString returns "[native code]" for patched functions', () => {
+      const customFn = () => 42;
+      DefenderInternals.makeNative!(customFn, 'getBattery', false, 0);
+
+      const str = Function.prototype.toString.call(customFn);
+      expect(str).toBe('function getBattery() { [native code] }');
+      expect(customFn.name).toBe('getBattery');
+      expect(customFn.length).toBe(0);
+    });
+
+    it('handles getter function names with "get " prefix', () => {
+      const getterFn = () => 8;
+      DefenderInternals.makeNative!(getterFn, 'hardwareConcurrency', true, 0);
+
+      const str = Function.prototype.toString.call(getterFn);
+      expect(str).toBe('function get hardwareConcurrency() { [native code] }');
+      expect(getterFn.name).toBe('get hardwareConcurrency');
+    });
+
+    it('toString itself appears as native code', () => {
+      const str = Function.prototype.toString.call(Function.prototype.toString);
+      expect(str).toBe('function toString() { [native code] }');
+    });
+  });
+
+  describe('3. Hardware & Screen Normalization', () => {
+    it('normalizes hardwareConcurrency to standard cohort values (4 or 8)', () => {
+      const mockNav: any = { hardwareConcurrency: 16, deviceMemory: 32 };
+      const mockScreen: any = { colorDepth: 32, pixelDepth: 32 };
+      DefenderInternals.applyHardwareNormalization!(mockNav, mockScreen);
+      expect([4, 8]).toContain(mockNav.hardwareConcurrency);
+      expect([4, 8]).toContain(mockNav.deviceMemory);
+      expect(mockScreen.colorDepth).toBe(24);
+      expect(mockScreen.pixelDepth).toBe(24);
+    });
+  });
+
+  describe('4. Canvas Fingerprint Probe Detection', () => {
+    it('flags disconnected canvases as fingerprint probes', () => {
+      const canvas: any = { isConnected: false, width: 200, height: 200, style: {} };
+      expect(DefenderInternals.isFingerprintProbe!(canvas)).toBe(true);
+    });
+
+    it('flags hidden or micro-dimensioned canvases as probes', () => {
+      const canvas: any = { isConnected: true, width: 16, height: 16, style: {} };
+      expect(DefenderInternals.isFingerprintProbe!(canvas)).toBe(true);
+    });
+
+    it('allows normal, connected, visible canvases', () => {
+      const canvas: any = {
+        isConnected: true,
+        width: 300,
+        height: 200,
+        style: { display: 'block', visibility: 'visible', opacity: '1' },
+        getBoundingClientRect: () => ({ width: 300, height: 200, left: 100, top: 100 })
+      };
+      expect(DefenderInternals.isFingerprintProbe!(canvas)).toBe(false);
+    });
+  });
+
+  describe('5. Multi-Tier Telemetry Classification & Sanitization', () => {
+    it('classifies known tracking and analytics endpoints', () => {
+      expect(DefenderInternals.isTelemetryEndpoint!('https://example.com/analytics/collect')).toBe(true);
+      expect(DefenderInternals.isTelemetryEndpoint!('https://example.com/api/telemetry')).toBe(true);
+      expect(DefenderInternals.isTelemetryEndpoint!('https://metrics.example.com/v1/event')).toBe(true);
+      expect(DefenderInternals.isTelemetryEndpoint!('https://track.adnetwork.com/beacon')).toBe(true);
+      expect(DefenderInternals.isTelemetryEndpoint!('https://example.com/api/user/profile')).toBe(false);
+    });
+
+    it('identifies fingerprint-specific parameter keys', () => {
+      expect(DefenderInternals.isFingerprintKey!('canvas')).toBe(true);
+      expect(DefenderInternals.isFingerprintKey!('fingerprint')).toBe(true);
+      expect(DefenderInternals.isFingerprintKey!('fp')).toBe(true);
+      expect(DefenderInternals.isFingerprintKey!('webgl')).toBe(true);
+      expect(DefenderInternals.isFingerprintKey!('device_id')).toBe(true);
+      expect(DefenderInternals.isFingerprintKey!('visitor_id')).toBe(true);
+      expect(DefenderInternals.isFingerprintKey!('username')).toBe(false);
+      expect(DefenderInternals.isFingerprintKey!('page')).toBe(false);
+    });
+
+    it('sanitizes fingerprint keys in URL query strings', () => {
+      const url = 'https://analytics.com/collect?session=123&canvas=hash456&fp=fingerprint789';
+      const sanitized = DefenderInternals.sanitizeUrlQuery!(url);
+      expect(sanitized).toContain('session=123');
+      expect(sanitized).toContain('canvas=%5BSANITIZED_BY_VIGIL%5D');
+      expect(sanitized).toContain('fp=%5BSANITIZED_BY_VIGIL%5D');
+    });
+
+    it('recursively sanitizes fingerprint fields in JSON payloads', () => {
+      const payload: any = {
+        app: 'store',
+        version: '1.0',
+        fingerprint: 'abcdef123456',
+        client_id: 'visitor_9999',
+        nested: {
+          canvas: 'raw_canvas_data_hash',
+          legitimateField: 'keep_me_intact'
+        }
       };
 
-      const result = camouflageToString.call(fakeNative);
-      expect(result).toBe('function get hardwareConcurrency() { [native code] }');
-      expect(result).toContain('[native code]');
-    });
-  });
-
-  describe('2. Hardware Normalization Specifications', () => {
-    it('normalizes hardware concurrency and device memory to standard profile values', () => {
-      const normalizedCores = 8;
-      const normalizedMemory = 8;
-
-      // In hostile fingerprinting scripts (CreepJS, FingerprintJS), unusual core counts
-      // (like 14, 28, 32) make devices stand out. Vigil normalizes them to common cohorts.
-      expect([4, 8]).toContain(normalizedCores);
-      expect([4, 8, 16]).toContain(normalizedMemory);
-    });
-  });
-
-  describe('3. Pseudo-Random Canvas Noise Math', () => {
-    it('produces subtle, bounded noise that alters image hash without visual destruction', () => {
-      const originalPixel = [255, 128, 64, 255]; // RGBA
-      const noise = 1; // 1-bit LSB subtle noise
-
-      const noisyPixel = [
-        Math.min(255, originalPixel[0] ^ noise),
-        originalPixel[1],
-        originalPixel[2],
-        originalPixel[3]
-      ];
-
-      expect(noisyPixel[0]).not.toBe(originalPixel[0]);
-      // Distortion must be strictly minimal (within 2 intensity levels)
-      expect(Math.abs(noisyPixel[0] - originalPixel[0])).toBeLessThanOrEqual(2);
-    });
-  });
-
-  describe('4. AudioContext & WebGL Fingerprint Defenses', () => {
-    it('applies micro-noise to audio buffer frequencies to randomize acoustic signatures', () => {
-      const originalFreq = 0.0456789;
-      const audioNoise = 0.0000001; // Bounded acoustic perturbation
-      const noisyFreq = originalFreq + audioNoise;
-
-      expect(noisyFreq).not.toBe(originalFreq);
-      expect(Math.abs(noisyFreq - originalFreq)).toBeLessThan(0.0001);
-    });
-
-    it('normalizes WebGL renderer and vendor strings to common cohort profiles', () => {
-      const standardVendor = 'Google Inc. (Intel)';
-      const standardRenderer = 'ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)';
-
-      expect(standardVendor).toContain('Google Inc.');
-      expect(standardRenderer).toContain('ANGLE');
-    });
-
-    it('neutralizes Battery API telemetry tracking', () => {
-      // Fingerprinters track exact charge percentages and discharge times
-      const safeBattery = {
-        charging: true,
-        chargingTime: 0,
-        dischargingTime: Infinity,
-        level: 1.0 // Fixed at 100%
-      };
-
-      expect(safeBattery.level).toBe(1.0);
-      expect(safeBattery.charging).toBe(true);
-    });
-
-    it('clamps screen dimensions to standard desktop aspect ratios', () => {
-      const screenWidth = 1920;
-      const screenHeight = 1080;
-      const aspectRatio = screenWidth / screenHeight;
-
-      expect(aspectRatio).toBeCloseTo(16 / 9, 2);
+      const modified = DefenderInternals.sanitizeObject!(payload);
+      expect(modified).toBe(true);
+      expect(payload.fingerprint).toBe('[SANITIZED_BY_VIGIL]');
+      expect(payload.client_id).toBe('[SANITIZED_BY_VIGIL]');
+      expect(payload.nested.canvas).toBe('[SANITIZED_BY_VIGIL]');
+      expect(payload.nested.legitimateField).toBe('keep_me_intact');
+      expect(payload.app).toBe('store');
     });
   });
 });

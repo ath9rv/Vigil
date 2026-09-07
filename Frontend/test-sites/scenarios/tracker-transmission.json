@@ -1,0 +1,23 @@
+{
+  "name": "tracker-transmission",
+  "description": "Verifies that Vigil detects cross-origin tracker beacons transmitting user identifiers.",
+  "start": "tracker",
+  "startOrigin": "http://127.0.0.1:4173/apps/tracker/",
+  "actions": [
+    "page-load"
+  ],
+  "observed": [
+    "cookie_created (_tracker_id)",
+    "cross_origin_request (127.0.0.1:4174/collect)",
+    "cross_origin_request (127.0.0.1:4175/analytics)",
+    "fingerprint_data_transmitted (127.0.0.1:4174/fp)"
+  ],
+  "expected": {
+    "claims": ["cross_site_transmission"],
+    "minConfidence": 0.6
+  },
+  "forbidden": [
+    "data_sale",
+    "malicious_tracking"
+  ]
+}

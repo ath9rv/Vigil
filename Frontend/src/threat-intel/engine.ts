@@ -65,7 +65,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
   } catch {
     return {
       status: 'UNKNOWN',
-      confidence: 'LOW',
+      confidence: 'OBSERVED',
       details: 'Malformed URL could not be parsed.'
     };
   }
@@ -77,7 +77,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
     return {
       status: 'KNOWN_PHISHING',
       source: 'LOCAL_HEURISTIC',
-      confidence: 'HIGH',
+      confidence: 'CONFIRMED',
       details: `Punycode / IDN homograph impersonation detected in hostname: ${hostname}`
     };
   }
@@ -95,7 +95,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
           return {
             status: 'KNOWN_PHISHING',
             source: 'LOCAL_HEURISTIC',
-            confidence: 'HIGH',
+            confidence: 'CONFIRMED',
             details: `Credential harvesting pattern matching brand "${target}": ${hostname}`
           };
         }
@@ -107,7 +107,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
       return {
         status: 'KNOWN_PHISHING',
         source: 'LOCAL_HEURISTIC',
-        confidence: 'HIGH',
+        confidence: 'CONFIRMED',
         details: `Typosquatting brand impersonation detected. Base domain "${baseName}" is deceptively similar to "${target}" (Levenshtein distance: ${dist}).`
       };
     }
@@ -120,7 +120,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
         return {
           status: 'KNOWN_PHISHING',
           source: 'LOCAL_HEURISTIC',
-          confidence: 'MEDIUM',
+          confidence: 'SUGGESTIVE',
           details: `Suspicious credential harvesting keyword pattern detected on unknown domain: ${hostname}`
         };
       }
@@ -138,7 +138,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
         return {
           status: 'KNOWN_MALWARE',
           source: 'LOCAL_HEURISTIC',
-          confidence: 'MEDIUM',
+          confidence: 'SUGGESTIVE',
           details: `URL matched local threat database prefix (${prefix4}).`
         };
       }
@@ -149,7 +149,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
 
   return {
     status: 'NO_KNOWN_THREAT',
-    confidence: 'HIGH',
+    confidence: 'CONFIRMED',
     details: 'Verified clean against local heuristic threat engine.'
   };
 }

@@ -1,0 +1,22 @@
+{
+  "name": "identifier-propagation",
+  "description": "Verifies that Vigil detects persistent identifier cookies being sent to third-party origins.",
+  "start": "identifier",
+  "startOrigin": "http://127.0.0.1:4173/apps/identifier/",
+  "actions": [
+    "page-load"
+  ],
+  "observed": [
+    "cookie_created (_vigil_test_id, persistent, SameSite=Lax)",
+    "identifier_transmitted_via_fetch (127.0.0.1:4174/collect)",
+    "identifier_transmitted_via_img (127.0.0.1:4175/id)"
+  ],
+  "expected": {
+    "claims": ["identifier_transmission", "cross_site_transmission"],
+    "minConfidence": 0.7
+  },
+  "forbidden": [
+    "data_sale",
+    "shares_personal_information"
+  ]
+}

@@ -32,7 +32,13 @@ export function runTrackerAnalysis(): PageTrackerReport {
   chrome.runtime.sendMessage({
     type: 'VIGIL_TRACKER_REPORT',
     payload: report,
-    pageUrl: window.location.href
+    context: {
+      tabId: 0,
+      navigationId: window.location.href,
+      origin: window.location.origin,
+      hostname: window.location.hostname,
+      startedAt: Date.now()
+    }
   }).catch(() => {
     // Extension context may be invalidated, ignore
   });

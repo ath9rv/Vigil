@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Identifier Propagation — Vigil Test Lab</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Shopping Cart</h1>
+  <p>Your items are ready for checkout.</p>
+
+  <!--
+    VIGIL TEST: This site sets a persistent cookie containing an identifier,
+    then sends it to a third-party endpoint via a network request.
+    This simulates identifier propagation (not mere cross-site transmission).
+  -->
+
+  <script>
+    (function() {
+      // Step 1: Set a persistent identifier cookie
+      const persistentId = 'vid_' + crypto.randomUUID();
+      document.cookie = '_vigil_test_id=' + persistentId + '; path=/; max-age=31536000; SameSite=Lax';
+
+      // Step 2: Read it back and transmit to a third party
+      const cookies = document.cookie.split(';').reduce((acc, c) => {
+        const [k, v] = c.trim().split('=');
+        acc[k] = v;
+        return acc;
+      }, {});
+
+      const id = cookies['_vigil_test_id'];
+      if (id) {
+        // Transmit via fetch to a third-party origin
+        fetch('http://127.0.0.1:4174/collect', {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({ identifier: id, page: location.href }),
+          headers: { 'Content-Type': 'text/plain' },
+        }).catch(() => {});
+
+        // Also transmit via query string
+        const beacon = new Image();
+        beacon.src = 'http://127.0.0.1:4175/id?uid=' + encodeURIComponent(id);
+      }
+    })();
+  </script>
+
+  <ul>
+    <li>Premium Widget — $29.99</li>
+  </ul>
+  <button>Proceed to Checkout</button>
+
+  <footer>
+    <p>&copy; 2026 Test Shop</p>
+  </footer>
+</body>
+</html>

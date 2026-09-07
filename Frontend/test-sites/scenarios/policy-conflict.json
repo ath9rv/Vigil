@@ -1,0 +1,22 @@
+{
+  "name": "policy-conflict",
+  "description": "Verifies that Vigil detects a contradiction between a privacy policy's claims and the page's observed tracking behavior.",
+  "start": "privacy-policy",
+  "startOrigin": "http://127.0.0.1:4173/apps/privacy-policy/",
+  "actions": [
+    "page-load"
+  ],
+  "observed": [
+    "policy_states: 'we do not share personal information with third parties'",
+    "cookie_created (_analytics_id)",
+    "cross_origin_request (127.0.0.1:4174/track with uid)"
+  ],
+  "expected": {
+    "claims": ["policy_contradiction", "cross_site_transmission"],
+    "minConfidence": 0.5
+  },
+  "forbidden": [
+    "data_sale",
+    "malicious_intent"
+  ]
+}

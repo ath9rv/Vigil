@@ -60,7 +60,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     const lower = text.toLowerCase();
 
     let category: LegalClauseCategory | null = null;
-    let confidence: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+    let confidence: 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED' = 'OBSERVED';
     let rationale = '';
 
     // ─── 1. Commercial Data Sale (Strict Verb & Object Binding) ──────────────
@@ -77,18 +77,18 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
         category = 'DATA_SALE';
         
         if (finding.classification === 'FAIR') {
-          confidence = 'HIGH';
+          confidence = 'CONFIRMED';
           rationale = 'FAIR: Site explicitly confirms that it DOES NOT sell customer personal information to third parties.';
         } else if (finding.classification === 'REVIEW') {
-          confidence = 'MEDIUM';
+          confidence = 'SUGGESTIVE';
           rationale = 'REVIEW: Site states it does not sell data, but includes a hedge or reservation of rights that may invalidate this promise.';
         } else {
-          confidence = 'HIGH';
+          confidence = 'CONFIRMED';
           rationale = 'WARNING: Site explicitly reserves the right to sell or commercialize personal consumer data.';
         }
       } else if (/\b(we|may|reserves?\s+the\s+right\s+to)\s+(sell|monetiz(e|ing)|commercializ(e|ing))\b/i.test(lower) || /\b(is|are)\s+sold\s+to\b/i.test(lower)) {
         category = 'DATA_SALE';
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'WARNING: Site explicitly reserves the right to sell or commercialize personal consumer data.';
       }
     }
@@ -100,13 +100,13 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       category = 'ARBITRATION';
 
       if (isCarveOut) {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Dispute clause specifies arbitration with explicit carve-outs, small claims exceptions, or opt-out rights.';
       } else if (/\b(binding\s+arbitration|mandatory\s+arbitration|waiv(e|ing)\s+(any\s+right\s+to\s+a\s+)?jury\s+trial)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'TRICKY: Mandatory binding arbitration with court trial waiver. Disables your right to seek legal remedies in public courts.';
       } else {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Site specifies private arbitration proceedings for legal dispute resolution.';
       }
     }
@@ -116,7 +116,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       const caNegation = findClauseNegation(text, /\bclass action\b/i);
       if (!caNegation.some(f => f.classification === 'FAIR')) {
         category = 'CLASS_ACTION';
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'TRICKY: Explicit class-action lawsuit waiver. Requires all disputes to be handled strictly as individual proceedings.';
       }
     }
@@ -125,16 +125,16 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(cookie|cookies|tracking\s+pixel|web\s+beacon|local\s+storage)\b/i.test(lower)) {
       category = 'COOKIE_POLICY';
       if (/\b(strictly\s+necessary|essential)\b/i.test(lower) && !/\b(marketing|advertising|cross[- ]context)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'HARMLESS: Essential operational cookies required for page navigation, security, and cart features.';
       } else if (/\b(marketing|advertising|targeted|commercial\s+partners?|cross[- ]context)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'WARNING: Marketing and cross-site behavioral tracking cookies deployed for targeted advertising.';
       } else if (/\b(analytics|performance|statistics|telemetry)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'NOTICE: Site deploys analytics cookies to measure site visits, render latency, and UX performance.';
       } else {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Discloses deployment of browser cookies and tracking tags.';
       }
     }
@@ -149,25 +149,25 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       category = 'DATA_SHARING';
 
       if (findClauseNegation(text, /\b(share|disclose)\b/i).some(f => f.classification === 'FAIR')) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'FAIR: Platform restricts third-party disclosures and commits not to share personal data without affirmative consent.';
       } else if (findClauseNegation(text, /\b(share|disclose)\b/i).some(f => f.classification === 'REVIEW')) {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'REVIEW: Platform claims it does not share data, but includes a hedge or exception that weakens this commitment.';
       } else if (isBusinessTransferContext) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'NOTICE: Customer information may be transferred as a business asset during a merger, acquisition, or sale of assets, subject to pre-existing privacy notice commitments.';
       } else if (/\b(service\s+providers?|vendors?|contractors?|fulfill(ing|ment)?|payment\s+processing|delivery|cloud\s+infrastructure|customer\s+service)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'NOTICE: Personal information shared with contracted service providers (e.g. order fulfillment, payment processing, delivery, and analytics) subject to purpose restrictions.';
       } else if (/\b(advertising\s+partners?|marketing\s+partners?|commercial\s+promotions?|data\s+brokers?)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'WARNING: Personal data is shared with third-party advertising networks or commercial marketing partners for promotional targeting.';
       } else if (/\b(affiliates?|subsidiaries|corporate\s+group)\b/i.test(lower)) {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Personal information shared across corporate affiliates and subsidiaries subject to common privacy practices.';
       } else {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Data shared with third-party service providers and operational infrastructure vendors.';
       }
     }
@@ -175,7 +175,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     // ─── 6. User Rights & Data Control (GDPR / CCPA / DPDP) ───────────────────
     else if (/\b(right\s+to\s+(access|delete|erasure|portability|rectification)|request\s+deletion|opt[- ]out|data\s+protection\s+officer)\b/i.test(lower)) {
       category = 'USER_RIGHTS';
-      confidence = 'HIGH';
+      confidence = 'CONFIRMED';
       rationale = 'FAIR: Site outlines concrete privacy rights, allowing you to access, export, rectify, or delete your personal data.';
     }
 
@@ -183,7 +183,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(law\s+enforcement|subpoena|court\s+order|government\s+agenc(y|ies)|legal\s+process|comply\s+with\s+the\s+law)\b/i.test(lower) && 
              /\b(disclos(e|ure)|provide|release|comply)\b/i.test(lower)) {
       category = 'GOVERNMENT_DISCLOSURE';
-      confidence = 'HIGH';
+      confidence = 'CONFIRMED';
       rationale = 'NOTICE: Platform discloses records to law enforcement agencies or judicial authorities when required by subpoena or statutory process.';
     }
 
@@ -192,10 +192,10 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
              /\b(indefinitely|perpetual|as\s+long\s+as\s+necessary|until\s+account\s+deletion|statutory\s+period)\b/i.test(lower)) {
       category = 'DATA_RETENTION';
       if (/\b(indefinitely|perpetual)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'WARNING: Personal information may be retained indefinitely even after account closure.';
       } else {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Personal data is retained for the duration necessary to deliver services, satisfy statutory audits, or resolve disputes.';
       }
     }
@@ -204,10 +204,10 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(children|minor|minors|under\s+(13|16|18)|coppa)\b/i.test(lower)) {
       category = 'CHILDREN_DATA';
       if (/\b(do\s+not\s+knowingly\s+collect|not\s+directed\s+to\s+children|parental\s+consent\s+required)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'HARMLESS: Site explicitly affirms it does not target minors or knowingly collect personal data from children without parental consent.';
       } else {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Specific age verification or parental consent provisions apply to minor users.';
       }
     }
@@ -220,7 +220,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       
       if (!licenseNegation.some(f => f.classification === 'FAIR')) {
         category = 'CONTENT_LICENSE';
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'TRICKY: Grants the platform an irrevocable, perpetual, royalty-free license to reproduce, adapt, and distribute your submitted content or reviews.';
       }
     }
@@ -232,13 +232,13 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
       const trainNegation = findClauseNegation(text, /\btrain\b/i);
       
       if (trainNegation.some(f => f.classification === 'FAIR')) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'FAIR: Platform confirms user content is NOT ingested or used to train artificial intelligence or machine learning models.';
       } else if (trainNegation.some(f => f.classification === 'REVIEW')) {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'REVIEW: Platform states it does not train AI on your data, but includes a hedge or exception.';
       } else {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'TRICKY: Platform reserves the right to use your personal submissions, chats, or communications to train machine learning models.';
       }
     }
@@ -247,7 +247,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(terminat(e|ion)|suspend|without\s+prior\s+notice|modify\s+these\s+terms|update\s+these\s+terms|reserves?\s+the\s+right\s+to\s+modify)\b/i.test(lower)) {
       if (/\bsole\s+discretion\b/i.test(lower) || /\bwithout\s+(prior\s+)?notice\b/i.test(lower) || /\b(at\s+any\s+time)\b/i.test(lower)) {
         category = 'TERMINATION';
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'UNFAIR: Reserves unconstrained authority to alter terms, suspend accounts, or terminate access without prior notice.';
       }
     }
@@ -256,35 +256,35 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(as\s+is|without\s+warrant(y|ies)|limitation\s+of\s+liability)\b/i.test(lower) && 
              /\b(consequential\s+damages|indirect\s+damages|disclaim\s+all\s+warranties)\b/i.test(lower)) {
       category = 'LIABILITY';
-      confidence = 'MEDIUM';
+      confidence = 'SUGGESTIVE';
       rationale = 'NOTICE: Broad disclaimer of warranties and standard cap on liability for service interruptions or platform downtime.';
     }
 
     // ─── 14. Auto-Renewal & Negative Option Billing ───────────────────────────
     else if (/\b(auto[- ]renew|automatic\s+renewal|recurring\s+charge|automatically\s+renew)\b/i.test(lower)) {
       category = 'AUTO_RENEWAL';
-      confidence = 'HIGH';
+      confidence = 'CONFIRMED';
       rationale = 'WARNING: Subscription automatically renews with recurring charges unless affirmatively canceled.';
     }
 
     // ─── 15. Indemnification ──────────────────────────────────────────────────
     else if (/\b(indemnify|hold\s+harmless|defend\s+us)\b/i.test(lower)) {
       category = 'INDEMNIFICATION';
-      confidence = 'HIGH';
+      confidence = 'CONFIRMED';
       rationale = 'TRICKY: Extreme liability shift. You agree to pay the company\'s legal fees and defend them in court if they are sued due to your usage.';
     }
 
     // ─── 16. Governing Law & Venue ────────────────────────────────────────────
     else if (/\b(governing\s+law|jurisdiction|venue|resolved\s+in\s+the\s+courts\s+of|shall\s+be\s+governed\s+by)\b/i.test(lower)) {
       category = 'GOVERNING_LAW';
-      confidence = 'MEDIUM';
+      confidence = 'SUGGESTIVE';
       rationale = 'NOTICE: Forces disputes to be resolved under the laws and courts of a specific, potentially distant jurisdiction.';
     }
 
     // ─── 17. Unilateral Price Changes ─────────────────────────────────────────
     else if (/\b(prices?|fees?|subscription\s+rates?|charges?)\b/i.test(lower) && /\b(change|increase|modify|at\s+any\s+time|sole\s+discretion)\b/i.test(lower)) {
       category = 'PRICE_CHANGE';
-      confidence = 'HIGH';
+      confidence = 'CONFIRMED';
       rationale = 'UNFAIR: Platform reserves the right to increase subscription fees or prices at any time without affirmative re-consent.';
     }
 
@@ -292,10 +292,10 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     else if (/\b(data\s+breach|security\s+breach|unauthorized\s+access|security\s+incident)\b/i.test(lower)) {
       category = 'DATA_BREACH';
       if (/\b(shall\s+not\s+be\s+liable|no\s+guarantee|cannot\s+guarantee)\b/i.test(lower)) {
-        confidence = 'HIGH';
+        confidence = 'CONFIRMED';
         rationale = 'TRICKY: Disclaims liability for unauthorized access or data breaches involving your personal information.';
       } else {
-        confidence = 'MEDIUM';
+        confidence = 'SUGGESTIVE';
         rationale = 'NOTICE: Defines procedures or disclaimers regarding security incidents and data breach notifications.';
       }
     }
@@ -303,7 +303,7 @@ export async function executeLocalSLM(candidates: SegmentedClause[]): Promise<Cl
     // ─── 19. Sensitive Data Collection ─────────────────────────────────────────
     else if (/\b(biometric|precise\s+geolocation|health\s+information|financial\s+information)\b/i.test(lower)) {
       category = 'DATA_COLLECTION';
-      confidence = 'HIGH';
+      confidence = 'CONFIRMED';
       rationale = 'WARNING: Explicitly collects highly sensitive personal data such as biometrics, precise location, or health information.';
     }
 

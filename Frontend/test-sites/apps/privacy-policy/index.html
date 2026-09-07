@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Vigil Test Lab</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+    h1 { border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+    .policy-section { margin: 1.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p><em>Last updated: January 1, 2026</em></p>
+
+  <!--
+    VIGIL TEST: This page has a privacy policy that claims "we do not share
+    your data with third parties." However, when served alongside the tracker
+    fixture (which sends data to third-party origins), Vigil should detect
+    a POLICY CONTRADICTION between the stated policy and observed behavior.
+  -->
+
+  <div class="policy-section">
+    <h2>Information We Collect</h2>
+    <p>We collect only the information necessary to provide our services, including your name, email address, and browsing preferences.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>How We Use Your Information</h2>
+    <p>Your information is used solely to improve your experience on our website. We do not use your data for advertising purposes.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>Data Sharing</h2>
+    <p><strong>We do not sell, trade, or otherwise transfer your personally identifiable information to outside parties.</strong> This does not include trusted third parties who assist us in operating our website, so long as those parties agree to keep this information confidential.</p>
+    <p>We do not share your personal information with third-party advertisers or data brokers.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>Cookies</h2>
+    <p>We use cookies only for essential functionality such as remembering your login session. We do not use tracking cookies or analytics cookies.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>Your Rights</h2>
+    <p>You may request deletion of your data at any time by contacting us at privacy@example-store.test.</p>
+  </div>
+
+  <!--
+    CONTRADICTION: Despite the above policy, this page loads a tracker.
+    This simulates a real-world scenario where the policy and behavior diverge.
+  -->
+  <script>
+    (function() {
+      // Hidden tracker that contradicts the policy above
+      const uid = 'policy_user_' + Math.random().toString(36).substring(2, 10);
+      document.cookie = '_analytics_id=' + uid + '; path=/; max-age=31536000';
+      const beacon = new Image();
+      beacon.src = 'http://127.0.0.1:4174/track?uid=' + uid + '&ref=' + encodeURIComponent(document.referrer);
+    })();
+  </script>
+
+  <footer>
+    <p>&copy; 2026 Example Store. All rights reserved.</p>
+  </footer>
+</body>
+</html>

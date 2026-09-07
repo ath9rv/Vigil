@@ -45,13 +45,18 @@ describe('Background Worker Fast-Lane Emergency Alert Engine', () => {
       ruleId: 'M2-001',
       ruleName: 'domain_similarity',
       module: 'M2',
-      severity: 'severe',
-      confidenceState: 'confirmed',
+      severity: 'CRITICAL',
+      confidenceState: 'CONFIRMED',
       statuteRef: '',
       explanation: 'Lookalike domain mimicking banking portal',
       elementSelector: 'body',
       elementRect: { top: 0, left: 0, width: 0, height: 0 },
-      pageUrl: 'https://paypa1.com/login',
+      context: {
+        scan: { tabId: 1, navigationId: 'https://example.com', origin: 'https://example.com', hostname: 'example.com', startedAt: Date.now() },
+        evidence: [],
+        coverage: { dom: true, threatIntel: true, network: true, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+      },
+      pageUrl: 'https://example.com/login',
       detectedAt: new Date().toISOString()
     };
 
@@ -60,7 +65,7 @@ describe('Background Worker Fast-Lane Emergency Alert Engine', () => {
     expect(notificationMock).toBeDefined();
     expect(notificationMock.priority).toBe(2);
     expect(notificationMock.title).toContain('Vigil Security Alert');
-    expect(notificationMock.message).toContain('paypa1.com');
+    expect(notificationMock.message).toContain('example.com');
   });
 
   it('updates extension action badge with red exclamation mark on affected tab', async () => {
@@ -69,12 +74,17 @@ describe('Background Worker Fast-Lane Emergency Alert Engine', () => {
       ruleId: 'M2-005',
       ruleName: 'form_action_mismatch',
       module: 'M2',
-      severity: 'severe',
-      confidenceState: 'confirmed',
+      severity: 'CRITICAL',
+      confidenceState: 'CONFIRMED',
       statuteRef: '',
       explanation: 'Credential exfiltration detected',
       elementSelector: 'form',
       elementRect: { top: 0, left: 0, width: 0, height: 0 },
+      context: {
+        scan: { tabId: 1, navigationId: 'https://fake-login.com/auth', origin: 'https://fake-login.com', hostname: 'fake-login.com', startedAt: Date.now() },
+        evidence: [],
+        coverage: { dom: true, threatIntel: true, network: true, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+      },
       pageUrl: 'https://fake-login.com/auth',
       detectedAt: new Date().toISOString()
     };
@@ -91,12 +101,17 @@ describe('Background Worker Fast-Lane Emergency Alert Engine', () => {
       ruleId: 'M2-003',
       ruleName: 'phishing_clone',
       module: 'M2',
-      severity: 'severe',
-      confidenceState: 'confirmed',
+      severity: 'CRITICAL',
+      confidenceState: 'CONFIRMED',
       statuteRef: '',
       explanation: 'Phishing clone page',
       elementSelector: 'form',
       elementRect: { top: 0, left: 0, width: 0, height: 0 },
+      context: {
+        scan: { tabId: 1, navigationId: 'https://arnazon.in/signin', origin: 'https://arnazon.in', hostname: 'arnazon.in', startedAt: Date.now() },
+        evidence: [],
+        coverage: { dom: true, threatIntel: true, network: true, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+      },
       pageUrl: 'https://arnazon.in/signin',
       detectedAt: new Date().toISOString()
     };

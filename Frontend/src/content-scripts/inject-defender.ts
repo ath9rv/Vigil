@@ -1,4 +1,4 @@
-﻿// Injected directly into the MAIN world at document_start.
+// Injected directly into the MAIN world at document_start.
 // Policy-Driven Controlled Active Deception & Anti-Fingerprinting Shield V2.
 // Measurably hardened against hostile fingerprinting probes, CreepJS prototype lie checks,
 // multi-channel telemetry bypasses, and iframe evasion.
@@ -12,16 +12,34 @@ export interface DeceptionPolicy {
   telemetryProtection: boolean;
 }
 
+let DefenderInternals: {
+  makeNative?: <T extends Function>(fn: T, name: string, isGetter?: boolean, arity?: number) => T;
+  isFingerprintProbe?: (canvas: HTMLCanvasElement) => boolean;
+  isFingerprintKey?: (key: string) => boolean;
+  isTelemetryEndpoint?: (rawUrl: string) => boolean;
+  sanitizeUrlQuery?: (rawUrl: string) => string;
+  sanitizeObject?: (obj: any, depth?: number) => boolean;
+  hashString?: (str: string) => number;
+  applyHardwareNormalization?: (targetNav: any, targetScreen: any) => void;
+} = {};
+
 (function() {
+  const win = typeof window !== 'undefined' ? window : (globalThis as any);
+  if (!win) return;
+
   // Idempotent execution guard
-  if ((window as any).__VIGIL_DEFENDER_INITIALIZED__) {
+  if (win.__VIGIL_DEFENDER_INITIALIZED__) {
     return;
   }
-  Object.defineProperty(window, '__VIGIL_DEFENDER_INITIALIZED__', {
-    value: true,
-    configurable: false,
-    writable: false
-  });
+  try {
+    Object.defineProperty(win, '__VIGIL_DEFENDER_INITIALIZED__', {
+      value: true,
+      configurable: false,
+      writable: false
+    });
+  } catch {
+    win.__VIGIL_DEFENDER_INITIALIZED__ = true;
+  }
 
   try {
     // ─── 0. Native Function Camouflage (Neutralizes CreepJS "Lie" Detectors) ───
@@ -53,6 +71,7 @@ export interface DeceptionPolicy {
       } catch {}
       return fn;
     }
+    DefenderInternals.makeNative = makeNative;
 
     // ─── 1. Central Policy Definition ──────────────────────────────────────────
     const policy: DeceptionPolicy = {
@@ -73,8 +92,9 @@ export interface DeceptionPolicy {
       }
       return h >>> 0;
     };
+    DefenderInternals.hashString = hashString;
 
-    const originHash = hashString(window.location.hostname || 'localhost');
+    const originHash = hashString(win.location?.hostname || 'localhost');
     const originSeed = (originHash % 1000) / 1000;
 
     // ─── 2. Advanced Fingerprint Probe Canvas Detection ────────────────────────
@@ -111,6 +131,7 @@ export interface DeceptionPolicy {
 
       return false;
     }
+    DefenderInternals.isFingerprintProbe = isFingerprintProbe;
 
     // ─── 3. Hardware Fingerprint Normalization (Stable Fleet Persona) ───────────
     function applyHardwareNormalization(targetNav: Navigator, targetScreen: Screen) {
@@ -120,41 +141,82 @@ export interface DeceptionPolicy {
         const screenProto = Object.getPrototypeOf(targetScreen) || targetScreen;
 
         const getHardwareConcurrency = makeNative(() => 8, 'hardwareConcurrency', true, 0);
-        Object.defineProperty(navProto, 'hardwareConcurrency', {
-          get: getHardwareConcurrency,
-          configurable: true,
-          enumerable: true
-        });
+        try {
+          Object.defineProperty(navProto, 'hardwareConcurrency', {
+            get: getHardwareConcurrency,
+            configurable: true,
+            enumerable: true
+          });
+        } catch {
+          try {
+            Object.defineProperty(targetNav, 'hardwareConcurrency', {
+              get: getHardwareConcurrency,
+              configurable: true,
+              enumerable: true
+            });
+          } catch {}
+        }
 
-        if ('deviceMemory' in navProto) {
-          const getDeviceMemory = makeNative(() => 8, 'deviceMemory', true, 0);
+        const getDeviceMemory = makeNative(() => 8, 'deviceMemory', true, 0);
+        try {
           Object.defineProperty(navProto, 'deviceMemory', {
             get: getDeviceMemory,
             configurable: true,
             enumerable: true
           });
+        } catch {
+          try {
+            Object.defineProperty(targetNav, 'deviceMemory', {
+              get: getDeviceMemory,
+              configurable: true,
+              enumerable: true
+            });
+          } catch {}
         }
 
         const getColorDepth = makeNative(() => 24, 'colorDepth', true, 0);
-        Object.defineProperty(screenProto, 'colorDepth', {
-          get: getColorDepth,
-          configurable: true,
-          enumerable: true
-        });
+        try {
+          Object.defineProperty(screenProto, 'colorDepth', {
+            get: getColorDepth,
+            configurable: true,
+            enumerable: true
+          });
+        } catch {
+          try {
+            Object.defineProperty(targetScreen, 'colorDepth', {
+              get: getColorDepth,
+              configurable: true,
+              enumerable: true
+            });
+          } catch {}
+        }
 
         const getPixelDepth = makeNative(() => 24, 'pixelDepth', true, 0);
-        Object.defineProperty(screenProto, 'pixelDepth', {
-          get: getPixelDepth,
-          configurable: true,
-          enumerable: true
-        });
+        try {
+          Object.defineProperty(screenProto, 'pixelDepth', {
+            get: getPixelDepth,
+            configurable: true,
+            enumerable: true
+          });
+        } catch {
+          try {
+            Object.defineProperty(targetScreen, 'pixelDepth', {
+              get: getPixelDepth,
+              configurable: true,
+              enumerable: true
+            });
+          } catch {}
+        }
       } catch {}
     }
+    DefenderInternals.applyHardwareNormalization = applyHardwareNormalization;
 
-    applyHardwareNormalization(navigator, window.screen);
+    if (typeof navigator !== 'undefined' && win.screen) {
+      applyHardwareNormalization(navigator, win.screen);
+    }
 
     // ─── 4. Canvas 2D Readback Protection (Idempotent Per-Instance) ─────────────
-    if (policy.canvasNoise) {
+    if (policy.canvasNoise && typeof HTMLCanvasElement !== 'undefined') {
       const perturbedCanvases = new WeakSet<HTMLCanvasElement>();
       const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
 
@@ -204,88 +266,92 @@ export interface DeceptionPolicy {
     }
 
     // ─── 5. WebGL Parameter Sanitization (Herd Blending) ───────────────────────
-    if (policy.webglNoise) {
-      const getParameterProto = WebGLRenderingContext.prototype.getParameter;
-      const UNMASKED_VENDOR_WEBGL = 0x9245;
-      const UNMASKED_RENDERER_WEBGL = 0x9246;
+    if (policy.webglNoise && typeof WebGLRenderingContext !== 'undefined') {
+      try {
+        const getParameterProto = WebGLRenderingContext.prototype.getParameter;
+        const UNMASKED_VENDOR_WEBGL = 0x9245;
+        const UNMASKED_RENDERER_WEBGL = 0x9246;
 
-      const sanitizeWebGLParam = (target: any, pname: number) => {
-        if (pname === UNMASKED_VENDOR_WEBGL) {
-          return 'Google Inc. (Intel)';
-        }
-        if (pname === UNMASKED_RENDERER_WEBGL) {
-          return 'ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)';
-        }
-        return getParameterProto.call(target, pname);
-      };
-
-      WebGLRenderingContext.prototype.getParameter = makeNative(function(this: WebGLRenderingContext, pname: number) {
-        return sanitizeWebGLParam(this, pname);
-      }, 'getParameter', false, 1);
-
-      if (window.WebGL2RenderingContext) {
-        const getParameter2Proto = WebGL2RenderingContext.prototype.getParameter;
-        WebGL2RenderingContext.prototype.getParameter = makeNative(function(this: WebGL2RenderingContext, pname: number) {
-          if (pname === UNMASKED_VENDOR_WEBGL || pname === UNMASKED_RENDERER_WEBGL) {
-            return sanitizeWebGLParam(this, pname);
+        const sanitizeWebGLParam = (target: any, pname: number) => {
+          if (pname === UNMASKED_VENDOR_WEBGL) {
+            return 'Google Inc. (Intel)';
           }
-          return getParameter2Proto.call(this, pname);
+          if (pname === UNMASKED_RENDERER_WEBGL) {
+            return 'ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)';
+          }
+          return getParameterProto.call(target, pname);
+        };
+
+        WebGLRenderingContext.prototype.getParameter = makeNative(function(this: WebGLRenderingContext, pname: number) {
+          return sanitizeWebGLParam(this, pname);
         }, 'getParameter', false, 1);
-      }
+
+        if (win.WebGL2RenderingContext) {
+          const getParameter2Proto = WebGL2RenderingContext.prototype.getParameter;
+          WebGL2RenderingContext.prototype.getParameter = makeNative(function(this: WebGL2RenderingContext, pname: number) {
+            if (pname === UNMASKED_VENDOR_WEBGL || pname === UNMASKED_RENDERER_WEBGL) {
+              return sanitizeWebGLParam(this, pname);
+            }
+            return getParameter2Proto.call(this, pname);
+          }, 'getParameter', false, 1);
+        }
+      } catch {}
     }
 
     // ─── 6. Audio Fingerprint Protection (OfflineAudioContext & AudioBuffer) ───
     if (policy.audioNoise) {
-      const AudioContextClass = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext;
-      if (AudioContextClass) {
-        const origStartRendering = AudioContextClass.prototype.startRendering;
-        AudioContextClass.prototype.startRendering = makeNative(async function(this: OfflineAudioContext) {
-          const renderedBuffer = await origStartRendering.call(this);
-          try {
-            for (let ch = 0; ch < renderedBuffer.numberOfChannels; ch++) {
-              const channelData = renderedBuffer.getChannelData(ch);
-              if (channelData && channelData.length > 10) {
-                // Perturb both early sample slice and whole-buffer index
-                const earlyIdx = (originHash % 25) + 5;
-                const sampleIdx = Math.floor(originSeed * (channelData.length - 1));
-                const direction = (originHash % 2 === 0) ? 1 : -1;
-                channelData[earlyIdx] += (direction * 0.000005);
-                channelData[sampleIdx] += (direction * 0.000005);
+      try {
+        const AudioContextClass = win.OfflineAudioContext || (win as any).webkitOfflineAudioContext;
+        if (AudioContextClass) {
+          const origStartRendering = AudioContextClass.prototype.startRendering;
+          AudioContextClass.prototype.startRendering = makeNative(async function(this: OfflineAudioContext) {
+            const renderedBuffer = await origStartRendering.call(this);
+            try {
+              for (let ch = 0; ch < renderedBuffer.numberOfChannels; ch++) {
+                const channelData = renderedBuffer.getChannelData(ch);
+                if (channelData && channelData.length > 10) {
+                  // Perturb both early sample slice and whole-buffer index
+                  const earlyIdx = (originHash % 25) + 5;
+                  const sampleIdx = Math.floor(originSeed * (channelData.length - 1));
+                  const direction = (originHash % 2 === 0) ? 1 : -1;
+                  channelData[earlyIdx] += (direction * 0.000005);
+                  channelData[sampleIdx] += (direction * 0.000005);
+                }
               }
-            }
-          } catch {}
-          return renderedBuffer;
-        }, 'startRendering', false, 0);
-      }
-
-      if (window.AudioBuffer) {
-        const originalGetChannelData = AudioBuffer.prototype.getChannelData;
-        AudioBuffer.prototype.getChannelData = makeNative(function(this: AudioBuffer, channel: number) {
-          const data = originalGetChannelData.call(this, channel);
-          if (data && data.length > 10) {
-            const earlyIdx = (originHash % 25) + 5;
-            const index = Math.floor(originSeed * (data.length - 1));
-            data[earlyIdx] = Math.round(data[earlyIdx] * 100000) / 100000;
-            data[index] = Math.round(data[index] * 100000) / 100000;
-          }
-          return data;
-        }, 'getChannelData', false, 1);
-
-        if (AudioBuffer.prototype.copyFromChannel) {
-          const origCopyFromChannel = AudioBuffer.prototype.copyFromChannel;
-          AudioBuffer.prototype.copyFromChannel = makeNative(function(
-            this: AudioBuffer, destination: any, channelNumber: number, bufferOffset = 0
-          ) {
-            origCopyFromChannel.call(this, destination, channelNumber, bufferOffset);
-            if (destination && destination.length > 10) {
-              const earlyIdx = (originHash % 25) + 5;
-              const index = Math.floor(originSeed * (destination.length - 1));
-              destination[earlyIdx] = Math.round(destination[earlyIdx] * 100000) / 100000;
-              destination[index] = Math.round(destination[index] * 100000) / 100000;
-            }
-          }, 'copyFromChannel', false, 2);
+            } catch {}
+            return renderedBuffer;
+          }, 'startRendering', false, 0);
         }
-      }
+
+        if (win.AudioBuffer) {
+          const originalGetChannelData = AudioBuffer.prototype.getChannelData;
+          AudioBuffer.prototype.getChannelData = makeNative(function(this: AudioBuffer, channel: number) {
+            const data = originalGetChannelData.call(this, channel);
+            if (data && data.length > 10) {
+              const earlyIdx = (originHash % 25) + 5;
+              const index = Math.floor(originSeed * (data.length - 1));
+              data[earlyIdx] = Math.round(data[earlyIdx] * 100000) / 100000;
+              data[index] = Math.round(data[index] * 100000) / 100000;
+            }
+            return data;
+          }, 'getChannelData', false, 1);
+
+          if (AudioBuffer.prototype.copyFromChannel) {
+            const origCopyFromChannel = AudioBuffer.prototype.copyFromChannel;
+            AudioBuffer.prototype.copyFromChannel = makeNative(function(
+              this: AudioBuffer, destination: any, channelNumber: number, bufferOffset = 0
+            ) {
+              origCopyFromChannel.call(this, destination, channelNumber, bufferOffset);
+              if (destination && destination.length > 10) {
+                const earlyIdx = (originHash % 25) + 5;
+                const index = Math.floor(originSeed * (destination.length - 1));
+                destination[earlyIdx] = Math.round(destination[earlyIdx] * 100000) / 100000;
+                destination[index] = Math.round(destination[index] * 100000) / 100000;
+              }
+            }, 'copyFromChannel', false, 2);
+          }
+        }
+      } catch {}
     }
 
     // ─── 7. Multi-Tier Telemetry Classification & Sanitization Pipeline ────────
@@ -303,7 +369,7 @@ export interface DeceptionPolicy {
       // Tier 1: Endpoint Classification
       function isTelemetryEndpoint(rawUrl: string): boolean {
         try {
-          const parsed = new URL(rawUrl, window.location.href);
+          const parsed = new URL(rawUrl, win.location?.href || 'http://localhost/');
           const pathAndQuery = `${parsed.pathname}${parsed.search}`.toLowerCase();
           const host = parsed.hostname.toLowerCase();
 
@@ -328,7 +394,7 @@ export interface DeceptionPolicy {
       // Tier 2: URL Query Sanitization
       function sanitizeUrlQuery(rawUrl: string): string {
         try {
-          const parsed = new URL(rawUrl, window.location.href);
+          const parsed = new URL(rawUrl, win.location?.href || 'http://localhost/');
           let modified = false;
           for (const [k] of Array.from(parsed.searchParams.entries())) {
             if (isFingerprintKey(k)) {
@@ -418,8 +484,13 @@ export interface DeceptionPolicy {
         return data;
       }
 
+      DefenderInternals.isFingerprintKey = isFingerprintKey;
+      DefenderInternals.isTelemetryEndpoint = isTelemetryEndpoint;
+      DefenderInternals.sanitizeUrlQuery = sanitizeUrlQuery;
+      DefenderInternals.sanitizeObject = sanitizeObject;
+
       // 7.1 Intercept navigator.sendBeacon
-      if (navigator.sendBeacon) {
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
         const originalSendBeacon = navigator.sendBeacon;
         navigator.sendBeacon = makeNative(function(this: Navigator, url: string | URL, data?: BodyInit | null): boolean {
           try {
@@ -433,9 +504,9 @@ export interface DeceptionPolicy {
       }
 
       // 7.2 Intercept window.fetch
-      if (window.fetch) {
-        const originalFetch = window.fetch;
-        window.fetch = makeNative(function(this: any, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+      if (typeof win.fetch !== 'undefined') {
+        const originalFetch = win.fetch;
+        win.fetch = makeNative(function(this: any, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
           try {
             let urlStr = '';
             if (typeof input === 'string') {
@@ -460,7 +531,7 @@ export interface DeceptionPolicy {
       }
 
       // 7.3 Intercept XMLHttpRequest
-      if (window.XMLHttpRequest) {
+      if (typeof win.XMLHttpRequest !== 'undefined') {
         const originalXhrOpen = XMLHttpRequest.prototype.open;
         const originalXhrSend = XMLHttpRequest.prototype.send;
         const xhrUrlMap = new WeakMap<XMLHttpRequest, string>();
@@ -487,10 +558,11 @@ export interface DeceptionPolicy {
 
     // ─── 8. Dynamic Same-Origin IFrame Inoculation (Phase 7) ────────────────────
     try {
-      const origContentWindowDesc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow');
-      if (origContentWindowDesc && origContentWindowDesc.get) {
-        const origContentWindowGetter = origContentWindowDesc.get;
-        Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+      if (typeof HTMLIFrameElement !== 'undefined') {
+        const origContentWindowDesc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow');
+        if (origContentWindowDesc && origContentWindowDesc.get) {
+          const origContentWindowGetter = origContentWindowDesc.get;
+          Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
           get: makeNative(function(this: HTMLIFrameElement) {
             const win = origContentWindowGetter.call(this);
             if (win && win.navigator && !(win as any).__VIGIL_DEFENDER_INITIALIZED__) {
@@ -503,29 +575,42 @@ export interface DeceptionPolicy {
           configurable: true,
           enumerable: true
         });
+        }
       }
     } catch {}
 
     // ─── 9. Global Privacy Control (GPC) & Public Status ────────────────────────
     try {
-      Object.defineProperty(navigator, 'globalPrivacyControl', {
+      if (typeof navigator !== 'undefined') {
+        Object.defineProperty(navigator, 'globalPrivacyControl', {
+          value: true,
+          configurable: false,
+          writable: false
+        });
+      }
+    } catch {}
+
+    try {
+      Object.defineProperty(win, '__VIGIL_PROTECTION_ACTIVE__', {
         value: true,
         configurable: false,
         writable: false
       });
-    } catch {}
+    } catch {
+      win.__VIGIL_PROTECTION_ACTIVE__ = true;
+    }
 
-    Object.defineProperty(window, '__VIGIL_PROTECTION_ACTIVE__', {
-      value: true,
-      configurable: false,
-      writable: false
-    });
+    try {
+      Object.defineProperty(win, '__VIGIL_DECEPTION_POLICY__', {
+        value: Object.freeze(policy),
+        configurable: false,
+        writable: false
+      });
+    } catch {
+      win.__VIGIL_DECEPTION_POLICY__ = Object.freeze(policy);
+    }
 
-    Object.defineProperty(window, '__VIGIL_DECEPTION_POLICY__', {
-      value: Object.freeze(policy),
-      configurable: false,
-      writable: false
-    });
+    win.__VIGIL_DEFENDER_INTERNALS__ = DefenderInternals;
 
   } catch {}
 })();

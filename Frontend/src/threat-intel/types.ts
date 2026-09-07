@@ -5,7 +5,7 @@ export type WebRiskThreatType = 'MALWARE' | 'SOCIAL_ENGINEERING' | 'UNWANTED_SOF
 export interface ThreatMatch {
   status: ThreatStatus;
   source?: ThreatSource;
-  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  confidence: 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED';
   details: string;
   hashPrefixHex?: string;
 }

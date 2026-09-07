@@ -1,5 +1,6 @@
 import { showAmbientAlert } from './ambient-shield';
-
+import { isSameSite } from '../shared/domain-intelligence';
+import { VigilDOMEventBus } from '../observation/event-bus';
 /**
  * Adversarial Defense & Behavioral Observer.
  * Defends against adversarial evasion techniques:
@@ -24,7 +25,7 @@ export function initAdversarialObserver(): void {
         const currentHost = window.location.hostname;
         
         // Check for domain mismatch
-        if (actionUrl.hostname !== currentHost && !actionUrl.hostname.endsWith(`.${currentHost}`)) {
+        if (!isSameSite(actionUrl.hostname, currentHost)) {
           // If the form contains password or payment tokens, this is an immediate interception
           if (hasPassword) {
             e.preventDefault();
@@ -84,9 +85,12 @@ function observeCountdownClocks(): void {
   const timerRegex = /\b(\d{1,2}):(\d{2}):?(\d{2})?\b/;
   const observedTimers = new WeakMap<Element, { lastVal: string; decrementCount: number }>();
 
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      const target = mutation.target as HTMLElement;
+  VigilDOMEventBus.start();
+  VigilDOMEventBus.subscribe((events) => {
+    for (const event of events) {
+      if (event.type !== 'TEXT_CHANGED' && event.type !== 'NODE_ADDED') continue;
+      
+      const target = event.target as HTMLElement;
       if (!target || !target.textContent) continue;
 
       const text = target.textContent.trim();
@@ -120,13 +124,4 @@ function observeCountdownClocks(): void {
       }
     }
   });
-
-  const body = document.documentElement || document.body;
-  if (body) {
-    observer.observe(body, {
-      characterData: true,
-      childList: true,
-      subtree: true
-    });
-  }
 }

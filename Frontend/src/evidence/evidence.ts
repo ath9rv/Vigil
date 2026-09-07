@@ -35,9 +35,9 @@ export interface Evidence {
 }
 
 export type FindingCategory = 'SECURITY' | 'PRIVACY' | 'DARK_PATTERN' | 'LEGAL';
-export type SeverityLevel = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-export type ConfidenceLevel = 'LOW' | 'MEDIUM' | 'HIGH';
-export type ReviewStatus = 'DETECTED' | 'REVIEW_NEEDED' | 'CONFIRMED';
+export type SeverityLevel = 'INFO' | 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED' | 'CRITICAL';
+export type ConfidenceLevel = 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED' | 'INCONCLUSIVE';
+export type ReviewStatus = 'CONFIRMED' | 'REVIEW_NEEDED' | 'INCONCLUSIVE';
 
 export interface Finding {
   id: string;

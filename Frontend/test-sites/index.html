@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigil Test Laboratory</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; }
+    h1 { color: #00d4ff; }
+    a { color: #7dd3fc; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 1.5rem; }
+    .card h3 { margin-top: 0; color: #e94560; }
+    code { background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>🔬 Vigil Test Laboratory</h1>
+  <p>Browser fixture sites for testing the Vigil extension against realistic web behavior.</p>
+  <p>For cross-origin testing, run separate instances on different ports. See <code>vite.config.ts</code>.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>🟢 Clean Site</h3>
+      <p>A benign page with no trackers, no dark patterns, no suspicious behavior.</p>
+      <p><strong>Expected:</strong> No findings.</p>
+      <a href="/apps/clean/">Open →</a>
+    </div>
+    <div class="card">
+      <h3>🔴 Tracker Site</h3>
+      <p>Loads third-party tracking scripts and transmits identifiers cross-origin.</p>
+      <p><strong>Expected:</strong> <code>cross_site_transmission</code></p>
+      <a href="/apps/tracker/">Open →</a>
+    </div>
+    <div class="card">
+      <h3>🟡 Identifier Propagation</h3>
+      <p>Sets cookies and sends them to a third-party endpoint.</p>
+      <p><strong>Expected:</strong> <code>identifier_transmission</code></p>
+      <a href="/apps/identifier/">Open →</a>
+    </div>
+    <div class="card">
+      <h3>🟠 Dark Pattern</h3>
+      <p>Pre-checked opt-in, hidden decline buttons, forced urgency.</p>
+      <p><strong>Expected:</strong> <code>deceptive_ui</code></p>
+      <a href="/apps/dark-pattern/">Open →</a>
+    </div>
+    <div class="card">
+      <h3>📜 Privacy Policy</h3>
+      <p>A page with a privacy policy that contradicts observed behavior.</p>
+      <p><strong>Expected:</strong> <code>policy_contradiction</code></p>
+      <a href="/apps/privacy-policy/">Open →</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Special Offer — Vigil Test Lab</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .modal { background: #fff; color: #333; border-radius: 12px; padding: 2rem; max-width: 450px; text-align: center; }
+    .btn-accept { background: #e94560; color: #fff; border: none; padding: 14px 40px; border-radius: 8px; font-size: 1.1em; cursor: pointer; margin: 0.5rem; }
+    .btn-decline { background: none; border: none; color: #ccc; font-size: 0.7em; cursor: pointer; opacity: 0.3; margin-top: 1rem; }
+    .urgency { color: #e94560; font-weight: bold; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .pre-checked { margin: 1rem 0; text-align: left; }
+    .pre-checked label { font-size: 0.85em; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to Our Store!</h1>
+  <p>Browse our amazing products.</p>
+
+  <!--
+    VIGIL TEST: This page demonstrates multiple dark patterns:
+    1. Pre-checked checkbox opting user into marketing emails
+    2. Decline button with suppressed visibility (low opacity, small font)
+    3. Forced urgency with fake countdown
+    4. Confirmshaming language
+  -->
+
+  <!-- Dark Pattern: Modal with confirmshaming + hidden decline -->
+  <div class="modal-overlay" id="darkModal">
+    <div class="modal">
+      <h2>🎉 Exclusive Deal!</h2>
+      <p class="urgency">⏰ Only <span id="countdown">3:42</span> left!</p>
+      <p>Sign up for our newsletter and get 50% off!</p>
+
+      <!-- Dark Pattern: Pre-checked checkbox -->
+      <div class="pre-checked">
+        <input type="checkbox" id="marketing" checked />
+        <label for="marketing">Yes, send me daily promotional emails and share my data with partners</label>
+      </div>
+
+      <div class="pre-checked">
+        <input type="checkbox" id="thirdParty" checked />
+        <label for="thirdParty">I agree to share my browsing activity with trusted third parties</label>
+      </div>
+
+      <button class="btn-accept" id="acceptBtn">Yes, I want to save money!</button>
+      <br/>
+      <!-- Dark Pattern: Confirmshaming + nearly invisible decline -->
+      <button class="btn-decline" id="declineBtn">No thanks, I prefer paying full price</button>
+    </div>
+  </div>
+
+  <!-- Fake urgency countdown script -->
+  <script>
+    (function() {
+      let seconds = 222;
+      const el = document.getElementById('countdown');
+      setInterval(() => {
+        if (seconds > 0) seconds--;
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
+      }, 1000);
+
+      document.getElementById('declineBtn')?.addEventListener('click', () => {
+        document.getElementById('darkModal')?.remove();
+      });
+      document.getElementById('acceptBtn')?.addEventListener('click', () => {
+        document.getElementById('darkModal')?.remove();
+      });
+    })();
+  </script>
+
+  <footer>
+    <p>&copy; 2026 Shady Store</p>
+  </footer>
+</body>
+</html>

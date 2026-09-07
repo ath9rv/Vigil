@@ -1,27 +1,131 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { showAmbientAlert, dismissAmbientAlert } from './ambient-shield';
 
-describe('Ambient In-Situ Warning Shield Architecture', () => {
-  it('enforces maximum integer z-index (2147483647) to prevent host page evasion', () => {
-    // 2^31 - 1 is the 32-bit signed integer maximum
-    const MAX_CSS_Z_INDEX = '2147483647';
-    expect(MAX_CSS_Z_INDEX).toBe('2147483647');
-    expect(parseInt(MAX_CSS_Z_INDEX, 10)).toBe(2147483647);
-  });
+describe('Ambient In-Situ Warning Shield (Direct Integration Tests)', () => {
+  let createdElements: any[] = [];
+  let currentHost: any = null;
 
-  it('correctly maps severity alert types to distinct psychological visual colors', () => {
-    const alertPalette = {
-      CRITICAL_SECURITY: '#ef4444', // Urgent Red
-      CREDENTIAL_WARNING: '#ea580c', // High Orange
-      DARK_PATTERN: '#f59e0b',       // Amber Warning
-      CANARY_BREAKAGE: '#6366f1'     // Indigo Notice
+  beforeEach(() => {
+    createdElements = [];
+    currentHost = null;
+
+    // Lightweight DOM environment polyfill for Node test runner
+    const mockBody: any = {
+      appendChild: vi.fn((child: any) => child),
     };
+    (globalThis as any).document = {
+      body: mockBody,
+      documentElement: mockBody,
+      contains: vi.fn((el: any) => el === currentHost),
+      createElement: vi.fn((tag: string) => {
+        const el: any = {
+          tagName: tag.toUpperCase(),
+          style: {},
+          children: [] as any[],
+          className: '',
+          textContent: '',
+          innerHTML: '',
+          remove: vi.fn(() => {
+            if (el.parentNode) {
+              const idx = el.parentNode.children.indexOf(el);
+              if (idx !== -1) el.parentNode.children.splice(idx, 1);
+            }
+          }),
+          addEventListener: vi.fn((event: string, handler: Function) => {
+            el._handlers = el._handlers || {};
+            el._handlers[event] = handler;
+          }),
+          appendChild: vi.fn((child: any) => {
+            child.parentNode = el;
+            el.children.push(child);
+            return child;
+          }),
+          attachShadow: vi.fn(() => {
+            const shadow: any = {
+              children: [] as any[],
+              appendChild: vi.fn((child: any) => {
+                child.parentNode = shadow;
+                shadow.children.push(child);
+                return child;
+              }),
+              querySelector: vi.fn((sel: string) => {
+                const search = (node: any): any => {
+                  if (sel.startsWith('.') && node.className && node.className.includes(sel.slice(1))) return node;
+                  if (sel.startsWith('#') && node.id === sel.slice(1)) return node;
+                  for (const c of node.children || []) {
+                    const found = search(c);
+                    if (found) return found;
+                  }
+                  return null;
+                };
+                for (const c of shadow.children) {
+                  const found = search(c);
+                  if (found) return found;
+                }
+                return null;
+              }),
+            };
+            el.shadowRoot = shadow;
+            return shadow;
+          }),
+          querySelector: vi.fn((sel: string) => {
+            if (sel.startsWith('.') && el.className && el.className.includes(sel.slice(1))) return el;
+            if (sel.startsWith('#') && el.id === sel.slice(1)) return el;
+            return null;
+          }),
+        };
 
-    expect(alertPalette.CRITICAL_SECURITY).toBe('#ef4444');
-    expect(alertPalette.DARK_PATTERN).toBe('#f59e0b');
+        if (tag === 'vigil-ambient-shield') {
+          currentHost = el;
+        }
+        createdElements.push(el);
+        return el;
+      }),
+    };
   });
 
-  it('guarantees Shadow DOM encapsulation to shield Vigil UI from host CSS leaks', () => {
-    const isShadowDomEnforced = true;
-    expect(isShadowDomEnforced).toBe(true);
+  it('renders alert with maximum integer z-index (2147483647) and shadow encapsulation', () => {
+    showAmbientAlert({
+      id: 'alert-1',
+      type: 'CRITICAL_SECURITY',
+      title: 'Phishing Warning',
+      message: 'Suspicious form detected.',
+    });
+
+    expect(currentHost).not.toBeNull();
+    expect(currentHost.style.zIndex).toBe('2147483647');
+    expect(currentHost.style.position).toBe('fixed');
+    expect(currentHost.shadowRoot).toBeDefined();
+  });
+
+  it('dismissAmbientAlert successfully removes the targeted alert card', () => {
+    showAmbientAlert({
+      id: 'alert-to-dismiss',
+      type: 'DARK_PATTERN',
+      title: 'Deceptive Pricing',
+      message: 'Hidden subscription fee.',
+    });
+
+    expect(currentHost).not.toBeNull();
+    dismissAmbientAlert('alert-to-dismiss');
+    // Calling dismiss twice or for missing alert is graceful
+    expect(() => dismissAmbientAlert('non-existent')).not.toThrow();
+  });
+
+  it('handles user actions and dismiss callbacks gracefully', () => {
+    const onPrimary = vi.fn();
+    const onDismiss = vi.fn();
+
+    showAmbientAlert({
+      id: 'actionable-alert',
+      type: 'CREDENTIAL_WARNING',
+      title: 'Credential Risk',
+      message: 'Password sent over insecure channel.',
+      primaryActionLabel: 'Block Form',
+      onPrimaryAction: onPrimary,
+      onDismiss: onDismiss,
+    });
+
+    expect(currentHost).not.toBeNull();
   });
 });

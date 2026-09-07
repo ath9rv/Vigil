@@ -2,6 +2,7 @@ import type { Rule, Finding, ScanCompleteMessage } from '../shared/types';
 import { KNOWN_DOMAINS } from '../shared/constants';
 import { getStorageValue, setStorageValue } from '../shared/storage';
 import { loadM1Rules, loadM2Rules, loadM3Rules, loadM4Rules, loadM5Rules } from './rules-loader';
+import { isSameSite } from '../shared/domain-intelligence';
 import { isRelevantForM2 } from './relevance-gate';
 import { showAmbientAlert } from './ambient-shield';
 import { createForensicAnalysis } from '../evidence/forensics';
@@ -121,7 +122,7 @@ export async function scanPage(): Promise<void> {
     rule: Rule,
     element: Element,
     extras: Record<string, string> = {},
-    confidenceState: Finding['confidenceState'] = 'under_review',
+    confidenceState: Finding['confidenceState'] = 'OBSERVED',
     reviewStatus: Finding['reviewStatus'] = 'REVIEW_NEEDED'
   ) => {
     // Per-rule dedup: only the FIRST match for each rule gets reported
@@ -140,7 +141,7 @@ export async function scanPage(): Promise<void> {
     findingElements.set(id, element);
     const capturedAt = Date.now();
     const forensics = createForensicAnalysis({
-      confidence: confidenceState === 'confirmed' ? 'HIGH' : 'MEDIUM',
+      confidence: confidenceState === 'CONFIRMED' ? 'CONFIRMED' : 'SUGGESTIVE',
       reviewStatus,
       observed: [`DOM rule ${rule.id} matched ${selectorPath}.`],
       supportingEvidence: [`Matched rule: ${rule.name}.`],
@@ -162,14 +163,6 @@ export async function scanPage(): Promise<void> {
       reviewStatus,
       statuteRef: rule.statute_ref,
       explanation,
-      evidence: {
-        sourceType: 'DOM',
-        sourceUrl: window.location.href,
-        capturedAt,
-        excerpt: (element.textContent || '').trim().slice(0, 240),
-        context: rule.statute_ref,
-        forensics
-      },
       elementSelector: selectorPath,
       elementRect: {
         top: rect.top,
@@ -178,9 +171,34 @@ export async function scanPage(): Promise<void> {
         height: rect.height,
       },
       pageUrl: window.location.href,
-      detectedAt: new Date().toISOString()
+      detectedAt: new Date().toISOString(),
+      context: {
+        scan: { tabId: 0, navigationId: window.location.href, origin: window.location.origin, hostname: window.location.hostname, startedAt: startTime },
+        evidence: [{
+          sourceType: 'DOM',
+          sourceUrl: window.location.href,
+          capturedAt,
+          excerpt: (element.textContent || '').trim().slice(0, 240),
+          context: rule.statute_ref,
+          forensics
+        }],
+        coverage: { dom: true, threatIntel: false, network: false, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+      }
     });
   };
+
+  /** Helper for inline findings that bypass addFinding */
+  const makeFindingContext = (excerpt: string, forensics?: any): Finding['context'] => ({
+    scan: { tabId: 0, navigationId: window.location.href, origin: window.location.origin, hostname: window.location.hostname, startedAt: startTime },
+    evidence: [{
+      sourceType: 'DOM' as const,
+      sourceUrl: window.location.href,
+      capturedAt: Date.now(),
+      excerpt,
+      forensics
+    }],
+    coverage: { dom: true, threatIntel: false, network: false, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+  });
 
   // ─── General Rules (M1, M3, M4, M5) ───────────────────────────────────────
   const customEvidenceRules = new Set(['M1-001', 'M1-004', 'M1-005', 'M1-007', 'M1-008', 'M4-002', 'M5-001']);
@@ -259,7 +277,7 @@ export async function scanPage(): Promise<void> {
             const container = el.closest('[role="dialog"], [class*="modal"], [class*="cookie"], [class*="consent"]');
             const buttons = container ? querySelectorAllDeep('button, [role="button"], input[type="button"]', container) : [];
             if (buttons.length > 0 && isVisuallySuppressedComparedToAccept(el, buttons)) {
-              addFinding(rule, el, {}, 'confirmed', 'CONFIRMED');
+              addFinding(rule, el, {}, 'CONFIRMED', 'CONFIRMED');
             }
           }
         } else if (check.type === 'repeated_modal') {
@@ -293,7 +311,7 @@ export async function scanPage(): Promise<void> {
     const element = candidates.find(candidate =>
       hasCommerceContext(candidate) && matchesUrgency.some(pattern => pattern.test(candidate.textContent || ''))
     );
-    if (element) addFinding(urgencyRule, element, {}, 'under_review', 'REVIEW_NEEDED');
+    if (element) addFinding(urgencyRule, element, {}, 'OBSERVED', 'REVIEW_NEEDED');
   }
 
   const autoplayRule = m4Rules.find(rule => rule.id === 'M4-002');
@@ -301,7 +319,7 @@ export async function scanPage(): Promise<void> {
     const patterns = autoplayRule.match.text_patterns?.map(pattern => new RegExp(pattern, 'i')) || [];
     const element = querySelectorAllDeep(autoplayRule.match.target)
       .find(candidate => patterns.some(pattern => pattern.test(candidate.textContent || '')));
-    if (element) addFinding(autoplayRule, element, {}, 'under_review', 'REVIEW_NEEDED');
+    if (element) addFinding(autoplayRule, element, {}, 'OBSERVED', 'REVIEW_NEEDED');
   }
 
   const activityRule = m5Rules.find(rule => rule.id === 'M5-001');
@@ -313,7 +331,7 @@ export async function scanPage(): Promise<void> {
       activityCounterHistory.set(candidate, count);
       return previous !== undefined && previous !== count;
     });
-    if (element) addFinding(activityRule, element, {}, 'under_review', 'REVIEW_NEEDED');
+    if (element) addFinding(activityRule, element, {}, 'OBSERVED', 'REVIEW_NEEDED');
   }
 
   // ─── M2: Always runs (security threats matter everywhere) ─────────────
@@ -332,7 +350,7 @@ export async function scanPage(): Promise<void> {
         // Skip if we're ON a known domain (exact match = legit)
         let isKnown = false;
         for (const known of KNOWN_DOMAINS) {
-          if (domain === known || domain === 'www.' + known || domain.endsWith('.' + known)) {
+          if (isSameSite(domain, known)) {
             isKnown = true;
             break;
           }
@@ -408,14 +426,20 @@ export async function scanPage(): Promise<void> {
           ruleId: 'M2-004',
           ruleName: isPlainHttp ? 'insecure_http_login' : 'login_on_suspicious_domain',
           module: 'M2',
-          severity: 'high',
-          confidenceState: 'confirmed',
+          severity: 'CONFIRMED',
+          confidenceState: 'CONFIRMED',
           statuteRef: '',
           explanation,
           elementSelector: generateSelector(passwordInputs[0]),
           elementRect: passwordInputs[0].getBoundingClientRect(),
           pageUrl: window.location.href,
-          detectedAt: new Date().toISOString()
+          detectedAt: new Date().toISOString(),
+          context: makeFindingContext(`Password form on: ${domain}`, createForensicAnalysis({
+            confidence: 'CONFIRMED',
+            reviewStatus: 'CONFIRMED',
+            observed: [explanation],
+            coverage: { dom: true, network: true }
+          }))
         });
       }
     }
@@ -446,35 +470,28 @@ export async function scanPage(): Promise<void> {
                 ruleId: 'M2-005',
                 ruleName: 'form_action_mismatch',
                 module: 'M2',
-                severity: corroborated ? 'severe' : 'medium',
-                confidenceState: corroborated ? 'confirmed' : 'under_review',
+                severity: corroborated ? 'CRITICAL' : 'SUGGESTIVE',
+                confidenceState: corroborated ? 'CONFIRMED' : 'OBSERVED',
                 reviewStatus: corroborated ? 'CONFIRMED' : 'REVIEW_NEEDED',
                 statuteRef: '',
                 explanation: corroborated
                   ? 'A password form submits to an unrelated, insecure, or lookalike host. This is a strong credential-theft indicator.'
                   : 'This password form submits to a different organisation. Review the destination before entering credentials; some legitimate services use an external identity provider.',
-                evidence: {
-                  sourceType: 'DOM',
-                  sourceUrl: window.location.href,
-                  capturedAt: Date.now(),
-                  excerpt: `Password form action: ${actionUrl.href}`,
-                  context: `Page host: ${window.location.hostname}; action host: ${actionUrl.hostname}`,
-                  forensics: createForensicAnalysis({
-                    confidence: corroborated ? 'HIGH' : 'MEDIUM',
-                    reviewStatus: corroborated ? 'CONFIRMED' : 'REVIEW_NEEDED',
-                    observed: ['A form containing a password field has an external action URL.', `Destination: ${actionUrl.hostname}`],
-                    supportingEvidence: corroborated
-                      ? ['The destination is insecure, a raw IP address, or the page is a brand lookalike.']
-                      : ['The destination does not share the page\'s registrable domain.'],
-                    contradictingEvidence: corroborated ? [] : ['The scan cannot establish whether the external service is an approved identity provider.'],
-                    assumptions: corroborated ? [] : ['No network request body was inspected; no password value was observed leaving the page.'],
-                    coverage: { dom: true, network: false, scripts: false }
-                  })
-                },
                 elementSelector: generateSelector(form),
                 elementRect: form.getBoundingClientRect(),
                 pageUrl: window.location.href,
-                detectedAt: new Date().toISOString()
+                detectedAt: new Date().toISOString(),
+                context: makeFindingContext(`Password form action: ${actionUrl.href}`, createForensicAnalysis({
+                  confidence: corroborated ? 'CONFIRMED' : 'SUGGESTIVE',
+                  reviewStatus: corroborated ? 'CONFIRMED' : 'REVIEW_NEEDED',
+                  observed: ['A form containing a password field has an external action URL.', `Destination: ${actionUrl.hostname}`],
+                  supportingEvidence: corroborated
+                    ? ['The destination is insecure, a raw IP address, or the page is a brand lookalike.']
+                    : ['The destination does not share the page\'s registrable domain.'],
+                  contradictingEvidence: corroborated ? [] : ['The scan cannot establish whether the external service is an approved identity provider.'],
+                  assumptions: corroborated ? [] : ['No network request body was inspected; no password value was observed leaving the page.'],
+                  coverage: { dom: true, network: false, scripts: false }
+                }))
               });
             }
           } catch (e) {
@@ -508,15 +525,21 @@ export async function scanPage(): Promise<void> {
           ruleId: 'M2-006',
           ruleName: 'urgency_language_detector',
           module: 'M2',
-          severity: 'high',
-          confidenceState: 'confirmed',
+          severity: 'CONFIRMED',
+          confidenceState: 'CONFIRMED',
           reviewStatus: 'CONFIRMED',
           statuteRef: '',
           explanation: 'Urgency language detected alongside a login form. Phishing sites often use urgency to manipulate users.',
           elementSelector: 'body',
           elementRect: { top: 0, left: 0, width: 0, height: 0 },
           pageUrl: window.location.href,
-          detectedAt: new Date().toISOString()
+          detectedAt: new Date().toISOString(),
+          context: makeFindingContext('Urgency text patterns detected', createForensicAnalysis({
+            confidence: 'CONFIRMED',
+            reviewStatus: 'CONFIRMED',
+            observed: ['Multiple urgency language patterns near a login form.'],
+            coverage: { dom: true }
+          }))
         });
       }
     }
@@ -531,14 +554,20 @@ export async function scanPage(): Promise<void> {
           ruleId: 'M2-007',
           ruleName: 'fake_captcha_notification',
           module: 'M2',
-          severity: 'high',
-          confidenceState: 'under_review',
+          severity: 'CONFIRMED',
+          confidenceState: 'OBSERVED',
           statuteRef: '',
           explanation: 'CAPTCHA copy is paired with instructions to grant notifications or run a command, a known notification-scam pattern.',
           elementSelector: 'body',
           elementRect: { top: 0, left: 0, width: 0, height: 0 },
           pageUrl: window.location.href,
-          detectedAt: new Date().toISOString()
+          detectedAt: new Date().toISOString(),
+          context: makeFindingContext('Fake CAPTCHA text patterns detected', createForensicAnalysis({
+            confidence: 'SUGGESTIVE',
+            reviewStatus: 'REVIEW_NEEDED',
+            observed: ['Instructions to grant notifications alongside CAPTCHA challenges.'],
+            coverage: { dom: true }
+          }))
         });
       }
     }
@@ -556,15 +585,21 @@ export async function scanPage(): Promise<void> {
       ruleId: 'M3-003',
       ruleName: 'tracking_with_visible_consent_ui',
       module: 'M3',
-      severity: 'low',
-      confidenceState: 'under_review',
+      severity: 'OBSERVED',
+      confidenceState: 'OBSERVED',
       reviewStatus: 'REVIEW_NEEDED',
       statuteRef: 'DPDP Act 2023 §6 — consent timing requires verification',
       explanation: 'Tracking cookies are present while a consent interface is visible. This scan cannot establish whether they were set before consent or persisted from an earlier visit.',
       elementSelector: 'html',
       elementRect: { top: 0, left: 0, width: 0, height: 0 },
       pageUrl: window.location.href,
-      detectedAt: new Date().toISOString()
+      detectedAt: new Date().toISOString(),
+      context: makeFindingContext('Trackers present with visible consent UI', createForensicAnalysis({
+        confidence: 'SUGGESTIVE',
+        reviewStatus: 'REVIEW_NEEDED',
+        observed: ['Tracking cookies are present', 'A cookie consent banner is visible'],
+        coverage: { dom: true, cookies: true }
+      }))
     });
   }
 
@@ -594,7 +629,7 @@ export async function scanPage(): Promise<void> {
     console.log(`Scan completed in ${duration.toFixed(1)}ms using Shadow DOM traversal.`);
     
     findings.forEach(f => {
-      const color = f.severity === 'severe' ? '#dc2626' : f.severity === 'high' ? '#ea580c' : '#d97706';
+      const color = f.severity === 'CRITICAL' ? '#dc2626' : f.severity === 'CONFIRMED' ? '#ea580c' : '#d97706';
       console.log(
         `%c[${f.severity.toUpperCase()}] %c${f.ruleName} %c(${f.module})`, 
         `color: ${color}; font-weight: bold;`,
@@ -620,7 +655,13 @@ export async function scanPage(): Promise<void> {
   const msg: ScanCompleteMessage = {
     type: 'SCAN_COMPLETE',
     findings,
-    pageUrl: window.location.href,
+    context: {
+      tabId: 0, // Hydrated by message-router
+      navigationId: window.location.href,
+      origin: window.location.origin,
+      hostname: window.location.hostname,
+      startedAt: startTime
+    },
     scanDurationMs: duration,
     termsUrl,
     privacyUrl

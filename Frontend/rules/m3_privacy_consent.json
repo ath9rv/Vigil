@@ -7,7 +7,7 @@
       "name": "suppressed_reject",
       "module": "M3",
       "statute_ref": "DPDP Act 2023 §6 — Consent must be free and easy to withdraw",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "structural",
       "match": {
         "target": "[id*='cookie'] button, [class*='cookie'] button, [id*='consent'] button, [class*='consent'] button",
@@ -27,7 +27,7 @@
       "name": "pre_ticked_consent",
       "module": "M3",
       "statute_ref": "DPDP Act 2023 §6 — Affirmative action required",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "structural",
       "match": {
         "target": "input[type='checkbox']",

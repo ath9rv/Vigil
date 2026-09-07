@@ -6,7 +6,7 @@ describe('Local Threat Intelligence Engine Verification (Zero External Egress)',
     const match = await evaluateUrlThreat('https://paypa1.com/signin');
     expect(match.status).toBe('KNOWN_PHISHING');
     expect(match.source).toBe('LOCAL_HEURISTIC');
-    expect(match.confidence).toBe('HIGH');
+    expect(match.confidence).toBe('CONFIRMED');
     expect(match.details).toContain('Typosquatting');
   });
 
@@ -20,14 +20,14 @@ describe('Local Threat Intelligence Engine Verification (Zero External Egress)',
   it('detects credential harvesting keyword combinations on unknown domains', async () => {
     const match = await evaluateUrlThreat('https://update-billing-secure.xyz/portal');
     expect(match.status).toBe('KNOWN_PHISHING');
-    expect(match.confidence).toBe('MEDIUM');
+    expect(match.confidence).toBe('SUGGESTIVE');
     expect(match.details).toContain('credential harvesting');
   });
 
   it('passes known authentic domains as clean', async () => {
     const match = await evaluateUrlThreat('https://paypal.com/myaccount');
     expect(match.status).toBe('NO_KNOWN_THREAT');
-    expect(match.confidence).toBe('HIGH');
+    expect(match.confidence).toBe('CONFIRMED');
     expect(match.details).toContain('Verified clean');
   });
 

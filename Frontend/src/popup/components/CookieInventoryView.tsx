@@ -213,7 +213,7 @@ export function CookieInventoryView({ cookies, trackersBlockedCount, thirdPartyT
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${style.bg} ${style.text} ${style.border}`}>
                         {style.icon} {cookie.category}
                       </span>
-                      {cookie.risk === 'HIGH' && (
+                      {cookie.risk === 'CONFIRMED' && (
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">
                           HIGH RISK
                         </span>

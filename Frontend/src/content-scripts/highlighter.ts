@@ -12,7 +12,7 @@ export function highlightFinding(finding: Finding): void {
   const overlay = document.createElement('div');
   overlay.setAttribute('data-vigil-overlay', 'true');
   
-  const sevKey = (finding.severity || 'low').toLowerCase() as keyof typeof HIGHLIGHT_COLORS;
+  const sevKey = (finding.severity || 'OBSERVED').toLowerCase() as keyof typeof HIGHLIGHT_COLORS;
   const bgColor = HIGHLIGHT_COLORS[sevKey] || HIGHLIGHT_COLORS.low;
   const borderColor = HIGHLIGHT_BORDER_COLORS[sevKey] || HIGHLIGHT_BORDER_COLORS.low;
 
@@ -28,7 +28,7 @@ export function highlightFinding(finding: Finding): void {
   overlay.style.boxSizing = 'border-box';
 
   const tooltip = document.createElement('div');
-  const icon = finding.severity === 'severe' ? '🛑' : finding.severity === 'high' ? '⚠️' : 'ℹ️';
+  const icon = finding.severity === 'CRITICAL' ? '🛑' : finding.severity === 'CONFIRMED' ? '⚠️' : 'ℹ️';
   tooltip.textContent = `${icon} ${finding.ruleName}`;
   tooltip.style.position = 'absolute';
   tooltip.style.top = '-20px';

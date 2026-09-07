@@ -7,7 +7,7 @@
       "name": "changing_activity_counter",
       "module": "M5",
       "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
-      "severity": "medium",
+      "severity": "MEDIUM",
       "selector_strategy": "text_pattern",
       "match": {
         "target": "span, div, p",
@@ -25,7 +25,7 @@
       "name": "undisclosed_sponsored",
       "module": "M5",
       "statute_ref": "Consumer Protection Act — Undisclosed Ad",
-      "severity": "high",
+      "severity": "HIGH",
       "selector_strategy": "structural",
       "match": {
         "target": "[class*='sponsored'], [class*='ad-label'], [class*='promoted'], [class*='advertisement']",

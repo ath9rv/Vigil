@@ -1,5 +1,6 @@
 import rules from '../../rules/cookie_consent_rules.json';
 import { showAmbientAlert } from './ambient-shield';
+import { VigilDOMEventBus } from '../observation/event-bus';
 
 const GENERIC_SELECTORS = [
   '[class*="cookie"][class*="banner"]',
@@ -273,29 +274,41 @@ function reportAction(action: 'AUTO_REJECTED' | 'BANNER_DETECTED' | 'NO_BANNER',
   
   chrome.runtime.sendMessage({ 
     type: 'VIGIL_COOKIE_ACTION', 
-    domain, 
+    context: {
+      tabId: 0,
+      navigationId: window.location.href,
+      origin: window.location.origin,
+      hostname: domain,
+      startedAt: Date.now()
+    },
     action, 
     cmp 
   }).catch(() => {});
 }
 
 let timeoutId: number | null = null;
+let unsubscribe: (() => void) | null = null;
+
 function setupObserver(): void {
-  const observer = new MutationObserver(() => {
+  VigilDOMEventBus.start();
+  unsubscribe = VigilDOMEventBus.subscribe((events) => {
     if (actionTaken) {
-      observer.disconnect();
+      if (unsubscribe) unsubscribe();
       return;
     }
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+    
+    // We only care if something structurally changed that might be a consent banner
+    const hasAddedNodes = events.some(e => e.type === 'NODE_ADDED' && e.region === 'CONSENT');
+    // For Phase 1, we still rely on throttling and scanning the whole DOM if a generic added node triggered it
+    const shouldCheck = events.length > 0; // Or refine to hasAddedNodes || events.some(e => e.type === 'NODE_ADDED')
+
+    if (shouldCheck) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(() => {
+        runDetection();
+      }, 500);
     }
-    timeoutId = window.setTimeout(() => {
-      runDetection();
-    }, 500);
   });
-  
-  const targetNode = document.documentElement || document.body;
-  if (targetNode) {
-    observer.observe(targetNode, { childList: true, subtree: true });
-  }
 }

@@ -1,0 +1,25 @@
+{
+  "name": "clean-negative-control",
+  "description": "Verifies that the clean page produces zero dark patterns, zero tracking, and zero false positive findings.",
+  "start": "clean",
+  "startOrigin": "http://127.0.0.1:4173/apps/clean/",
+  "actions": [
+    "page-load"
+  ],
+  "observed": [
+    "clean_dom_rendered",
+    "no_tracking_cookies",
+    "no_third_party_requests"
+  ],
+  "expected": {
+    "claims": [],
+    "maxFindings": 0
+  },
+  "forbidden": [
+    "cross_site_transmission",
+    "shares_personal_information",
+    "uses_trackers",
+    "deceptive_ui_pattern",
+    "phishing_risk"
+  ]
+}

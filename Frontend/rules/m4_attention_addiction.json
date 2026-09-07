@@ -7,7 +7,7 @@
       "name": "loss_framed_streaks",
       "module": "M4",
       "statute_ref": "Attention Exploitation / Deceptive Design",
-      "severity": "medium",
+      "severity": "MEDIUM",
       "selector_strategy": "text_pattern",
       "match": {
         "target": "p, span, div, h1, h2, h3",
@@ -26,7 +26,7 @@
       "name": "autoplay_trap",
       "module": "M4",
       "statute_ref": "Attention Exploitation / Addictive UX",
-      "severity": "low",
+      "severity": "LOW",
       "selector_strategy": "text_pattern",
       "match": {
         "target": "[class*='autoplay'], [class*='next'], [class*='countdown']",

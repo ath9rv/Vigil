@@ -6,16 +6,17 @@ interface ConfidenceBadgeProps {
 }
 
 const BADGE_CONFIG: Record<ConfidenceState, { label: string; className: string }> = {
-  under_review: { label: 'Checking', className: 'bg-gray-100 text-gray-600' },
-  confirmed: { label: 'Verified', className: 'bg-green-100 text-green-700' },
-  disputed: { label: 'Disputed', className: 'bg-orange-100 text-orange-700' },
+  OBSERVED: { label: 'Observed', className: 'bg-gray-100 text-gray-600' },
+  SUGGESTIVE: { label: 'Suggestive', className: 'bg-yellow-100 text-yellow-700' },
+  CONFIRMED: { label: 'Verified', className: 'bg-green-100 text-green-700' },
+  INCONCLUSIVE: { label: 'Inconclusive', className: 'bg-orange-100 text-orange-700' },
 };
 
 /**
  * Tiny status pill — minimal, not attention-grabbing.
  */
 export function ConfidenceBadge({ state }: ConfidenceBadgeProps) {
-  const config = BADGE_CONFIG[state] || BADGE_CONFIG.under_review;
+  const config = BADGE_CONFIG[state] || BADGE_CONFIG.OBSERVED;
 
   return (
     <span

@@ -15,6 +15,17 @@ async function bootstrap() {
     return;
   }
 
+  chrome.runtime.sendMessage({
+    type: 'NAVIGATION_STARTED',
+    context: {
+      tabId: 0,
+      navigationId: window.location.href,
+      origin: window.location.origin,
+      hostname: window.location.hostname,
+      startedAt: Date.now()
+    }
+  }).catch(() => {});
+
   // 1. Static/DOM Scanner
   initScanner();
   
@@ -35,7 +46,13 @@ async function bootstrap() {
             movement: source.movement,
           })),
         },
-        pageUrl: window.location.href
+        context: {
+          tabId: 0,
+          navigationId: window.location.href,
+          origin: window.location.origin,
+          hostname: window.location.hostname,
+          startedAt: Date.now()
+        }
       });
     },
   });

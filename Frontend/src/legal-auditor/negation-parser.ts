@@ -2,7 +2,7 @@ export interface ClauseFinding {
   clauseText: string;
   negated: boolean;
   hedged: boolean;
-  confidence: "high" | "medium";
+  confidence: "CONFIRMED" | "SUGGESTIVE";
   classification: "FAIR" | "WARNING" | "REVIEW";
 }
 
@@ -50,9 +50,9 @@ export function findClauseNegation(fullText: string, keywordPattern: RegExp): Cl
     let classification: ClauseFinding["classification"];
     let confidence: ClauseFinding["confidence"];
 
-    if (negated && !hedged) { classification = "FAIR"; confidence = "high"; }
-    else if (negated && hedged) { classification = "REVIEW"; confidence = "medium"; } // the "loophole" case
-    else { classification = "WARNING"; confidence = "high"; }
+    if (negated && !hedged) { classification = "FAIR"; confidence = "CONFIRMED"; }
+    else if (negated && hedged) { classification = "REVIEW"; confidence = "SUGGESTIVE"; } // the "loophole" case
+    else { classification = "WARNING"; confidence = "CONFIRMED"; }
 
     findings.push({ clauseText: keywordClause.trim(), negated, hedged, confidence, classification });
   }

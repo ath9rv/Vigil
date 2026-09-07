@@ -22,24 +22,24 @@ export function normalizeFinding(raw: any): Finding {
   let severity: SeverityLevel = 'INFO';
   const rawSev = (raw.severity || '').toString().toUpperCase();
   if (rawSev === 'CRITICAL' || rawSev === 'SEVERE') severity = 'CRITICAL';
-  else if (rawSev === 'HIGH') severity = 'HIGH';
-  else if (rawSev === 'MEDIUM') severity = 'MEDIUM';
-  else if (rawSev === 'LOW') severity = 'LOW';
+  else if (rawSev === 'CONFIRMED') severity = 'CONFIRMED';
+  else if (rawSev === 'SUGGESTIVE') severity = 'SUGGESTIVE';
+  else if (rawSev === 'OBSERVED') severity = 'OBSERVED';
 
   // Normalize confidence
-  let confidence: ConfidenceLevel = 'MEDIUM';
-  if (raw.confidence && ['LOW', 'MEDIUM', 'HIGH'].includes(raw.confidence)) {
+  let confidence: ConfidenceLevel = 'SUGGESTIVE';
+  if (raw.confidence && ['OBSERVED', 'SUGGESTIVE', 'CONFIRMED'].includes(raw.confidence)) {
     confidence = raw.confidence as ConfidenceLevel;
   } else if (raw.confidenceState) {
-    if (raw.confidenceState === 'confirmed') confidence = 'HIGH';
-    else if (raw.confidenceState === 'disputed') confidence = 'LOW';
-    else confidence = 'MEDIUM';
+    if (raw.confidenceState === 'CONFIRMED') confidence = 'CONFIRMED';
+    else if (raw.confidenceState === 'INCONCLUSIVE') confidence = 'OBSERVED';
+    else confidence = 'SUGGESTIVE';
   }
 
   // Normalize interpretation
   const interpretation = raw.interpretation || raw.explanation || raw.ruleName || 'Flagged activity detected.';
 
-  const reviewStatus = raw.reviewStatus || (confidence === 'HIGH' ? 'CONFIRMED' : 'REVIEW_NEEDED');
+  const reviewStatus = raw.reviewStatus || (confidence === 'CONFIRMED' ? 'CONFIRMED' : 'REVIEW_NEEDED');
 
   // Normalize evidence
   const evidence = raw.evidence ? {
@@ -106,14 +106,14 @@ function calculateDimension(findings: Finding[], category: FindingCategory): Dim
     }
     
     if (f.severity === 'CRITICAL') score -= 50;
-    else if (f.severity === 'HIGH') score -= 30;
-    else if (f.severity === 'MEDIUM') score -= 15;
-    else if (f.severity === 'LOW') score -= 5;
+    else if (f.severity === 'CONFIRMED') score -= 30;
+    else if (f.severity === 'SUGGESTIVE') score -= 15;
+    else if (f.severity === 'OBSERVED') score -= 5;
   }
   
   return {
     score: Math.max(0, score),
-    confidence: cats.length > 0 ? 'HIGH' : 'LOW',
+    confidence: cats.length > 0 ? 'CONFIRMED' : 'OBSERVED',
     evidenceCount: cats.length
   };
 }
@@ -131,8 +131,8 @@ function groupFingerprintingFindings(findings: Finding[]): Finding[] {
     const merged: Finding = {
       id: crypto.randomUUID(),
       category: 'PRIVACY',
-      severity: 'HIGH',
-      confidence: 'HIGH',
+      severity: 'CONFIRMED',
+      confidence: 'CONFIRMED',
       reviewStatus: 'CONFIRMED',
       ruleName: 'Fingerprinting Activity Detected',
       interpretation: `Detected ${fpFindings.length} distinct fingerprinting API interactions.`,
@@ -191,7 +191,7 @@ export function correlateFindings(
       id: crypto.randomUUID(),
       category: 'SECURITY',
       severity: 'CRITICAL',
-      confidence: 'HIGH',
+      confidence: 'CONFIRMED',
       reviewStatus: 'CONFIRMED',
       ruleName: threatStatus === 'KNOWN_MALWARE' ? 'Malware Distribution' : 'Known Phishing',
       interpretation: 'Current URL matched local threat intelligence.',
@@ -226,9 +226,9 @@ export function correlateFindings(
   const coveragePercent = Math.round((coverageScore / coverageSurfaces.length) * 100);
   const unassessedSurfaces = coverageSurfaces.filter(([, assessed]) => !assessed).map(([name]) => name);
   
-  let overallConfidence: ConfidenceLevel = 'LOW';
-  if (coveragePercent >= 75) overallConfidence = 'HIGH';
-  else if (coveragePercent >= 40) overallConfidence = 'MEDIUM';
+  let overallConfidence: ConfidenceLevel = 'OBSERVED';
+  if (coveragePercent >= 75) overallConfidence = 'CONFIRMED';
+  else if (coveragePercent >= 40) overallConfidence = 'SUGGESTIVE';
 
   return {
     security,

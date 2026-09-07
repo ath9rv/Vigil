@@ -17,26 +17,17 @@ function hostname(value: string): string {
   }
 }
 
+import { isSameSite } from '../shared/domain-intelligence';
+
 export function sameSiteOrSubdomain(first: string, second: string): boolean {
   const a = hostname(first) || first.toLowerCase();
   const b = hostname(second) || second.toLowerCase();
-  if (!a || !b) return false;
-  if (a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`)) return true;
-  // A lightweight registrable-domain comparison. It deliberately handles the
-  // common two-part public suffixes used by the extension's target markets.
-  const registrable = (host: string) => {
-    const labels = host.split('.');
-    const twoPartSuffix = /\.(co|com|net|org|gov|ac)\.(uk|in|au|jp|nz)$/i.test(host);
-    return labels.slice(twoPartSuffix ? -3 : -2).join('.');
-  };
-  return registrable(a) === registrable(b);
+  return isSameSite(a, b);
 }
 
 export function isRecognizedIdentityProvider(host: string): boolean {
   const normalized = host.toLowerCase();
-  return IDENTITY_PROVIDER_HOSTS.some(provider =>
-    normalized === provider || normalized.endsWith(`.${provider}`)
-  );
+  return IDENTITY_PROVIDER_HOSTS.some(provider => isSameSite(normalized, provider));
 }
 
 /** A real CAPTCHA is not a scam. Scam pages typically pair CAPTCHA copy with

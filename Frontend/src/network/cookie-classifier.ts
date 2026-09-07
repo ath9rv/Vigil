@@ -4,7 +4,7 @@ import { scoreCookieBehavior, type ScoredBehavioralDNA } from './behavioral-scor
 export type { CookieBehavioralDNA, ScoredBehavioralDNA };
 
 export type CookieCategory = 'ESSENTIAL' | 'ANALYTICS' | 'MARKETING' | 'FUNCTIONAL' | 'UNKNOWN';
-export type CookieRisk = 'LOW' | 'MEDIUM' | 'HIGH';
+export type CookieRisk = 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED';
 
 export interface DetailedCookie {
   name: string;
@@ -36,28 +36,28 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^_ga($|_)/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Google Analytics',
     purpose: 'Distinguishes unique website visitors by assigning a randomly generated client identifier to measure site traffic and usage.'
   },
   {
     pattern: /^_gid$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Google Analytics',
     purpose: 'Stores and updates a 24-hour unique identifier to track and group page views across a single browsing session.'
   },
   {
     pattern: /^_gat($|_)/i,
     category: 'ANALYTICS',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Google Analytics',
     purpose: 'Throttles the request rate to Google Analytics servers on high-traffic websites to limit data collection overhead.'
   },
   {
     pattern: /^__utm[a-z]$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Google Universal Analytics (Legacy)',
     purpose: 'Legacy analytics tracker recording visitor sessions, traffic campaign sources, and navigation timestamps.'
   },
@@ -66,21 +66,21 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^_fbp$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Meta / Facebook',
     purpose: 'Identifies users across third-party websites to target behavioral advertisements and measure ad conversion efficiency.'
   },
   {
     pattern: /^_fbc$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Meta / Facebook',
     purpose: 'Stores the unique Facebook click identifier (fbclid) when a user arrives from a Facebook advertisement.'
   },
   {
     pattern: /^fr$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Meta / Facebook',
     purpose: 'Primary Facebook advertising cookie containing encrypted browser and user IDs to serve cross-context ads.'
   },
@@ -89,14 +89,14 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(IDE|test_cookie|DSID|ANID)$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Google DoubleClick',
     purpose: 'Registers and reports user actions after viewing or clicking targeted advertisements across multiple domains.'
   },
   {
     pattern: /^_gcl_/i,
     category: 'MARKETING',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Google AdSense / Ads',
     purpose: 'Conversion linker cookie recording campaign clicks to measure ad conversion performance.'
   },
@@ -105,14 +105,14 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(MUID|MUIDB)$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Microsoft Advertising',
     purpose: 'Widely used by Microsoft as a unique user ID to track visitors across domains for targeted Bing ad delivery.'
   },
   {
     pattern: /^_uet(sid|vid)$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Microsoft Bing Ads (UET)',
     purpose: 'Universal Event Tracking cookie recording user behavior on site after clicking a sponsored search result.'
   },
@@ -121,42 +121,42 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(bcookie|UserMatchHistory)$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'LinkedIn',
     purpose: 'Primary browser tracking ID used to follow your visits across LinkedIn and partner websites to deliver targeted ads and job sponsorships.'
   },
   {
     pattern: /^li_sugr$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'LinkedIn',
     purpose: 'Synthesized User Global Request tracker used to match your identity outside LinkedIn for cross-site behavioral ad targeting.'
   },
   {
     pattern: /^(liap|li_at|bscookie)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'LinkedIn',
     purpose: 'Secure authentication key proving you are signed into your LinkedIn account so you don\'t have to re-login on every page.'
   },
   {
     pattern: /^(li_theme|li_theme_set)$/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'LinkedIn',
     purpose: 'Remembers your personal display preferences (such as Light Mode vs Dark Mode).'
   },
   {
     pattern: /^lidc$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'LinkedIn',
     purpose: 'Directs your network traffic to the nearest LinkedIn data center to make pages load quickly.'
   },
   {
     pattern: /^AnalyticsSyncHistory$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'LinkedIn',
     purpose: 'Records the timestamp of when your advertising analytics data was last synchronized with partner networks.'
   },
@@ -165,7 +165,7 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^_tt(p|_enable_cookie)$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'TikTok',
     purpose: 'Custom behavioral pixel used to monitor user conversion flows and deliver targeted TikTok video advertisements.'
   },
@@ -174,21 +174,21 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^__cf_bm$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Cloudflare',
     purpose: 'Essential security cookie distinguishing humans from malicious automated bot traffic. Does not track across sites.'
   },
   {
     pattern: /^cf_clearance$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Cloudflare',
     purpose: 'Stores proof of successful completion of a CAPTCHA or Managed Challenge to grant secure access.'
   },
   {
     pattern: /^AWSALB(CORS)?$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon Web Services',
     purpose: 'Enables load-balancer server stickiness to ensure successive HTTP requests reach the same backend compute instance.'
   },
@@ -197,14 +197,14 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(JSESSIONID|PHPSESSID|ASP\.NET_SessionId|connect\.sid|sid|sessionid|sess_id|session)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Web Server / Host',
     purpose: 'Maintains user session state, shopping cart contents, or logged-in status between HTTP page navigations.'
   },
   {
     pattern: /^(csrftoken|_csrf|xsrf[-_]token|csrf[-_]token)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Security Defense',
     purpose: 'Cryptographic anti-tamper token that protects web forms against Cross-Site Request Forgery attacks.'
   },
@@ -213,7 +213,7 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /(consent|cookie_notice|cookie-agreed|has_js|optanon|gdpr|terms)/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'First-Party / CMP',
     purpose: 'Remembers user cookie consent choices and browser feature flags so notice banners are not shown on every click.'
   },
@@ -222,21 +222,21 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^_cl(ck|sk)$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Microsoft Clarity',
     purpose: 'Records anonymized user clicks, mouse movements, and scroll activity to generate visual session heatmaps.'
   },
   {
     pattern: /^_hj(Session|SessionUser|id|IncludedIn)/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Hotjar',
     purpose: 'Retains Hotjar User ID and session recording state to analyze UX friction points and navigational drops.'
   },
   {
     pattern: /^_pk_(id|ses|ref)/i,
     category: 'ANALYTICS',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Matomo (Privacy-Friendly)',
     purpose: 'Self-hosted privacy-respecting web analytics tracking site visits without cross-domain commercial data sale.'
   },
@@ -245,77 +245,77 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^csm-hit$/i,
     category: 'ANALYTICS',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon Client-Side Metrics (CSM)',
     purpose: 'Amazon performance monitoring cookie. Measures page load speed, latency, render timing, and interaction telemetry to maintain high website availability.'
   },
   {
     pattern: /^session-id$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Primary shopping session identifier linking your page views, shopping cart contents, and search queries across Amazon.'
   },
   {
     pattern: /^session-id-time$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Amazon session creation timestamp used to validate active session duration and prevent session hijacking or replay attacks.'
   },
   {
     pattern: /^session-token$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Encrypted cryptographic authorization token verifying your signed-in customer account session.'
   },
   {
     pattern: /^ubid-(main|acbin|tacb|[a-z0-9]+)$/i,
     category: 'FUNCTIONAL',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Amazon Unique Browser ID',
     purpose: 'Amazon Unique Browser ID (UBID). Persists across visits to recognize your device, preserve shopping cart state, and detect fraudulent account activity.'
   },
   {
     pattern: /^at-(main|acbin|[a-z0-9]+)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Amazon customer authentication verification token required for account access and one-click purchasing.'
   },
   {
     pattern: /^x-(main|acbin|wl-uid)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Amazon cross-site routing and wishlist identifier maintaining your shopping preferences across regional domains.'
   },
   {
     pattern: /^(i18n-prefs|lc-(main|acbin|[a-z0-9]+))$/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Remembers localization preferences including shopping currency (e.g. INR/USD), language, and delivery region.'
   },
   {
     pattern: /^sp-cdn$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon CloudFront CDN',
     purpose: 'Routes content delivery requests to the closest Amazon edge server to accelerate product image and page loading.'
   },
   {
     pattern: /^skin$/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Remembers user interface styling preferences and responsive design layout modes.'
   },
   {
     pattern: /^appstore-dev-sid$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Amazon',
     purpose: 'Session identifier for Amazon Appstore and Developer Console operations.'
   },
@@ -324,35 +324,35 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(VISITOR_INFO1_LIVE|YSC|GPS)$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'YouTube / Google',
     purpose: 'Measures video streaming bandwidth, playback performance, view counts, and video recommendations.'
   },
   {
     pattern: /^PREF$/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'YouTube / Google',
     purpose: 'Remembers playback preferences including volume, autoplay, caption language, and video resolution.'
   },
   {
     pattern: /^(__Secure-)?(3P)?(AP)?(S)?SID$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Google Account',
     purpose: 'Secure authentication cookie verifying your signed-in Google account and protecting against fraudulent sign-ins.'
   },
   {
     pattern: /^(NID|1P_JAR|AEC|OGPC)$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Google',
     purpose: 'User profiling and ad targeting cookie remembering search queries to serve personalized advertising.'
   },
   {
     pattern: /^SOCS$/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Google',
     purpose: 'Stores your cookie consent choice regarding Google services and personalized ads.'
   },
@@ -361,28 +361,28 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(guest_id|guest_id_marketing|guest_id_ads)$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Twitter / X',
     purpose: 'Visitor tracking identifier assigned to non-logged-in users to build an ad profile based on viewed tweets.'
   },
   {
     pattern: /^(auth_token|twid)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Twitter / X',
     purpose: 'Authentication key proving your active sign-in status on Twitter / X.'
   },
   {
     pattern: /^ct0$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Twitter / X',
     purpose: 'Cross-Site Request Forgery (CSRF) protection token securing your account against unauthorized actions.'
   },
   {
     pattern: /^personalization_id$/i,
     category: 'MARKETING',
-    risk: 'HIGH',
+    risk: 'CONFIRMED',
     provider: 'Twitter / X',
     purpose: 'Records visits across external websites embedding Twitter widgets to build ad personalization profiles.'
   },
@@ -391,21 +391,21 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(c_user|xs)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Meta / Facebook',
     purpose: 'Facebook user account ID and encrypted session token maintaining your active login.'
   },
   {
     pattern: /^datr$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Meta / Facebook',
     purpose: 'Browser verification security cookie used to recognize trusted devices and block malicious login takeovers.'
   },
   {
     pattern: /^(sb|wd|dpr)$/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Meta / Facebook',
     purpose: 'Stores browser window dimensions and device pixel ratio for proper interface scaling.'
   },
@@ -414,14 +414,14 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(_shopify_s|_shopify_y|_shopify_m|_shopify_sa_p|_shopify_sa_t)$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Shopify',
     purpose: 'Shopify store analytics cookie tracking shopping funnel progression, visit duration, and marketing source.'
   },
   {
     pattern: /^(cart|cart_sig|cart_ts|checkout_token)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'E-Commerce Store',
     purpose: 'Stores your shopping cart items, quantities, and checkout state throughout the purchasing flow.'
   },
@@ -430,14 +430,14 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^__stripe_(mid|sid)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Stripe',
     purpose: 'Fraud prevention and device telemetry cookie required to verify payments securely and prevent credit card fraud.'
   },
   {
     pattern: /^(nsid|ts|ts_c|paypal)$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'PayPal',
     purpose: 'PayPal authentication, transaction verification, and fraud detection cookie for secure payment checkout.'
   },
@@ -446,21 +446,21 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^(ajs_anonymous_id|ajs_user_id)$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Segment (Twilio)',
     purpose: 'Customer Data Platform (CDP) client identifier tracking user interactions and funnel events.'
   },
   {
     pattern: /^mp_.*_mixpanel$/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Mixpanel',
     purpose: 'Product telemetry cookie tracking feature usage and application event sequences.'
   },
   {
     pattern: /^amplitude_id/i,
     category: 'ANALYTICS',
-    risk: 'MEDIUM',
+    risk: 'SUGGESTIVE',
     provider: 'Amplitude',
     purpose: 'Product intelligence cookie tracking user behavior cohorts and feature adoption.'
   },
@@ -469,35 +469,35 @@ const COOKIE_KNOWLEDGE_BASE: CookieDef[] = [
   {
     pattern: /^wordpress_(logged_in|sec|test_cookie)/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'WordPress',
     purpose: 'WordPress authentication and cookie capability test verification.'
   },
   {
     pattern: /^wp-settings/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'WordPress',
     purpose: 'Customizes the WordPress administrative interface and editor display settings.'
   },
   {
     pattern: /^__next/i,
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Next.js',
     purpose: 'Next.js frontend framework state cookie preserving routing data and hydration state.'
   },
   {
     pattern: /^_cfuvid$/i,
     category: 'ESSENTIAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Cloudflare',
     purpose: 'Cloudflare rate limiting cookie used to apply Web Application Firewall (WAF) rules per visitor.'
   },
   {
     pattern: /^(aka-cdn|RT)$/i,
     category: 'ANALYTICS',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: 'Akamai / Boomerang',
     purpose: 'Real User Monitoring (RUM) measuring page load speed and asset download latency.'
   }
@@ -557,7 +557,7 @@ export function classifyCookie(
   if (dna.category === 'high_risk_tracker') {
     return {
       category: 'MARKETING',
-      risk: 'HIGH',
+      risk: 'CONFIRMED',
       provider: `${domain} (Behavioral Profiler)`,
       purpose: `Vigil Behavioral DNA identified cross-site tracking patterns (Score ${dna.score}/100: ${dna.reasons[0] || 'High-entropy identifier'}).`,
       dna
@@ -567,7 +567,7 @@ export function classifyCookie(
   if (dna.category === 'probable_tracker') {
     return {
       category: 'ANALYTICS',
-      risk: 'MEDIUM',
+      risk: 'SUGGESTIVE',
       provider: `${domain} (Telemetry/Tracker)`,
       purpose: `Vigil Behavioral DNA identified persistent telemetry identifier (Score ${dna.score}/100).`,
       dna
@@ -594,7 +594,7 @@ export function classifyCookie(
   ) {
     return {
       category: 'ANALYTICS',
-      risk: 'LOW',
+      risk: 'OBSERVED',
       provider: `${domain} (Telemetry)`,
       purpose: 'Performance and telemetry cookie measuring page load times, click events, or server response latency.',
       dna
@@ -617,7 +617,7 @@ export function classifyCookie(
   ) {
     return {
       category: 'MARKETING',
-      risk: 'HIGH',
+      risk: 'CONFIRMED',
       provider: `${domain} (Marketing)`,
       purpose: 'Advertising or cross-site tracking identifier used to profile your browsing behavior and target advertisements.',
       dna
@@ -644,7 +644,7 @@ export function classifyCookie(
   ) {
     return {
       category: 'ESSENTIAL',
-      risk: 'LOW',
+      risk: 'OBSERVED',
       provider: `${domain} (Session)`,
       purpose: 'Session security or checkout state cookie maintaining your authenticated status and cart items.',
       dna
@@ -667,7 +667,7 @@ export function classifyCookie(
   ) {
     return {
       category: 'FUNCTIONAL',
-      risk: 'LOW',
+      risk: 'OBSERVED',
       provider: `${domain} (Preferences)`,
       purpose: 'Remembers user display settings, regional language, preferred currency, or interface customization.',
       dna
@@ -677,7 +677,7 @@ export function classifyCookie(
   // General Application Cookie
   return {
     category: 'FUNCTIONAL',
-    risk: 'LOW',
+    risk: 'OBSERVED',
     provider: domain,
     purpose: 'First-party application cookie managing site features or internal session state.',
     dna
@@ -793,7 +793,7 @@ export function generateCookieSummary(cookies: DetailedCookie[], domain: string)
  * Returns plain-English explanations of why a cookie is risky or safe for normal people.
  */
 export function getPlainEnglishRiskExplanation(category: CookieCategory, risk: CookieRisk, name: string): { title: string; explanation: string; isSafe: boolean } {
-  if (category === 'MARKETING' || risk === 'HIGH') {
+  if (category === 'MARKETING' || risk === 'CONFIRMED') {
     return {
       title: '🚨 Why is this risky for you?',
       explanation: 'This cookie tags your browser with a permanent advertising ID. As you browse other websites across the internet, ad networks read this cookie to follow your trail, remembering what jobs, articles, or products you looked at so they can show you targeted ads.',
