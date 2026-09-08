@@ -198,4 +198,44 @@ export class EvidenceGraph {
 
     return neighbors;
   }
+
+  /**
+   * Total number of active nodes in the graph.
+   */
+  public getNodeCount(): number {
+    return this.nodes.size;
+  }
+
+  /**
+   * Total number of active edges in the graph.
+   */
+  public getEdgeCount(): number {
+    return this.edges.size;
+  }
+
+  /**
+   * Prunes all nodes and edges associated with a specific navigation ID.
+   * Crucial for memory bounded retention during long browsing sessions.
+   */
+  public pruneNavigation(navigationId: string): number {
+    const nodesToRemove = this.getNodesByNavigationId(navigationId);
+    if (nodesToRemove.length === 0) return 0;
+
+    const nodeIds = new Set(nodesToRemove.map(n => n.id));
+
+    // Remove edges connected to these nodes
+    for (const edge of Array.from(this.edges)) {
+      if (nodeIds.has(edge.from) || nodeIds.has(edge.to)) {
+        this.edges.delete(edge);
+      }
+    }
+
+    // Remove nodes and indices
+    for (const id of nodeIds) {
+      this.nodes.delete(id);
+      this.edgesByNode.delete(id);
+    }
+
+    return nodeIds.size;
+  }
 }

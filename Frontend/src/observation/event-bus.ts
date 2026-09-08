@@ -8,6 +8,7 @@
  */
 
 import { metricsCollector } from '../observability/metrics';
+import { performanceGovernor } from '../observability/governor';
 
 export type VigilDOMEventType = 'NODE_ADDED' | 'SUBTREE_CHANGED' | 'TEXT_CHANGED' | 'ATTRIBUTE_CHANGED';
 export type SemanticRegion = 'CONSENT' | 'CHECKOUT' | 'LOGIN' | 'GENERAL' | 'UNKNOWN';
@@ -26,6 +27,7 @@ class VigilDOMEventBusImpl {
   private subscribers: EventSubscriber[] = [];
   private coalesceTimeout: number | null = null;
   private pendingMutations: MutationRecord[] = [];
+  private lastFlushTime: number = Date.now();
 
   public subscribe(callback: EventSubscriber): () => void {
     this.subscribers.push(callback);
@@ -40,11 +42,15 @@ class VigilDOMEventBusImpl {
     this.observer = new MutationObserver((mutations) => {
       metricsCollector.increment('mutation_callbacks_count', 1);
       metricsCollector.increment('nodes_received_count', mutations.length);
-      this.pendingMutations.push(...mutations);
+
+      // Bounded buffer: cap pending mutations to 5000 to prevent OOM
+      if (this.pendingMutations.length < 5000) {
+        this.pendingMutations.push(...mutations);
+      }
       
       if (this.coalesceTimeout === null) {
-        // Coalesce mutations over a short window to prevent SPA render-storms
-        this.coalesceTimeout = window.setTimeout(() => this.flush(), 150);
+        const windowMs = performanceGovernor.getRecommendedCoalesceWindowMs();
+        this.coalesceTimeout = window.setTimeout(() => this.flush(), windowMs);
       }
     });
 
@@ -77,9 +83,21 @@ class VigilDOMEventBusImpl {
     
     if (this.pendingMutations.length === 0 || this.subscribers.length === 0) return;
 
+    const flushStart = performance.now();
+    const count = this.pendingMutations.length;
+    const windowDuration = Date.now() - this.lastFlushTime;
+    this.lastFlushTime = Date.now();
+
     // Deduplicate and normalize mutations
     const events = this.normalize(this.pendingMutations);
     this.pendingMutations = [];
+
+    const scanDuration = performance.now() - flushStart;
+    performanceGovernor.reportCycle({
+      mutationsInWindow: count,
+      windowDurationMs: windowDuration,
+      scanDurationMs: scanDuration,
+    });
 
     if (events.length > 0) {
       this.subscribers.forEach(sub => {

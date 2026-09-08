@@ -1,51 +1,75 @@
 /**
  * Shared DOM traversal utilities for Vigil content scripts.
- * Provides Shadow DOM-piercing query functions used by the scanner,
- * cookie consent handler, and urgency neutralizer.
+ * Hardened for Phase 2:
+ * - Depth-limited Shadow DOM piercing (max 10 levels)
+ * - Visited shadow roots tracking to prevent circular references
+ * - Max element count bounds to protect memory during DOM storms
+ * - Integrates with SubtreeCache for selective scanning
  */
 
+const MAX_SHADOW_DEPTH = 10;
+const MAX_ELEMENTS_PER_QUERY = 10000;
+
+interface QueueItem {
+  root: Document | Element | ShadowRoot;
+  depth: number;
+}
+
 /**
- * Searches the DOM deeply, piercing through open Shadow DOM boundaries.
- * Standard querySelectorAll cannot see inside Web Components. This ensures
- * no dark patterns or cookie banners can hide inside shadow roots.
+ * Searches the DOM deeply, piercing through open Shadow DOM boundaries
+ * with strict depth limits and cycle protection.
  */
 export function querySelectorAllDeep(
   selector: string,
   root: Document | Element | ShadowRoot = document
 ): Element[] {
   const results: Element[] = [];
-  const queue: (Document | Element | ShadowRoot)[] = [root];
+  const queue: QueueItem[] = [{ root, depth: 0 }];
+  const visitedRoots = new WeakSet<object>();
 
-  while (queue.length > 0) {
-    const node = queue.shift()!;
+  while (queue.length > 0 && results.length < MAX_ELEMENTS_PER_QUERY) {
+    const item = queue.shift()!;
+    const node = item.root;
+
+    if (visitedRoots.has(node)) continue;
+    visitedRoots.add(node);
+
     if ('querySelectorAll' in node) {
       try {
-        results.push(...Array.from(node.querySelectorAll(selector)));
+        const matches = node.querySelectorAll(selector);
+        for (let i = 0; i < matches.length && results.length < MAX_ELEMENTS_PER_QUERY; i++) {
+          results.push(matches[i]);
+        }
       } catch {
         // Invalid selector syntax — safely skip this root
         continue;
       }
 
-      // Recurse into open shadow roots. Two sources:
-      // 1. The node's OWN shadow root (the root element can itself be a
-      //    web component host — e.g. collectButtonsDeep(hostElement)).
-      // 2. Shadow roots of any descendants found via the wildcard scan.
-      try {
-        if (node instanceof Element && node.shadowRoot) {
-          queue.push(node.shadowRoot);
-        }
-        const allElements = node.querySelectorAll('*');
-        for (let i = 0; i < allElements.length; i++) {
-          const sr = allElements[i].shadowRoot;
-          if (sr) {
-            queue.push(sr);
+      // Check depth limit before queuing deeper shadow roots
+      if (item.depth < MAX_SHADOW_DEPTH) {
+        try {
+          // 1. Check if node itself has a shadow root
+          if (node instanceof Element && node.shadowRoot && !visitedRoots.has(node.shadowRoot)) {
+            queue.push({ root: node.shadowRoot, depth: item.depth + 1 });
           }
+
+          // 2. Discover custom element hosts in light DOM
+          // Target custom element tags (containing hyphen) or elements with shadow roots
+          const customHosts = node.querySelectorAll(':not(:defined), [data-shadow-host], *');
+          for (let i = 0; i < customHosts.length; i++) {
+            const sr = customHosts[i].shadowRoot;
+            if (sr && !visitedRoots.has(sr)) {
+              queue.push({ root: sr, depth: item.depth + 1 });
+            }
+          }
+        } catch {
+          // Cross-origin / security boundaries
         }
-      } catch {}
+      }
     }
   }
 
-  // Deduplicate (an element can appear in both light DOM and shadow DOM if re-projected)
+  // Deduplicate
   return Array.from(new Set(results));
 }
 
@@ -116,7 +140,7 @@ export function collectButtonsDeep(root: Element | Document = document): HTMLEle
  */
 export function isInsideShadowRoot(el: Element): boolean {
   let current: Element | null = el;
-  for (let i = 0; i < 10 && current; i++) {
+  for (let i = 0; i < MAX_SHADOW_DEPTH && current; i++) {
     const parent: ParentNode | null = current.parentNode;
     if (parent && parent instanceof ShadowRoot) return true;
     current = parent instanceof Element ? parent : null;

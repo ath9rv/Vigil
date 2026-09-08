@@ -156,8 +156,17 @@ export class TrustEngine {
   public dispose(navigationId: string): void {
     this.disposedNavigations.add(navigationId);
     this.correlator.disposeNavigation(navigationId);
+    this.graph.pruneNavigation(navigationId);
     this.nodeCountByNav.delete(navigationId);
     this.claimCountByNav.delete(navigationId);
+  }
+
+  public getActiveGraphNodeCount(): number {
+    return this.graph.getNodeCount();
+  }
+
+  public getActiveGraphEdgeCount(): number {
+    return this.graph.getEdgeCount();
   }
 
   private recordBudgetRejection(type: string) {
