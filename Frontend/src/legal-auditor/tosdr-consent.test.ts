@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchTosDrService, getTosDrConsent, setTosDrConsent } from './tosdr-client';
 
 describe('ToS;DR Privacy Five-Fold Behavioral Test Suite (Gate 2 Enforcement)', () => {
@@ -16,6 +16,12 @@ describe('ToS;DR Privacy Five-Fold Behavioral Test Suite (Gate 2 Enforcement)', 
           }),
           set: vi.fn(async (obj: Record<string, any>) => {
             Object.assign(storageMock, obj);
+          }),
+          remove: vi.fn(async (keys: string | string[]) => {
+            const list = Array.isArray(keys) ? keys : [keys];
+            for (const k of list) {
+              delete storageMock[k];
+            }
           })
         }
       }
@@ -88,6 +94,38 @@ describe('ToS;DR Privacy Five-Fold Behavioral Test Suite (Gate 2 Enforcement)', 
     const result = await fetchTosDrService('example.com');
     expect(result?.name).toBe('Cached Service');
     // Fetch should NOT be called because cache is valid
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('TEST-TOSDR-06: Revoking consent immediately clears cache and completely halts queries', async () => {
+    // 1. Grant and cache
+    storageMock['tosdr_example.com'] = {
+      data: { id: 101, name: 'Cached Service', points: [] },
+      timestamp: Date.now()
+    };
+    await setTosDrConsent('example.com', true);
+
+    // 2. Revoke consent
+    await setTosDrConsent('example.com', false);
+
+    // 3. Cache must be purged from storage
+    expect(storageMock['tosdr_example.com']).toBeUndefined();
+
+    // 4. Invariant: call must return null with zero network calls
+    const result = await fetchTosDrService('example.com');
+    expect(result).toBeNull();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('TEST-TOSDR-07: Network call-site invariant guarantees zero network egress without consent under concurrent attempts', async () => {
+    // Attempt multiple concurrent calls on non-consented domains
+    const promises = [
+      fetchTosDrService('unconsented-1.com'),
+      fetchTosDrService('unconsented-2.com'),
+      fetchTosDrService('unconsented-3.com')
+    ];
+    const results = await Promise.all(promises);
+    expect(results).toEqual([null, null, null]);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

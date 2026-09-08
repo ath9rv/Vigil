@@ -43,24 +43,41 @@ export async function setTosDrConsent(domain: string, granted: boolean): Promise
     const map = (result.legal_audit_consent || {}) as Record<string, boolean>;
     map[domain] = granted;
     await chrome.storage.local.set({ legal_audit_consent: map });
+    // If consent was revoked, immediately purge any cached third-party data for this domain
+    if (!granted) {
+      await chrome.storage.local.remove(`tosdr_${domain}`);
+    }
   } catch (e) {
     console.warn('Vigil: Failed to save legal audit consent', e);
   }
 }
 
-export async function fetchTosDrService(domain: string, requireExplicitConsent = true): Promise<TosDrService | null> {
+/**
+ * Purges explicit consent and cached data for a domain.
+ */
+export async function clearTosDrConsent(domain: string): Promise<void> {
+  await setTosDrConsent(domain, false);
+}
+
+/**
+ * Fetches third-party legal analysis from ToS;DR Phoenix API.
+ * 
+ * INVARIANT: Non-bypassable consent gate at the network call site.
+ * Vigil operates 100% on-device by default. Under NO circumstances will an
+ * outbound HTTP request be dispatched without verified, affirmative user consent.
+ */
+export async function fetchTosDrService(domain: string): Promise<TosDrService | null> {
   // Validate domain format (reject localhost, raw IP, path traversal)
   if (!domain || typeof domain !== 'string' || !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(domain)) {
     console.warn(`[Vigil Security] Invalid domain for ToS;DR query: ${domain}`);
     return null;
   }
 
-  // Option C + Option A Privacy Enforcement: Zero network egress without affirmative user consent
-  if (requireExplicitConsent) {
-    const hasConsent = await getTosDrConsent(domain);
-    if (!hasConsent) {
-      return null;
-    }
+  // 1. Mandatory Call-Site Consent Invariant:
+  // Must have affirmative stored user consent before proceeding.
+  const hasConsent = await getTosDrConsent(domain);
+  if (!hasConsent) {
+    return null;
   }
 
   const cacheKey = `tosdr_${domain}`;
@@ -71,6 +88,14 @@ export async function fetchTosDrService(domain: string, requireExplicitConsent =
     if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
       return data;
     }
+  }
+
+  // 2. Pre-Flight Network Gate Assertion:
+  // Re-verify consent immediately prior to socket allocation and fetch dispatch.
+  // Guarantees zero speculative prefetch or background task bypass.
+  const preFlightConsent = await getTosDrConsent(domain);
+  if (!preFlightConsent) {
+    return null;
   }
 
   try {
