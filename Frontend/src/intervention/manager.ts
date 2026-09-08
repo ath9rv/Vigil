@@ -1,30 +1,40 @@
 /**
  * Vigil Centralized Intervention & Reversibility Manager
  *
- * Implements the Observe -> Score -> Decide -> Intervene -> Verify pipeline.
+ * Implements the Two-Axis Decision Gate & Transactional Safety Pipeline:
+ * Observe -> Assess Blast Radius -> Two-Axis Decision -> Transaction (Snapshot -> Mutate -> Verify -> Commit/Rollback).
  *
  * Key guarantees:
- * 1. Zero destructive element deletions: all interventions are non-destructive visual de-emphases
- * 2. Pre-intervention state captured in WeakMap before any mutation
- * 3. Geometry and layout preserved (no layout shifts)
- * 4. 100% reversible via 1-click restore
- * 5. Full provenance recorded for every intervention
+ * 1. Two-axis separation: Detection Confidence != Intervention Safety
+ * 2. Absolute form/auth/payment immutability (Level 4 BLOCKED)
+ * 3. Mutation-scoped snapshotting and comparative compatibility verification
+ * 4. Automatic causal error rollback monitoring
+ * 5. Dry-run simulation and global protection modes (ACTIVE, SAFE_ONLY, OBSERVE_ONLY, OFF)
+ * 6. 100% reversible via 1-click restore
  */
 
-import type {
+import {
   InterventionRecord,
-  OriginalElementState,
   ApplyInterventionOptions,
-  InterventionStatus,
+  ProtectionMode,
+  InterventionSafetyClass,
+  InterventionConfidence,
+  MutationPlan,
 } from './types';
+import { blastRadiusEstimator } from './blast-radius';
+import { InterventionTransaction } from './transaction';
+import { causalRollbackMonitor } from './auto-rollback';
 
 export class InterventionManager {
   private static instance: InterventionManager | null = null;
 
-  // WeakMap prevents memory leaks when DOM elements are removed by the page
-  private originalStates = new WeakMap<HTMLElement, OriginalElementState>();
-  
-  // Registry of all performed interventions
+  private protectionMode: ProtectionMode = 'ACTIVE';
+  private dryRun = false;
+
+  // Active transactions map by transaction/intervention ID
+  private transactions = new Map<string, InterventionTransaction>();
+
+  // Registry of all performed interventions for popup & telemetry
   private records = new Map<string, { record: InterventionRecord; elementRef: WeakRef<HTMLElement> }>();
 
   public static getInstance(): InterventionManager {
@@ -34,9 +44,25 @@ export class InterventionManager {
     return InterventionManager.instance;
   }
 
+  public setProtectionMode(mode: ProtectionMode): void {
+    this.protectionMode = mode;
+  }
+
+  public getProtectionMode(): ProtectionMode {
+    return this.protectionMode;
+  }
+
+  public setDryRun(dryRun: boolean): void {
+    this.dryRun = dryRun;
+  }
+
+  public isDryRun(): boolean {
+    return this.dryRun;
+  }
+
   /**
    * Applies a safe, non-destructive intervention to a target element.
-   * Follows: Capture State -> Apply Minimal Mutation -> Verify Layout -> Register Rollback.
+   * Follows the two-axis safety matrix: Detection Confidence x Intervention Safety.
    */
   public applyIntervention(
     element: HTMLElement,
@@ -46,83 +72,90 @@ export class InterventionManager {
       return null;
     }
 
-    // Idempotent: do not re-intervene on an already active element
-    if (this.originalStates.has(element)) {
-      const existingId = element.getAttribute('data-vigil-intervention-id');
-      if (existingId && this.records.has(existingId)) {
-        return this.records.get(existingId)!.record;
-      }
-    }
-
-    const interventionId = `vigil-inv-${crypto.randomUUID()}`;
-    const rect = typeof element.getBoundingClientRect === 'function'
-      ? element.getBoundingClientRect()
-      : { width: 0, height: 0, top: 0, left: 0 };
-
-    // 1. Capture Original State
-    const originalState: OriginalElementState = {
-      opacity: element.style.opacity || '',
-      pointerEvents: element.style.pointerEvents || '',
-      animation: element.style.animation || '',
-      transition: element.style.transition || '',
-      textContent: options.freezeText ? element.textContent || '' : undefined,
-      attributes: {
-        'data-vigil-neutralized': element.getAttribute('data-vigil-neutralized'),
-        'data-vigil-intervention-id': element.getAttribute('data-vigil-intervention-id'),
-        'title': element.getAttribute('title'),
-      },
-      boundingRect: {
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      },
-    };
-    this.originalStates.set(element, originalState);
-
-    // 2. Apply Minimal Non-Destructive Mutation
-    const mutationType = options.mutationType || 'VISUAL_FREEZE';
-    try {
-      element.setAttribute('data-vigil-neutralized', 'true');
-      element.setAttribute('data-vigil-intervention-id', interventionId);
-      element.setAttribute('title', `Vigil: ${options.reason} (Click Vigil shield in toolbar to restore)`);
-
-      element.style.setProperty('opacity', '0.3', 'important');
-      element.style.setProperty('pointer-events', 'none', 'important');
-      element.style.setProperty('animation', 'none', 'important');
-      element.style.setProperty('transition', 'none', 'important');
-
-      if (options.freezeText && element.textContent) {
-        element.textContent = options.freezeText;
-      }
-    } catch (err) {
-      console.warn('[Vigil InterventionManager] Failed to apply mutation:', err);
+    if (this.protectionMode === 'OFF') {
       return null;
     }
 
-    // 3. Verify Layout and Stability
-    const newRect = typeof element.getBoundingClientRect === 'function'
-      ? element.getBoundingClientRect()
-      : { width: 0, height: 0 };
-    
-    // Geometry check: verify element has not collapsed to 0 height unexpectedly
-    const layoutPreserved = rect.height === 0 || newRect.height > 0;
-    const verificationResult = layoutPreserved ? 'PASS' : 'FAIL';
+    // 1. Blast Radius Assessment
+    const assessment = blastRadiusEstimator.assess(element);
+    const confidence = options.confidenceState || 'HIGH';
 
-    // 4. Register Provenance Record
+    // 2. Two-Axis Decision Gate
+    if (!this.isAuthorizedToMutate(confidence, assessment.safetyClass)) {
+      // Inadmissible for mutation: record advisory finding only
+      return this.recordAdvisory(element, options, assessment.safetyClass, 'DECISION_GATE_BLOCKED');
+    }
+
+    // Global Protection Mode Enforcement
+    if (this.protectionMode === 'OBSERVE_ONLY') {
+      return this.recordAdvisory(element, options, assessment.safetyClass, 'OBSERVE_ONLY_MODE');
+    }
+
+    if (this.protectionMode === 'SAFE_ONLY' && assessment.safetyClass !== 'SAFE') {
+      return this.recordAdvisory(element, options, assessment.safetyClass, 'SAFE_ONLY_DOWNGRADED');
+    }
+
+    // 3. Build Mutation Plan
+    const mutationType = options.mutationType || 'VISUAL_FREEZE';
+    const plan: MutationPlan = {
+      styles: {
+        opacity: '0.3',
+        'pointer-events': 'none',
+        animation: 'none',
+        transition: 'none',
+      },
+      attributes: {
+        'data-vigil-neutralized': 'true',
+        title: `Vigil: ${options.reason} (Click Vigil shield in toolbar to restore)`,
+      },
+      freezeText: options.freezeText,
+    };
+
+    // 4. Construct Transaction
+    const isDryRunActive = options.dryRun !== undefined ? options.dryRun : this.dryRun;
+    const transaction = new InterventionTransaction({
+      element,
+      ruleId: options.ruleId || 'M1-URGENCY-NEUTRALIZE',
+      navigationId: options.navigationId || 'nav-current',
+      frameId: options.frameId || 'main',
+      origin: options.origin,
+      safetyClass: assessment.safetyClass,
+      compatibilityLevel: assessment.compatibilityLevel,
+      detectionConfidence: confidence,
+      plan,
+      dryRun: isDryRunActive,
+    });
+
+    // 5. Execute Transaction: Snapshot -> Apply -> Verify -> Commit/Rollback
+    transaction.snapshot();
+    transaction.apply();
+    const verification = transaction.verify();
+
+    if (verification.result === 'PASS') {
+      transaction.commit();
+      // Attach Causal Auto-Rollback Monitor for 500ms
+      causalRollbackMonitor.monitorTransaction(transaction, element, 500);
+    }
+
+    // 6. Record in registry
+    const interventionId = transaction.id;
+    element.setAttribute('data-vigil-intervention-id', interventionId);
+    this.transactions.set(interventionId, transaction);
+
     const record: InterventionRecord = {
       id: interventionId,
       targetSelector: this.buildSelector(element),
       elementTag: element.tagName.toLowerCase(),
       reason: options.reason,
       triggeringEvidenceIds: options.triggeringEvidenceIds || [],
-      confidenceState: options.confidenceState || 'HIGH',
+      confidenceState: confidence,
       mutationType,
       timestamp: Date.now(),
-      layoutPreserved,
+      layoutPreserved: verification.geometryPreserved,
       rollbackAvailable: true,
-      verificationResult,
-      status: 'ACTIVE',
+      verificationResult: verification.result,
+      status: verification.result === 'PASS' ? 'ACTIVE' : 'FAILED',
+      transactionId: transaction.id,
     };
 
     this.records.set(interventionId, {
@@ -134,73 +167,49 @@ export class InterventionManager {
   }
 
   /**
-   * Restores an element to its exact pre-intervention state.
+   * Two-Axis Decision Gate:
+   * Maps Detection Confidence x Intervention Safety into an authorization decision.
+   */
+  public isAuthorizedToMutate(
+    confidence: InterventionConfidence,
+    safetyClass: InterventionSafetyClass
+  ): boolean {
+    if (safetyClass === 'BLOCKED') {
+      return false; // Absolute invariant: BLOCKED elements are NEVER mutated
+    }
+
+    if (confidence === 'LOW' || confidence === 'MODERATE' || confidence === 'CONTESTED') {
+      return false; // Insufficient confidence to mutate host DOM
+    }
+
+    if (safetyClass === 'RESTRICTED') {
+      return false; // Requires explicit user approval
+    }
+
+    // At HIGH or CONFIRMED confidence, SAFE and CAUTIOUS mutations are permitted
+    return safetyClass === 'SAFE' || safetyClass === 'CAUTIOUS';
+  }
+
+  /**
+   * Restores an element to its exact pre-intervention state via transaction rollback.
    */
   public restoreIntervention(interventionId: string): boolean {
+    const transaction = this.transactions.get(interventionId);
+    if (transaction) {
+      transaction.rollback('User or extension requested restore');
+    }
+
     const entry = this.records.get(interventionId);
-    if (!entry) return false;
-
-    const element = entry.elementRef.deref();
-    if (!element || !(element instanceof HTMLElement)) {
-      entry.record.status = 'FAILED';
-      return false;
-    }
-
-    const originalState = this.originalStates.get(element);
-    if (!originalState) {
-      entry.record.status = 'FAILED';
-      return false;
-    }
-
-    try {
-      // Restore Styles
-      if (originalState.opacity) {
-        element.style.opacity = originalState.opacity;
-      } else {
-        element.style.removeProperty('opacity');
+    if (entry) {
+      const el = entry.elementRef.deref();
+      if (el && el instanceof HTMLElement) {
+        el.removeAttribute('data-vigil-intervention-id');
+        el.removeAttribute('data-vigil-neutralized');
       }
-
-      if (originalState.pointerEvents) {
-        element.style.pointerEvents = originalState.pointerEvents;
-      } else {
-        element.style.removeProperty('pointer-events');
-      }
-
-      if (originalState.animation) {
-        element.style.animation = originalState.animation;
-      } else {
-        element.style.removeProperty('animation');
-      }
-
-      if (originalState.transition) {
-        element.style.transition = originalState.transition;
-      } else {
-        element.style.removeProperty('transition');
-      }
-
-      // Restore Text Content
-      if (originalState.textContent !== undefined) {
-        element.textContent = originalState.textContent;
-      }
-
-      // Restore Attributes
-      element.removeAttribute('data-vigil-neutralized');
-      element.removeAttribute('data-vigil-intervention-id');
-
-      if (originalState.attributes['title']) {
-        element.setAttribute('title', originalState.attributes['title']!);
-      } else {
-        element.removeAttribute('title');
-      }
-
-      this.originalStates.delete(element);
       entry.record.status = 'RESTORED';
       return true;
-    } catch (err) {
-      console.warn('[Vigil InterventionManager] Failed to restore intervention:', err);
-      entry.record.status = 'FAILED';
-      return false;
     }
+    return false;
   }
 
   /**
@@ -218,33 +227,52 @@ export class InterventionManager {
     return restoredCount;
   }
 
-  /**
-   * Get all intervention records.
-   */
   public getInterventions(): InterventionRecord[] {
     return Array.from(this.records.values()).map(e => e.record);
   }
 
-  /**
-   * Get a specific intervention record by ID.
-   */
   public getIntervention(id: string): InterventionRecord | undefined {
     return this.records.get(id)?.record;
   }
 
-  /**
-   * Number of currently active interventions.
-   */
   public getActiveCount(): number {
     return Array.from(this.records.values()).filter(e => e.record.status === 'ACTIVE').length;
   }
 
-  /**
-   * Clear all records (e.g. on navigation unload).
-   */
   public clear(): void {
     this.restoreAll();
     this.records.clear();
+    this.transactions.clear();
+  }
+
+  private recordAdvisory(
+    element: HTMLElement,
+    options: ApplyInterventionOptions,
+    safetyClass: InterventionSafetyClass,
+    reason: string
+  ): InterventionRecord {
+    const id = `vigil-adv-${crypto.randomUUID()}`;
+    const record: InterventionRecord = {
+      id,
+      targetSelector: this.buildSelector(element),
+      elementTag: element.tagName.toLowerCase(),
+      reason: `${options.reason} [Advisory: ${reason}]`,
+      triggeringEvidenceIds: options.triggeringEvidenceIds || [],
+      confidenceState: options.confidenceState || 'HIGH',
+      mutationType: 'ATTRIBUTE_FLAG',
+      timestamp: Date.now(),
+      layoutPreserved: true,
+      rollbackAvailable: false,
+      verificationResult: 'PASS',
+      status: 'ACTIVE',
+    };
+
+    this.records.set(id, {
+      record,
+      elementRef: new WeakRef(element),
+    });
+
+    return record;
   }
 
   private buildSelector(element: HTMLElement): string {

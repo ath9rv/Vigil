@@ -56,4 +56,56 @@ describe('Vigil Phase 2: SubtreeCache & Incremental DOM Scanning', () => {
     // Must re-analyze because structural fingerprint changed
     expect(cache.shouldAnalyze(container, 'urgency-detector')).toBe(true);
   });
+
+  it('redacts sensitive inputs, passwords, and credit card fields from fingerprints', () => {
+    // Password input
+    const pwd = document.createElement('input');
+    pwd.type = 'password';
+    pwd.value = 'SuperSecret123!';
+    document.body.appendChild(pwd);
+
+    const pwdFp = cache.computeFingerprint(pwd);
+    expect(pwdFp).toContain('REDACTED');
+    expect(pwdFp).not.toContain('SuperSecret123!');
+
+    // Textarea
+    const textarea = document.createElement('textarea');
+    textarea.value = 'Confidential private message';
+    document.body.appendChild(textarea);
+
+    const txtFp = cache.computeFingerprint(textarea);
+    expect(txtFp).toContain('REDACTED');
+    expect(txtFp).not.toContain('Confidential');
+
+    // Credit card field
+    const ccInput = document.createElement('input');
+    ccInput.setAttribute('autocomplete', 'cc-number');
+    ccInput.id = 'card-number';
+    document.body.appendChild(ccInput);
+
+    const ccFp = cache.computeFingerprint(ccInput);
+    expect(ccFp).toContain('REDACTED');
+
+    // ContentEditable container
+    const editable = document.createElement('div');
+    editable.contentEditable = 'true';
+    editable.textContent = 'Secret user note';
+    document.body.appendChild(editable);
+
+    const editFp = cache.computeFingerprint(editable);
+    expect(editFp).toContain('REDACTED');
+    expect(editFp).not.toContain('Secret user note');
+  });
+
+  it('stores one-way integer hashes rather than raw page text in fingerprints', () => {
+    const el = document.createElement('div');
+    el.textContent = 'Limited time offer! Sale ends in 5 minutes';
+    document.body.appendChild(el);
+
+    const fp = cache.computeFingerprint(el);
+    // Fingerprint should contain tag and hash, NOT the literal promotional text
+    expect(fp).toContain('DIV');
+    expect(fp).not.toContain('Limited time offer');
+    expect(fp).not.toContain('Sale ends');
+  });
 });

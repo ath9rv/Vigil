@@ -27,6 +27,8 @@ export interface ScheduledTask<T = unknown> {
   createdAt: number;
 }
 
+import { performanceGovernor } from './governor';
+
 export class TaskScheduler {
   private static instance: TaskScheduler | null = null;
 
@@ -37,6 +39,10 @@ export class TaskScheduler {
 
   private isFlushing = false;
   private maxCycleBudgetMs = 30.0;
+  private maxP2Queue = 2000;
+  private maxP3Queue = 1000;
+
+  public totalShedTasks = 0;
 
   public static getInstance(): TaskScheduler {
     if (!TaskScheduler.instance) {
@@ -73,6 +79,26 @@ export class TaskScheduler {
     }
 
     return new Promise<T>((resolve, reject) => {
+      // Check governor gating for low priority tasks
+      if (!performanceGovernor.shouldExecute(priority)) {
+        this.totalShedTasks++;
+        resolve({ shed: true, reason: 'GOVERNOR_SHED' } as any);
+        return;
+      }
+
+      // Check queue bounds for P2 and P3
+      if (priority === 'P2_CONTEXTUAL' && this.p2Queue.length >= this.maxP2Queue) {
+        this.totalShedTasks++;
+        resolve({ shed: true, reason: 'P2_QUEUE_CAPACITY' } as any);
+        return;
+      }
+
+      if (priority === 'P3_ENRICHMENT' && this.p3Queue.length >= this.maxP3Queue) {
+        this.totalShedTasks++;
+        resolve({ shed: true, reason: 'P3_QUEUE_CAPACITY' } as any);
+        return;
+      }
+
       const task: ScheduledTask<T> = {
         id: `task-${crypto.randomUUID()}`,
         priority,
@@ -224,6 +250,7 @@ export class TaskScheduler {
     this.p2Queue = [];
     this.p3Queue = [];
     this.isFlushing = false;
+    this.totalShedTasks = 0;
   }
 }
 

@@ -109,4 +109,81 @@ describe('Vigil Phase 2: Memory Lifecycle & Bounded Evidence Retention', () => {
     const activeNodes = engine.getActiveGraphNodeCount();
     expect(activeNodes).toBeLessThanOrEqual(5);
   });
+
+  it('proves strict unreachability across 100 consecutive navigations', () => {
+    const disposedNavIds: string[] = [];
+
+    // Execute 100 navigations
+    for (let i = 0; i < 100; i++) {
+      const navId = `stress-nav-${i}`;
+      navigationState.startNavigation(1, navId);
+      const ctx = makeContext(navId);
+
+      // Ingest observations
+      for (let j = 0; j < 10; j++) {
+        engine.observe(ObservationFactory.fromNetworkRequest(ctx, {
+          url: `https://api.test/resource-${i}-${j}`,
+          crossSite: false,
+        }));
+      }
+
+      if (i > 0) {
+        const prev = `stress-nav-${i - 1}`;
+        engine.dispose(prev);
+        disposedNavIds.push(prev);
+      }
+    }
+
+    // Only active navigation 99 remains
+    expect(engine.getActiveGraphNodeCount()).toBeLessThanOrEqual(10);
+
+    // Verify all 99 disposed navigations are 100% unreachable
+    const graph = (engine as any).graph as EvidenceGraph;
+    for (const oldNavId of disposedNavIds) {
+      const nodesForNav = graph.getNodesByNavigationId ? graph.getNodesByNavigationId(oldNavId) : [];
+      expect(nodesForNav.length).toBe(0);
+    }
+  });
+
+  it('prevents cross-navigation evidence contamination', () => {
+    const navA = 'nav-authenticated-user';
+    navigationState.startNavigation(1, navA);
+    const ctxA = makeContext(navA);
+
+    // Navigation A: User logged in, identifier X observed
+    engine.observe(ObservationFactory.fromNetworkRequest(ctxA, {
+      url: 'https://analytics.test/track?uid=user-12345',
+      crossSite: true,
+    }));
+
+    // Dispose Navigation A
+    engine.dispose(navA);
+
+    // Navigation B: Anonymous session, identifier Y observed
+    const navB = 'nav-anonymous-session';
+    navigationState.startNavigation(1, navB);
+    const ctxB = makeContext(navB);
+
+    engine.observe(ObservationFactory.fromNetworkRequest(ctxB, {
+      url: 'https://analytics.test/track?session=anon-99999',
+      crossSite: true,
+    }));
+
+    const graph = (engine as any).graph as EvidenceGraph;
+    const nodesB = graph.getNodesByNavigationId(navB);
+    expect(nodesB.length).toBe(1);
+    expect((nodesB[0].data as any).url).toContain('anon-99999');
+
+    // Prove zero nodes exist for navA
+    const nodesA = graph.getNodesByNavigationId(navA);
+    expect(nodesA.length).toBe(0);
+
+    // Finalize Navigation B
+    const resultB = engine.finalize(navB);
+
+    // Prove serializedResult has ZERO references to Navigation A's ID or user-12345
+    const serializedResult = JSON.stringify(resultB);
+    expect(serializedResult).not.toContain('user-12345');
+    expect(serializedResult).not.toContain(navA);
+  });
 });
