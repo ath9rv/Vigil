@@ -1,39 +1,75 @@
-﻿# Zero-Telemetry & Privacy Verification
+# Zero-Telemetry & Privacy Model
 
-This document details the security and privacy invariants upheld by Vigil.
-
----
-
-## 1. The Zero-Telemetry Guarantee
-
-Vigil operates under an absolute **Zero-Telemetry Policy**:
-* **No Remote Analytics**: Vigil does not embed Google Analytics, Mixpanel, Sentry, or any third-party tracking SDKs.
-* **No Cloud Telemetry**: Scanned URLs, DOM nodes, and cookie inventories are never transmitted off the user device.
-* **No Ingestion Servers**: All threat intelligence indices, heuristics, legal parsers, and machine learning models execute entirely within local browser memory.
-* **Cryptographic Isolation**: All cached domain trust scores and site settings stored in `chrome.storage.local` stay on disk within the browser user profile.
+This document provides the technical evidence behind Vigil's privacy claims.
 
 ---
 
-## 2. Declarative Net Request (DNR) Sanitization
+## 1. Zero-Telemetry Guarantee
 
-Vigil leverages Chrome's `declarativeNetRequest` API (`Frontend/rules/`) to protect the user at the network layer:
-1. **Tracker Blocklist (`tracker_blocklist.json`)**:
-   * Pre-compiled block rules for over 100 high-prevalence advertising, tracking, social, and cryptomining domains.
-   * Evaluated directly in the browser network stack without invoking JavaScript on every request.
-2. **URL Sanitizer (`url_sanitizer.json`)**:
-   * Uses `queryTransform.removeParams` to automatically strip tracking parameters (`utm_source`, `fbclid`, `gclid`, `_ga`, etc.) from all web requests.
-3. **HTTPS Upgrade Enforcer (`https_upgrades.json`)**:
-   * Upgrades insecure HTTP traffic to secure HTTPS channels.
+Vigil upholds an absolute zero-telemetry invariant:
+
+- **No analytics SDKs** — no Google Analytics, Mixpanel, Sentry, Segment, Datadog, or PostHog.
+- **No cloud processing** — scanned URLs, DOM nodes, cookie inventories, and legal analysis results never leave the device.
+- **No ingestion servers** — all heuristics, ML models, and threat indices execute in local browser memory.
+- **No tracking identifiers** — no device fingerprints, advertising IDs, or cross-session user trackers are generated.
+- **Verified by audit** — full-codebase grep for `fetch(`, `XMLHttpRequest`, `sendBeacon`, `WebSocket`, and `navigator.sendBeacon` confirms zero telemetry egress. The only `sendBeacon`/`XMLHttpRequest` references in the codebase exist in `inject-defender.ts`, where Vigil *intercepts* third-party tracker telemetry on visited pages (defensive, not egress).
 
 ---
 
-## 3. Extension Permissions Least-Privilege Audit
+## 2. Declarative Network Sanitization (DNR)
 
-| Permission | Purpose | Principle of Least Privilege |
-| :--- | :--- | :--- |
-| `storage` | Storing local user preferences, site allowlists, and cached trust scores | Required for local persistence |
-| `scripting` | Injecting MAIN-world anti-fingerprinting defender | Scoped to active web contexts |
-| `declarativeNetRequest` | Enforcing network-level tracker blocking | Local kernel-level network protection |
-| `activeTab` | Accessing tab metadata when popup opens | Minimal tab-level access |
-| `notifications` | Warning users upon encountering confirmed credential theft | Urgent security alerts only |
-| `cookies` | Reading cookie metadata for Behavioral DNA analysis | Strictly read-only local forensic analysis |
+Vigil uses Chrome's native `declarativeNetRequest` engine (`Frontend/rules/`) for network-layer protection:
+
+| Ruleset | Function |
+|:---|:---|
+| `tracker_blocklist.json` | Blocks 100+ tracking, advertising, and cryptomining domains at the browser network stack level |
+| `url_sanitizer.json` | Strips tracking parameters (`utm_*`, `fbclid`, `gclid`, `_ga`) via `queryTransform.removeParams` |
+| `https_upgrades.json` | Upgrades insecure HTTP → HTTPS |
+
+DNR rules are evaluated by the browser engine without JavaScript observing raw request payloads.
+
+---
+
+## 3. Optional External Service: ToS;DR
+
+The only external network call in Vigil is the opt-in ToS;DR legal lookup:
+
+| Property | Detail |
+|:---|:---|
+| Default state | **OFF** |
+| Consent enforcement | Non-bypassable call-site gate in `tosdr-client.ts` |
+| Data transmitted | Public domain name only (`credentials: 'omit'`) |
+| Revocation behavior | Immediate cache purge from `chrome.storage.local` |
+
+See [`PRIVACY.md`](../../PRIVACY.md) for the full call-site consent architecture.
+
+---
+
+## 4. Permission Least-Privilege Audit
+
+| Permission | Purpose | Safeguard |
+|:---|:---|:---|
+| `host_permissions: ["<all_urls>"]` | Real-time DOM scanning on arbitrary origins | Content scripts analyze locally, never transmit |
+| `declarativeNetRequest` | Native tracker blocking | Browser engine handles, no JS observes requests |
+| `declarativeNetRequestWithHostAccess` | URL tracking param stripping | Native redirect transforms only |
+| `declarativeNetRequestFeedback` | Blocked tracker count for popup UI | Count only, no URLs stored |
+| `storage` | Local preferences and scores | On-device `chrome.storage.local` only |
+| `cookies` | Read-only cookie metadata inspection | Values never persisted or transmitted |
+| `scripting` | MAIN-world `defender.js` injection | Anti-fingerprinting only |
+| `privacy` | WebRTC IP leak protection | Only `webRTCIPHandlingPolicy`, no other settings |
+| `activeTab` | Temporary tab access during popup use | Ephemeral, user-initiated only |
+| `notifications` | Local phishing alerts | No personal data in notifications |
+
+Full per-permission justification text: [`CHROME_WEB_STORE_JUSTIFICATIONS.md`](CHROME_WEB_STORE_JUSTIFICATIONS.md)
+
+---
+
+## 5. Content Security Policy
+
+```
+script-src 'self'; object-src 'self'
+```
+
+- No `eval()`, no remote script loading, no CDN imports
+- Cross-context messages authenticated via `sender.id === chrome.runtime.id`
+- SSRF protection on all outbound `fetch()` calls (`url-security.ts`)

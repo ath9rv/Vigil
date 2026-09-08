@@ -1,147 +1,128 @@
-﻿================================================================================
-           VIGIL V2.1 RC1 — HOW TO USE & QUICK START GUIDE (FOR NOTEPAD)
+================================================================================
+              VIGIL v2.1 — QUICK START GUIDE
 ================================================================================
 
-Welcome to Vigil — your open-source, client-side browser trust shield and
-cognitive firewall for Chromium browsers (Manifest V3).
+  Your browser, with receipts.
 
-Vigil detects deceptive commerce (dark patterns), stops browser fingerprinting,
-inspects cookie behavioral DNA, audits legal terms, neutralizes fake urgency,
-and sanitizes tracking telemetry — 100% locally with zero cloud telemetry.
+  Vigil detects dark patterns, neutralizes fingerprinting, inspects cookie
+  behavioral DNA, and audits predatory legal terms — 100% locally with
+  zero cloud telemetry.
 
-Release:    v2.1.0-rc.1 (Feature-Frozen Release Candidate 1)
-License:    Apache 2.0
-Repository: https://github.com/ath9rv/Vigil.git
-
-
---------------------------------------------------------------------------------
-1. QUICK START: LOAD THE EXTENSION (30 SECONDS)
---------------------------------------------------------------------------------
-
-Step 1: Open your Chromium-based browser (Google Chrome, Brave, Edge, or Opera).
-
-Step 2: Navigate to your extensions page by typing this into your address bar:
-        chrome://extensions/
-        (In Brave: brave://extensions/ | In Edge: edge://extensions/)
-
-Step 3: In the top-right corner, toggle ON "Developer mode".
-
-Step 4: Click the "Load unpacked" button in the top-left corner.
-
-Step 5: In the file dialog, navigate to your cloned Vigil folder and select:
-        Frontend/dist
-        (e.g., C:\path\to\Vigil\Frontend\dist)
-
-Step 6: "Vigil — Web Trust & Safety Shield" will appear in your extensions list!
-        Pin the Vigil shield icon to your browser toolbar for quick access.
-
-* Note: After rebuilding or pulling updates, simply click the Reload (🔄) icon
-  on the Vigil card in chrome://extensions/ and refresh your tab.
+  Version:    2.1.0-rc.1 (Feature-Frozen Release Candidate)
+  License:    Apache 2.0
+  Repository: https://github.com/ath9rv/Vigil
 
 
 --------------------------------------------------------------------------------
-2. HOW TO USE VIGIL'S DEFENSIVE FEATURES
+  1. INSTALL THE EXTENSION (30 SECONDS)
 --------------------------------------------------------------------------------
 
-Open any website (e.g. https://amazon.com, https://reddit.com, or news sites),
-and click the Vigil shield icon in your toolbar.
+  Step 1: Open Chrome, Brave, or Edge.
 
-You will see the popup with 3 primary forensic tabs:
+  Step 2: Go to chrome://extensions/
+          (Brave: brave://extensions/ | Edge: edge://extensions/)
 
-======================================================================
-TAB 1: 🛡️ OVERVIEW (Trust Score & Dark Patterns)
-======================================================================
-- View the unified Trust Score Gauge (0 to 100).
-- View the before-and-after Privacy Grade (e.g. D+ -> A-).
-- Correlated Findings: Lists detected dark patterns, manufactured countdown
-  timers, sneaky subscription checkboxes, or deceptive pricing tricks.
-- Strict Privacy: Enable MAIN-world stealth anti-fingerprinting defense
-  (Canvas, WebGL, AudioContext, and Hardware persona normalization).
-- Master Switch: Pause or resume Vigil protection globally with one click.
+  Step 3: Toggle ON "Developer mode" (top-right corner).
 
+  Step 4: Click "Load unpacked" (top-left).
 
-======================================================================
-TAB 2: 🍪 COOKIES (Live Forensics & Behavioral DNA)
-======================================================================
-- See the exact number of active cookies stored by the current site.
-- Categorized by Behavioral DNA:
-  * 🛡️ Safe / Essential: Session tokens, bot protection (Cloudflare).
-  * 📊 Analytics: Google Analytics (_ga, _gid), Microsoft Clarity.
-  * 🎯 Marketing: Facebook Pixel (_fbp, fr), Google DoubleClick (IDE).
-  * ⚙️ Functional: Language preferences, theme state.
-- Plain-English Explanations: Click any cookie to view its Shannon entropy,
-  transmission security flags (🔒 HTTPS Secure, 🛡️ HttpOnly, SameSite), and
-  cryptographic JWT verification.
-- Third-Party Embedded Trackers: Scroll down to view external tracking
-  scripts and domains currently loaded on the page.
+  Step 5: Select the Frontend/dist folder inside this repository.
 
+  Step 6: Pin the Vigil shield icon to your toolbar.
 
-======================================================================
-TAB 3: ⚖️ TERMS (Deep Legal & Policy Audit)
-======================================================================
-- Vigil automatically discovers all legal links in the page footer:
-  * Terms of Service / Terms & Conditions
-  * Privacy Policy / Privacy Statement
-  * Cookie Policy & Disclaimers
-- How to Audit:
-  1. Select a document from the "Discovered Policies" dropdown.
-  2. Click "Deep Audit Selected Policy".
-  3. Vigil parses clauses offline and categorizes each into:
-     - 🚨 Tricky Terms: Forced binding arbitration, class-action waivers,
-       data sale, unilateral price changes, or AI training on your data.
-     - ⚠️ Notice Terms: Third-party sharing, retention periods, disclaimers.
-     - 🛡️ Fair Terms: Explicit non-sale promises, deletion rights.
-  4. Click "Locate on Page" to scroll and highlight the clause in yellow!
+  That's it. Vigil is now protecting every page you visit.
 
-
-======================================================================
-EXPLAIN MODE & 1-CLICK RESTORE (NEW IN V2.1)
-======================================================================
-Vigil operates under a strict "Evidence ≠ Intent" and "Detect ≠ Mutate" rule:
-- Why Vigil Acted: Plain-English breakdown showing exact observed facts.
-- What Vigil Did NOT Conclude: Transparency into rejected inferences.
-- 1-Click Restore: If any visual intervention affects your browsing flow,
-  click "Restore Original" to instantly revert DOM modifications.
+  * After rebuilding or pulling updates, click the reload icon on
+    the Vigil card in chrome://extensions/ and refresh your tab.
 
 
 --------------------------------------------------------------------------------
-3. HOW TO RUN THE AUTOMATED TEST SUITE
+  2. THE THREE TABS
 --------------------------------------------------------------------------------
 
-From the repository root in your terminal (PowerShell, Bash, or Command Prompt):
+  Click the Vigil shield icon on any website to open the popup.
 
-A. Run Unit & Integration Suite (Vitest — 51 suites):
-   npm test
+  TAB 1: OVERVIEW
+  ──────────────────────────────────────────────────────────────
+  • Trust Score gauge (0–100) with letter grade
+  • Correlated findings: dark patterns, fake urgency, hidden fees
+  • Strict Privacy toggle: enables MAIN-world anti-fingerprinting
+    (Canvas, WebGL, Audio, Hardware persona normalization)
+  • Master switch: pause/resume Vigil globally
 
-B. Run Browser Acceptance Suite (Playwright in real Chromium — 13 scenarios):
-   npm run test:browser
+  TAB 2: COOKIES
+  ──────────────────────────────────────────────────────────────
+  • Active cookie count with behavioral DNA classification:
+    - Essential (session tokens, bot protection)
+    - Analytics (Google Analytics, Clarity)
+    - Marketing (Facebook Pixel, DoubleClick)
+    - Functional (language, theme)
+  • Click any cookie for Shannon entropy, security flags
+    (Secure, HttpOnly, SameSite), and JWT verification
+  • Third-party embedded tracker domains at the bottom
 
-C. Run Complete Verification Battery:
-   npm run test:all
+  TAB 3: LEGAL
+  ──────────────────────────────────────────────────────────────
+  • Vigil discovers legal links automatically (ToS, Privacy
+    Policy, Cookie Policy, Disclaimers)
+  • Select a document and click "Deep Audit Selected Policy"
+  • Clauses are categorized:
+    - Tricky: forced arbitration, data sale, AI training rights
+    - Notice: third-party sharing, retention periods
+    - Fair: non-sale promises, deletion rights
+  • Click "Locate on Page" to scroll and highlight in yellow
 
-D. Compile Production Extension Bundle:
-   npm run build
+  NOTE: All analysis runs locally on your device by default.
+  External ToS;DR lookups are strictly opt-in and off by default.
 
-* For test methodologies and verification reports, see docs/testing/ and
-  docs/release/V2.1-RC1-CERTIFICATION.md.
+
+  EXPLAIN MODE & 1-CLICK RESTORE
+  ──────────────────────────────────────────────────────────────
+  • Why Vigil Acted: plain-English breakdown of observed facts
+  • What Vigil Did NOT Conclude: rejected alternative inferences
+  • 1-Click Restore: instantly reverts any DOM intervention
 
 
 --------------------------------------------------------------------------------
-4. FREQUENTLY ASKED QUESTIONS & TROUBLESHOOTING
+  3. RUN THE AUTOMATED TEST SUITE
 --------------------------------------------------------------------------------
 
-Q: Does Vigil send any browsing data to external servers?
-A: ABSOLUTELY NOT. Vigil has an unconditional ZERO-TELEMETRY policy. All threat
-   detection, dark pattern analysis, legal parsing, and anti-fingerprinting
-   execute 100% locally inside your browser process.
+  From the repository root:
 
-Q: Can Vigil see HttpOnly cookies?
-A: Yes. With standard browser extension permissions, Vigil inspects both
-   JavaScript-accessible cookies and secure HttpOnly cookies locally.
+  A. Unit & Integration (Vitest — 52 suites, 357 tests):
+     npm test
 
-Q: How do I report a security issue or suggest an improvement?
-A: See SECURITY.md for coordinated disclosure or CONTRIBUTING.md to submit a PR.
+  B. Browser Acceptance (Playwright — 13 Chromium scenarios):
+     npm run test:browser
+
+  C. Full Battery:
+     npm run test:all
+
+  D. Production Build:
+     npm run build
+
+
+--------------------------------------------------------------------------------
+  4. FAQ
+--------------------------------------------------------------------------------
+
+  Q: Does Vigil send browsing data to external servers?
+  A: No. Vigil has an unconditional zero-telemetry policy. All detection,
+     analysis, and defense runs locally inside your browser.
+
+  Q: What about the ToS;DR legal lookup?
+  A: It is strictly opt-in, off by default, and gated by a non-bypassable
+     consent check at the network call site (not just a UI toggle).
+     When enabled, only the public domain name is sent. No cookies,
+     credentials, or user identifiers are transmitted.
+
+  Q: Can Vigil see HttpOnly cookies?
+  A: Yes, via standard chrome.cookies API permissions (read-only, local).
+
+  Q: How do I report a security issue?
+  A: See SECURITY.md for coordinated disclosure guidelines.
+
 
 ================================================================================
-                     PROTECTED BY VIGIL V2.1 RC1
+                     PROTECTED BY VIGIL v2.1
 ================================================================================

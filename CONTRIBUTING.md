@@ -1,87 +1,71 @@
-﻿# Contributing to Vigil
+# Contributing to Vigil
 
-Thank you for your interest in contributing to **Vigil**! As an open-source, client-side cognitive firewall and privacy shield, maintaining high security standards, zero telemetry, and zero page breakage is critical.
-
----
-
-## 1. Core Invariants & Architecture Constraints
-
-Every contribution must strictly preserve the following invariants:
-
-1. **Zero-Telemetry Invariant**:
-   * Never introduce external analytics, tracking beacons, cloud telemetry, or remote logging.
-   * All reasoning, threat evaluation, and heuristic classification must happen 100% locally in browser memory.
-2. **Detection Authority ≠ Mutation Authority**:
-   * Detecting a suspicious pattern never grants permission to mutate the DOM directly.
-   * All mutations must be authorized through the Safety Plane (`blastRadiusEstimator`), bound to an atomic `InterventionTransaction`, and reversible via `differentialComparator`.
-3. **Evidence ≠ Intent**:
-   * Preserve the distinction between raw observations (DOM/network facts) and inferences (hypotheses).
-   * Register rejected counter-inferences for all findings.
-4. **Manifest V3 Least Privilege**:
-   * Do not request broad or unnecessary extension permissions.
+Thank you for your interest in contributing to **Vigil**. This document covers the architectural invariants every contribution must preserve, the development workflow, and testing requirements.
 
 ---
 
-## 2. Classification of Changes
+## Architectural Invariants
 
-To maintain release candidate stability, contributions are classified into two categories:
+Every contribution must strictly preserve these properties:
 
-* **Category A (Semantic-Neutral)**:
-  * Documentation improvements, test fixtures, tooling scripts, or comments.
-  * Subject to standard linting and unit test verification.
-* **Category B (Release-Affecting)**:
-  * Changes to manifest, background service workers, content script scanners, mutation logic, or dependencies.
-  * Must pass the entire automated verification battery: Vitest (all suites), Playwright (all browser scenarios), and build integrity checks.
+1. **Zero-Telemetry** — Never introduce external analytics, tracking beacons, cloud telemetry, or remote logging. All analysis runs 100% locally.
+2. **Detection ≠ Mutation** — Detecting a suspicious pattern never grants permission to modify the DOM. All mutations require Safety Plane authorization, atomic transactions, and differential health checks.
+3. **Evidence ≠ Intent** — Raw observations and inferences are distinct types. Register rejected counter-hypotheses for all findings.
+4. **Manifest V3 Least Privilege** — Do not request unnecessary permissions.
+5. **Non-Bypassable Consent** — Any code path that could trigger an external network request must verify stored user consent at the call site, not just at the UI layer.
+6. **Fail Closed** — Unknown or unhandled message types, malformed inputs, and unexpected states must produce explicit errors, never silent success.
 
 ---
 
-## 3. Development Workflow
+## Development Setup
 
-### Prerequisites
-* **Node.js**: `v20.x` or `v24.x`
-* **NPM**: `v10.x` or `v11.x`
-* **Chromium**: Google Chrome, Brave, Chromium, or Microsoft Edge
+**Prerequisites:** Node.js v20+ · npm v10+ · Chrome, Brave, Edge, or Chromium
 
-### Setup
 ```bash
-# Clone the repository
+# Clone
 git clone https://github.com/ath9rv/Vigil.git
 cd Vigil
 
 # Install extension dependencies
 npm install --prefix Frontend
 
-# Install browser testing dependencies
+# Install browser test dependencies
 npm install --prefix tests/browser
 ```
 
-### Running Commands from Repository Root
+## Build & Test Commands
+
+All commands run from the repository root:
+
 ```bash
-# Compile TypeScript and bundle production extension (output in Frontend/dist)
-npm run build
-
-# Run Vitest unit and integration test suite
-npm test
-
-# Run Playwright end-to-end browser suite in real Chromium
-npm run test:browser
-
-# Run the complete test battery
-npm run test:all
+npm run build        # TypeScript compile + Vite production bundle → Frontend/dist
+npm run typecheck    # tsc --noEmit (zero errors required)
+npm test             # Vitest: 52 suites, 357 tests
+npm run test:browser # Playwright: 13 Chromium acceptance tests
+npm run test:all     # Full verification battery
 ```
 
 ---
 
-## 4. Testing Requirements
+## Change Categories
 
-Before opening a pull request, ensure:
-1. `npm test` passes 100% green across all unit and integration test suites.
-2. `npm run test:browser` passes 100% green across all Chromium adversarial test scenarios.
-3. `npm run build` completes without TypeScript errors or Rollup warnings.
-4. No machine-specific absolute file paths are committed in code or documentation.
+| Category | Scope | Verification |
+|:---|:---|:---|
+| **A — Semantic-Neutral** | Docs, comments, test fixtures, tooling | Standard lint + unit tests |
+| **B — Release-Affecting** | Manifest, service worker, content scripts, mutation logic, dependencies | Full test battery: Vitest + Playwright + clean build |
 
 ---
 
-## 5. Security Vulnerability Reporting
+## Before Opening a PR
 
-If you discover a security vulnerability or bypass in Vigil, please refer to [`SECURITY.md`](SECURITY.md) for confidential reporting guidelines.
+1. `npm test` — 100% green
+2. `npm run test:browser` — 100% green
+3. `npm run build` — zero TypeScript errors, clean Vite bundle
+4. No machine-specific absolute paths in code or docs
+5. All new external-facing functions have JSDoc comments
+
+---
+
+## Security Vulnerabilities
+
+If you discover a security vulnerability or bypass, see [`SECURITY.md`](SECURITY.md) for confidential reporting guidelines.

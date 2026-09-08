@@ -1,69 +1,88 @@
-﻿# Testing Methodology & Quality Assurance
+# Testing Methodology & QA Framework
 
-This document details the multi-tiered verification framework used by Vigil.
+Vigil uses a multi-tiered verification framework: fast unit tests for correctness, browser-level acceptance tests for real-world behavior, and adversarial stress tests for resilience.
 
 ---
 
-## 1. Testing Framework Overview
+## Test Architecture
 
-Vigil employs a three-layer automated testing hierarchy:
-
-```text
-                           TESTING HIERARCHY
-                                  │
-       ┌──────────────────────────┼──────────────────────────┐
-       ▼                          ▼                          ▼
-[UNIT & INTEGRATION]      [BROWSER ACCEPTANCE]       [STRESS & HOSTILE]
-- Vitest Runner           - Playwright in Chromium   - 10,000 Mutation Flood
-- JSDOM DOM Environment   - Real Extension Context   - P3 Queue Starvation
-- 51 Test Suites          - Local Adversarial Server - Impostor Node Hijack
-- Fast feedback (<15s)    - 13 E2E Test Scenarios    - Depth Bomb Traversal
+```
+                         VERIFICATION HIERARCHY
+                                 │
+      ┌──────────────────────────┼──────────────────────────┐
+      ▼                          ▼                          ▼
+  UNIT & INTEGRATION       BROWSER E2E              ADVERSARIAL STRESS
+  Vitest + JSDOM           Playwright + Chromium    Hostile page fixtures
+  52 suites, 357 tests     13 real-browser tests    Mutation storms,
+  Fast feedback (<15s)     Local fixture server     queue floods, spoofing
 ```
 
 ---
 
-## 2. Unit & Integration Battery (`vitest`)
+## 1. Unit & Integration (Vitest)
 
-Located across `Frontend/src/**/*.test.ts`:
-* **Evidence & Trust Reasoning**: Verifies `EvidenceGraph`, observation provenance, verdict resolution, and memory retention clamping.
-* **Intervention Safety**: Verifies blast radius calculation, two-axis authorization gates, atomic transaction commits, and automatic rollbacks.
-* **Network & Cookie Analysis**: Verifies cookie entropy, JWT token detection, and tracker domain classification.
-* **Legal Auditor**: Verifies 19-dimensional legal traps and negation parsing.
-* **RC1 Certification Suites (`src/certification/`)**:
-  * `rc1-lifecycle.test.ts`: Executes complete 17-stage pipeline.
-  * `compatibility-corpus.test.ts`: Evaluates 11 real-world web archetypes across all 4 operational modes.
-  * `self-protection.test.ts`: Verifies runtime resilience against hostile host pages.
-  * `field-validation.test.ts`: Verifies Explain Mode forensic justifications and 1-click restore logic.
+All tests located across `Frontend/src/**/*.test.ts`:
 
----
-
-## 3. Browser E2E Adversarial Suite (`playwright`)
-
-Located in `tests/browser/` and executed against the local adversarial fixture server (`tests/adversarial/server.js`):
-1. `defender.audio.spec.ts`: OfflineAudioContext & AudioBuffer perturbation consistency.
-2. `defender.canvas.spec.ts`: Offscreen canvas probe mitigation and visible canvas non-interference.
-3. `defender.cname.spec.ts`: Subdomain cloaking detection vs. first-party traffic.
-4. `defender.evasion.spec.ts`: Opaque endpoint paths and nested/mixed-case payloads.
-5. `defender.hardware.spec.ts`: 8C/8GB/24b normalization, descriptor & CreepJS lie checks.
-6. `defender.race.spec.ts`: Dynamic iframes, inline evaluation, and SPA navigation.
-7. `defender.regression.spec.ts`: Canvas paths, WebGL shader compilation, forms, and standard fetch.
-8. `defender.telemetry.spec.ts`: sendBeacon, fetch, and XHR across JSON, URLSearchParams, and queries.
-9. `defender.webgl.spec.ts`: WebGL 1 & 2 vendor/renderer masking while preserving 3D limits.
-10. `fingerprint.spec.ts` (Stages A, B, B2, B3): Dynamic MAIN-world registration, early canvas probes, cross-API mitigation, and hardware persona stealth.
+| Area | What's Verified |
+|:---|:---|
+| Evidence & Trust | `EvidenceGraph`, observation provenance, verdict resolution, memory clamping |
+| Intervention Safety | Blast radius calculation, two-axis authorization, atomic transactions, auto-rollback |
+| Cookie DNA | Shannon entropy, JWT detection, tracker domain classification |
+| Legal Auditor | 19-dimension trap parsing, negation precision, clause categorization |
+| SSRF Protection | Loopback, RFC 1918, cloud metadata, non-HTTPS, obfuscated IPs (18 attack vectors) |
+| Consent Enforcement | ToS;DR opt-in consent gate, cache purge on revocation, concurrent bypass immunity |
+| RC1 Certification | 17-stage pipeline lifecycle, 11-category compatibility corpus, self-protection battery, Explain Mode |
 
 ---
 
-## 4. Running the Test Battery
+## 2. Browser E2E (Playwright)
 
-All test commands can be executed from the repository root:
+Runs against a local adversarial HTTP fixture server (`tests/adversarial/server.js`):
+
+| Test File | Coverage |
+|:---|:---|
+| `defender.audio.spec.ts` | OfflineAudioContext & AudioBuffer perturbation consistency |
+| `defender.canvas.spec.ts` | Offscreen probe mitigation, visible canvas non-interference |
+| `defender.cname.spec.ts` | CNAME cloaking detection vs. first-party traffic |
+| `defender.evasion.spec.ts` | Opaque endpoints, nested/mixed-case payloads |
+| `defender.hardware.spec.ts` | 8C/8GB/24b normalization, CreepJS lie detection bypass |
+| `defender.race.spec.ts` | Dynamic iframes, inline eval, SPA navigation |
+| `defender.regression.spec.ts` | Canvas paths, WebGL shaders, forms, standard fetch |
+| `defender.telemetry.spec.ts` | sendBeacon, fetch, XHR across payload formats |
+| `defender.webgl.spec.ts` | WebGL 1 & 2 masking with 3D limit preservation |
+| `fingerprint.spec.ts` | 4-stage: MAIN-world registration, early probes, cross-API mitigation, hardware stealth |
+
+---
+
+## 3. Running Tests
+
+All commands from repository root:
 
 ```bash
-# Run Vitest unit and integration suite
+# Unit & Integration (52 suites, 357 tests)
 npm test
 
-# Run Playwright browser suite in Chromium
+# Browser E2E (13 Chromium scenarios)
 npm run test:browser
 
-# Run complete verification battery
+# Complete battery
 npm run test:all
+
+# TypeScript typecheck (zero errors required)
+npm run typecheck
+
+# Production build
+npm run build
 ```
+
+---
+
+## 4. Test Results (v2.1.0-rc.1)
+
+| Layer | Count | Status |
+|:---|:---:|:---:|
+| Vitest unit & integration | 357 | ✅ All passing |
+| Playwright browser E2E | 13 | ✅ All passing |
+| TypeScript typecheck | 0 errors | ✅ Clean |
+| Production build | 111 modules | ✅ Clean |
+| **Total** | **370** | **✅ 370/370** |
