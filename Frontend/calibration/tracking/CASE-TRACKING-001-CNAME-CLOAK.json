@@ -1,0 +1,19 @@
+{
+  "caseId": "CASE-TRACKING-001",
+  "category": "TRACKING",
+  "type": "FALSE_NEGATIVE",
+  "domain": "metrics.fashionbrand.com",
+  "archetype": "E-Commerce First-Party Subdomain",
+  "observedSignals": [
+    "Subdomain matches host first-party domain",
+    "Request payload base64 encoded token: 'eyJhbm9uSWQiOiAiZmI5OC4uLiJ9'",
+    "Destination CNAME points to custom-subdomain.telemetry-collector.io"
+  ],
+  "expectedInterpretation": "Third-party tracker disguised via CNAME cloaking",
+  "actualInterpretation": "First-party analytics request (missed detection)",
+  "confidenceAssigned": "UNSUPPORTED",
+  "safetyClassAssigned": "SAFE",
+  "rootCause": "Traditional DNR blocklists evaluate requestDomains literally without resolving CNAME aliases or deep-inspecting payload base64 tokens.",
+  "calibrationRule": "Detect CNAME fingerprint signatures and sanitize base64 token parameters in telemetry monitor.",
+  "regressionTestPath": "tests/browser/defender.cname.spec.ts"
+}

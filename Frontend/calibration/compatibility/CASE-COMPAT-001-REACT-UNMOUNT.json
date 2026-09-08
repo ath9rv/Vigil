@@ -1,0 +1,19 @@
+{
+  "caseId": "CASE-COMPAT-001",
+  "category": "COMPATIBILITY",
+  "type": "COMPATIBILITY_REGRESSION_PREVENTED",
+  "domain": "modern-react-dashboard.io",
+  "archetype": "Dynamic Single Page Application (SPA)",
+  "observedSignals": [
+    "Target node unmounted during asynchronous verification phase",
+    "Identical HTML node mounted in parent container by React virtual DOM reconciler",
+    "Transaction state transitioning from SNAPSHOTTED to APPLYING"
+  ],
+  "expectedInterpretation": "Stale transaction target; unmounted node must not be mutated or rolled back on replacement node",
+  "actualInterpretation": "ABORTED_STALE triggered via deterministic node identity check",
+  "confidenceAssigned": "HIGH",
+  "safetyClassAssigned": "SAFE",
+  "rootCause": "SPA frameworks replace real DOM nodes during re-render cycles, causing naive element references to mutate unmanaged replacement nodes.",
+  "calibrationRule": "Enforce computeDeterministicNodeIdentity and isConnected check before apply/verify/rollback; set state to ABORTED_STALE on mismatch.",
+  "regressionTestPath": "src/intervention/adversarial-safety.test.ts"
+}

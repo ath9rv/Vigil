@@ -1,0 +1,19 @@
+{
+  "caseId": "CASE-URGENCY-001",
+  "category": "URGENCY",
+  "type": "FALSE_POSITIVE",
+  "domain": "ticketing-partner.net",
+  "archetype": "Ticketing & Live Events",
+  "observedSignals": [
+    "Countdown clock decreasing at 1s intervals",
+    "Text phrase 'Your tickets are held for: 09:45'",
+    "Shopping cart container detected"
+  ],
+  "expectedInterpretation": "Legitimate cart reservation timeout (server held)",
+  "actualInterpretation": "Manufactured countdown urgency",
+  "confidenceAssigned": "HIGH",
+  "safetyClassAssigned": "CAUTIOUS",
+  "rootCause": "Ticketing platform uses server-synchronized reservation held in Redis session rather than explicit data-server-time attribute.",
+  "calibrationRule": "Exclude countdown containers if preceded by explicit 'tickets held' or 'reservation locked' wording backed by authenticated session.",
+  "regressionTestPath": "src/content-scripts/urgency-calibration.test.ts"
+}
