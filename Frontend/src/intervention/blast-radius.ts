@@ -189,23 +189,34 @@ export class BlastRadiusEstimator {
   }
 
   private isPaymentOrAuthElement(el: Element): boolean {
+    const isInputOrForm = el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.tagName === 'FORM' || el.tagName === 'BUTTON';
+
+    // 1. Direct sensitive input controls (always payment/auth)
     const type = el.getAttribute('type');
     if (type && SENSITIVE_INPUT_TYPES.has(type.toLowerCase())) return true;
 
     const autocomplete = el.getAttribute('autocomplete');
     if (autocomplete && SENSITIVE_AUTOCOMPLETE.has(autocomplete.toLowerCase())) return true;
 
-    const name = el.getAttribute('name');
-    if (name && SENSITIVE_PATTERNS.test(name)) return true;
+    // 2. Sensitive names/IDs on actual form controls or buttons
+    if (isInputOrForm) {
+      const name = el.getAttribute('name');
+      if (name && SENSITIVE_PATTERNS.test(name)) return true;
 
-    const id = el.id;
-    if (id && SENSITIVE_PATTERNS.test(id)) return true;
+      const id = el.id;
+      if (id && SENSITIVE_PATTERNS.test(id)) return true;
 
-    const ariaLabel = el.getAttribute('aria-label');
-    if (ariaLabel && SENSITIVE_PATTERNS.test(ariaLabel)) return true;
+      const ariaLabel = el.getAttribute('aria-label');
+      if (ariaLabel && SENSITIVE_PATTERNS.test(ariaLabel)) return true;
+    }
 
-    const className = el.className && typeof el.className === 'string' ? el.className : '';
-    if (className && SENSITIVE_PATTERNS.test(className)) return true;
+    // 3. Container structural combination:
+    // A container is only payment/auth if it contains an active form/submit control AND inputs
+    if (el.tagName === 'FORM') {
+      const hasInputs = el.querySelectorAll('input, select, textarea').length > 0;
+      const hasSubmit = el.querySelectorAll('button[type="submit"], input[type="submit"], button').length > 0;
+      if (hasInputs && hasSubmit) return true;
+    }
 
     return false;
   }

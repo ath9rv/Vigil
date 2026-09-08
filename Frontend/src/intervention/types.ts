@@ -1,6 +1,6 @@
 /**
  * Vigil Intervention & Reversibility Subsystem Types
- * Phase 3: Transactional Intervention Safety, Verification & Compatibility Framework
+ * Phase 4: Real-World Compatibility, Dry-Run Validation & False-Positive Calibration
  */
 
 export type MutationType = 
@@ -44,7 +44,8 @@ export type TransactionState =
   | 'VERIFIED'
   | 'COMMITTED'
   | 'ROLLED_BACK'
-  | 'ABORTED';
+  | 'ABORTED'
+  | 'ABORTED_STALE';
 
 export type VerificationResult = 
   | 'PASS' 
@@ -70,6 +71,7 @@ export interface GeometrySnapshot {
 export type ShiftClassification = 
   | 'NO_SHIFT' 
   | 'EXPECTED_SHIFT' 
+  | 'EXTERNAL_SHIFT'
   | 'UNKNOWN_SHIFT' 
   | 'INTERVENTION_CORRELATED_SHIFT';
 
@@ -105,9 +107,77 @@ export interface OriginalElementState {
   };
 }
 
+export interface TransactionContext {
+  origin: string;
+  navigationId: string;
+  frameId: string;
+  nodeIdentity: string;
+}
+
+export interface CompatibilityDiagnostic {
+  vector: string;
+  score: number;
+  evidence: string[];
+  hardFailure: boolean;
+}
+
+export interface DiagnosticCompatibilityScore {
+  layout: number;        // 0-100
+  interaction: number;   // 0-100
+  forms: number;         // 0-100
+  accessibility: number; // 0-100
+  runtime: number;       // 0-100
+  performance: number;   // 0-100
+  overall: number;       // weighted diagnostic score
+  hardSafetyGatePassed: boolean;
+  diagnostics: CompatibilityDiagnostic[];
+}
+
+export interface BaselineHealth {
+  errorCount: number;
+  unhandledRejectionCount: number;
+  interactiveCount: number;
+  formFieldCount: number;
+  geometry: GeometrySnapshot;
+  neighborGeometries: Map<string, GeometrySnapshot>;
+  timestamp: number;
+}
+
+export interface PostHealth {
+  errorCount: number;
+  unhandledRejectionCount: number;
+  interactiveCount: number;
+  formFieldCount: number;
+  geometry: GeometrySnapshot;
+  neighborGeometries: Map<string, GeometrySnapshot>;
+  timestamp: number;
+}
+
+export interface DifferentialResult {
+  materiallyWorsened: boolean;
+  baseline: BaselineHealth;
+  post: PostHealth;
+  newlyIntroducedErrors: number;
+  newlyBrokenInteractions: number;
+  correlatedLayoutShifts: number;
+  attribution: 'PRE_EXISTING' | 'INTERVENTION_RELATED' | 'UNKNOWN';
+  reasons: string[];
+  hardSafetyViolation: boolean;
+  diagnosticScore?: DiagnosticCompatibilityScore;
+}
+
+export interface SiteOverridePolicy {
+  domain: string;
+  protectionMode: ProtectionMode;
+  neverIntervene: boolean;
+  setAt: number;
+  source: 'USER' | 'POLICY';
+}
+
 export interface InterventionTransactionRecord {
   id: string; // INT-XXXXX
   ruleId: string;
+  context: TransactionContext;
   navigationId: string;
   frameId: string;
   origin: string;
@@ -125,10 +195,13 @@ export interface InterventionTransactionRecord {
   postSnapshot?: {
     geometry: GeometrySnapshot;
   };
+  createdAt: number;
+  expiresAt: number;
   appliedAt?: number;
   verifiedAt?: number;
   rolledBackAt?: number;
   rollbackReason?: string;
+  staleReason?: string;
   dryRun: boolean;
 }
 
@@ -146,6 +219,7 @@ export interface InterventionRecord {
   verificationResult: VerificationResult;
   status: InterventionStatus;
   transactionId?: string;
+  diagnosticScore?: DiagnosticCompatibilityScore;
 }
 
 export interface ApplyInterventionOptions {

@@ -10,7 +10,9 @@
  * 3. Mutation-scoped snapshotting and comparative compatibility verification
  * 4. Automatic causal error rollback monitoring
  * 5. Dry-run simulation and global protection modes (ACTIVE, SAFE_ONLY, OBSERVE_ONLY, OFF)
- * 6. 100% reversible via 1-click restore
+ * 6. Site Governance: domain overrides preserve passive TrustEngine intelligence
+ * 7. Hard Safety Gates override numerical diagnostic scores
+ * 8. 100% reversible via 1-click restore
  */
 
 import {
@@ -24,6 +26,9 @@ import {
 import { blastRadiusEstimator } from './blast-radius';
 import { InterventionTransaction } from './transaction';
 import { causalRollbackMonitor } from './auto-rollback';
+import { siteGovernance } from './site-governance';
+import { differentialComparator } from './differential-comparator';
+import { compatibilityScorer } from './compatibility-scorer';
 
 export class InterventionManager {
   private static instance: InterventionManager | null = null;
@@ -76,6 +81,17 @@ export class InterventionManager {
       return null;
     }
 
+    // 0. Site Governance Check
+    const domain = options.origin
+      ? new URL(options.origin).hostname
+      : typeof window !== 'undefined'
+        ? window.location.hostname
+        : 'unknown';
+
+    if (!siteGovernance.shouldMutate(domain)) {
+      return this.recordAdvisory(element, options, 'SAFE', 'SITE_GOVERNANCE_OVERRIDE');
+    }
+
     // 1. Blast Radius Assessment
     const assessment = blastRadiusEstimator.assess(element);
     const confidence = options.confidenceState || 'HIGH';
@@ -95,7 +111,10 @@ export class InterventionManager {
       return this.recordAdvisory(element, options, assessment.safetyClass, 'SAFE_ONLY_DOWNGRADED');
     }
 
-    // 3. Build Mutation Plan
+    // 3. Capture Pre-Intervention Baseline Health
+    const baselineHealth = differentialComparator.captureBaseline(element);
+
+    // 4. Build Mutation Plan
     const mutationType = options.mutationType || 'VISUAL_FREEZE';
     const plan: MutationPlan = {
       styles: {
@@ -111,8 +130,9 @@ export class InterventionManager {
       freezeText: options.freezeText,
     };
 
-    // 4. Construct Transaction
+    // 5. Construct Transaction
     const isDryRunActive = options.dryRun !== undefined ? options.dryRun : this.dryRun;
+    const startTime = performance.now();
     const transaction = new InterventionTransaction({
       element,
       ruleId: options.ruleId || 'M1-URGENCY-NEUTRALIZE',
@@ -126,18 +146,35 @@ export class InterventionManager {
       dryRun: isDryRunActive,
     });
 
-    // 5. Execute Transaction: Snapshot -> Apply -> Verify -> Commit/Rollback
+    // 6. Execute Transaction: Snapshot -> Apply -> Verify -> Commit/Rollback
     transaction.snapshot();
     transaction.apply();
     const verification = transaction.verify();
+    const durationMs = performance.now() - startTime;
 
-    if (verification.result === 'PASS') {
+    // 7. Post-Health & Differential Assessment
+    const postHealth = differentialComparator.capturePostHealth(element);
+    const diffResult = differentialComparator.compare(baselineHealth, postHealth, [], element);
+
+    // 8. Multi-Vector Diagnostic Scoring & Hard Safety Gates
+    const diagnosticScore = compatibilityScorer.score({
+      check: verification,
+      diffHealth: diffResult,
+      assessment,
+      durationMs,
+    });
+
+    const isSuccessful = verification.result === 'PASS' && diagnosticScore.hardSafetyGatePassed;
+
+    if (isSuccessful) {
       transaction.commit();
       // Attach Causal Auto-Rollback Monitor for 500ms
       causalRollbackMonitor.monitorTransaction(transaction, element, 500);
+    } else {
+      transaction.rollback(`Safety gate failure: ${verification.reasons.concat(diffResult.reasons).join('; ')}`);
     }
 
-    // 6. Record in registry
+    // 9. Record in registry
     const interventionId = transaction.id;
     element.setAttribute('data-vigil-intervention-id', interventionId);
     this.transactions.set(interventionId, transaction);
@@ -153,9 +190,10 @@ export class InterventionManager {
       timestamp: Date.now(),
       layoutPreserved: verification.geometryPreserved,
       rollbackAvailable: true,
-      verificationResult: verification.result,
-      status: verification.result === 'PASS' ? 'ACTIVE' : 'FAILED',
+      verificationResult: isSuccessful ? 'PASS' : 'FAIL',
+      status: isSuccessful ? 'ACTIVE' : 'FAILED',
       transactionId: transaction.id,
+      diagnosticScore,
     };
 
     this.records.set(interventionId, {
