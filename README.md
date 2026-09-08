@@ -12,7 +12,7 @@
 
 **An open-source cognitive firewall for Chromium that detects dark patterns, neutralizes fingerprinting, reverse-engineers cookie DNA, and audits predatory legal terms — 100% on-device, zero cloud telemetry.**
 
-[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Privacy Model](#privacy-model) · [Contributing](CONTRIBUTING.md)
+[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Privacy Model](#privacy-model)
 
 </div>
 
@@ -167,7 +167,6 @@ Vigil/
 ├── docs/                        # Architecture, release, security, testing docs
 ├── PRIVACY.md                   # Zero-telemetry privacy policy
 ├── SECURITY.md                  # Vulnerability disclosure policy
-├── CONTRIBUTING.md              # Contributor guidelines
 ├── CHANGELOG.md                 # Release history
 ├── HOW_TO_USE.txt               # Plain-text quick start guide
 └── LICENSE                      # Apache 2.0

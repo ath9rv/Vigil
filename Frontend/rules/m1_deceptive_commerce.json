@@ -91,7 +91,7 @@
       "severity": "high",
       "selector_strategy": "structural",
       "match": {
-        "target": "input[type='checkbox']",
+        "target": "input[type='checkbox'], input[type='radio']",
         "structural_check": {
           "type": "pre_checked_checkbox",
           "reference_selector": "[class*='cart'], [class*='checkout'], [id*='cart'], [id*='checkout']",

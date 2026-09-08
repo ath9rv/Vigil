@@ -7,12 +7,13 @@ describe('ML Legal Classifier — Phase 2 Integration', () => {
   });
 
   describe('Category Label Definitions', () => {
-    it('should define labels for all 13 legal categories plus DATA_COLLECTION', () => {
+    it('should define labels for all 18 legal categories plus DATA_COLLECTION', () => {
       const expectedCategories = [
         'DATA_SALE', 'ARBITRATION', 'CLASS_ACTION', 'COOKIE_POLICY',
         'DATA_SHARING', 'USER_RIGHTS', 'GOVERNMENT_DISCLOSURE',
         'DATA_RETENTION', 'CHILDREN_DATA', 'DATA_COLLECTION',
         'AI_TRAINING', 'TERMINATION', 'LIABILITY', 'CONTENT_LICENSE',
+        'AUTO_RENEWAL', 'INDEMNIFICATION', 'GOVERNING_LAW', 'PRICE_CHANGE', 'DATA_BREACH',
       ];
 
       const definedCategories = Object.values(LEGAL_CATEGORY_LABELS);
@@ -29,8 +30,8 @@ describe('ML Legal Classifier — Phase 2 Integration', () => {
       }
     });
 
-    it('should have exactly 14 category labels', () => {
-      expect(Object.keys(LEGAL_CATEGORY_LABELS).length).toBe(14);
+    it('should have exactly 19 category labels', () => {
+      expect(Object.keys(LEGAL_CATEGORY_LABELS).length).toBe(19);
     });
   });
 

@@ -1,6 +1,6 @@
 {
   "module": "M5_social_proof",
-  "version": "2026.09.01.1",
+  "version": "2026.09.08.1",
   "rules": [
     {
       "id": "M5-001",
@@ -34,11 +34,132 @@
           "threshold": 0.4
         },
         "text_patterns": [
-          "^sponsored$", "^ad$", "^promoted$"
+          "^sponsored$",
+          "^ad$",
+          "^promoted$"
         ],
         "case_insensitive": true
       },
       "explanation_template": "The 'Sponsored' or 'Ad' label is severely faded or illegible, illegally disguising paid content as organic content."
+    },
+    {
+      "id": "M5-003",
+      "name": "fake_testimonial_carousel",
+      "module": "M5",
+      "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
+      "severity": "HIGH",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='testimonial'], [class*='review'], [class*='carousel']",
+        "text_patterns": [
+          "testimonial",
+          "what our customers say",
+          "reviews from",
+          "customer stories"
+        ],
+        "case_insensitive": true,
+        "structural_check": {
+          "type": "missing_nearby_element",
+          "expected_nearby": "a[href]",
+          "proximity_px": 500
+        }
+      },
+      "explanation_template": "Testimonial or review carousel uses unverifiable identities, which may be fake social proof."
+    },
+    {
+      "id": "M5-004",
+      "name": "unlinked_trust_badge",
+      "module": "M5",
+      "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
+      "severity": "HIGH",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "img[alt*='certified'], img[alt*='verified'], img[alt*='secured'], img[alt*='trusted'], img[alt*='norton'], img[alt*='mcafee'], img[alt*='bbb'], img[alt*='ssl']",
+        "case_insensitive": true,
+        "context_required": {
+          "ancestor_selector": "a[href='#'], a[href^='javascript:']",
+          "max_ancestor_distance": 3
+        }
+      },
+      "explanation_template": "Trust or certification badge is not clickable or links to nowhere, suggesting it may be unverified."
+    },
+    {
+      "id": "M5-005",
+      "name": "manufactured_purchase_notification",
+      "module": "M5",
+      "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
+      "severity": "HIGH",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='toast'], [class*='notification'], [class*='popup']",
+        "text_patterns": [
+          "(?:\\w+\\s+)?\\w+ from [\\w\\s]+ just (purchased|bought|signed up|joined)",
+          "someone in [\\w\\s]+ recently",
+          "people are viewing this"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "A toast notification claims recent purchases or activity without verifiable proof, often used to create false urgency."
+    },
+    {
+      "id": "M5-006",
+      "name": "unverifiable_statistics",
+      "module": "M5",
+      "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
+      "severity": "MEDIUM",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "span, p, div, h1, h2, h3, h4",
+        "text_patterns": [
+          "\\d+%\\s*(?:of\\s+)?(?:users?|customers?|people)?\\s*(?:recommend|prefer|love|trust|satisfied|happy|agree|satisfaction)"
+        ],
+        "case_insensitive": true,
+        "structural_check": {
+          "type": "missing_nearby_element",
+          "expected_nearby": "a[href]",
+          "proximity_px": 500
+        }
+      },
+      "explanation_template": "Statistical claim lacking a nearby source or survey link."
+    },
+    {
+      "id": "M5-007",
+      "name": "fake_scarcity_timer",
+      "module": "M5",
+      "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
+      "severity": "HIGH",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='timer'], [class*='countdown']",
+        "text_patterns": [
+          "limited time",
+          "offer ends",
+          "deal expires",
+          "hurry",
+          "last chance"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Countdown timer coupled with pressure language may reset on reload to force a quick decision."
+    },
+    {
+      "id": "M5-008",
+      "name": "fake_live_chat",
+      "module": "M5",
+      "statute_ref": "IT Rules 2021 — Deceptive Social Proof",
+      "severity": "MEDIUM",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='chat'], [id*='chat']",
+        "text_patterns": [
+          "is typing...",
+          "online now",
+          "available to chat",
+          "live chat"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Live chat widget may use automated bots mimicking real humans to build false trust."
     }
   ]
 }

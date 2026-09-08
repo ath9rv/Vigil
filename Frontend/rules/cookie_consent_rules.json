@@ -78,5 +78,53 @@
     "manage_selectors": [],
     "toggle_off": "",
     "save_selectors": []
+  },
+  {
+    "name": "Klaro",
+    "detector": ".klaro .cn-decline, data-name='klaro'",
+    "reject_selectors": [".klaro .cn-decline"],
+    "manage_selectors": [],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "Iubenda",
+    "detector": "#iubenda-cs-banner",
+    "reject_selectors": [".iubenda-cs-reject-btn"],
+    "manage_selectors": [],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "Sourcepoint",
+    "detector": "[id*='sp_message']",
+    "reject_selectors": ["button[sp_choice_type='11']"],
+    "manage_selectors": ["button[sp_choice_type='13']"],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "Axeptio",
+    "detector": "#axeptio_overlay, .axeptio-widget",
+    "reject_selectors": ["[data-axeptio-action='close']"],
+    "manage_selectors": [],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "Ketch",
+    "detector": "#ketch-consent",
+    "reject_selectors": ["[data-ketch-action='reject']"],
+    "manage_selectors": [],
+    "toggle_off": "",
+    "save_selectors": []
+  },
+  {
+    "name": "Borlabs Cookie",
+    "detector": "#BorlabsCookieBox",
+    "reject_selectors": ["a[data-cookie-refuse]"],
+    "manage_selectors": [],
+    "toggle_off": "",
+    "save_selectors": []
   }
 ]

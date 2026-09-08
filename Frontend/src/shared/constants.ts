@@ -47,10 +47,15 @@ export const SCORE_CAUTION_THRESHOLD = 70;
 
 /** Penalty applied per finding based on severity */
 export const SEVERITY_PENALTIES: Record<string, number> = {
-  low: 3,
-  medium: 8,
-  high: 15,
-  severe: 30,
+  INFO: 0,
+  OBSERVED: 2,
+  LOW: 3,
+  MEDIUM: 8,
+  SUGGESTIVE: 8,
+  HIGH: 15,
+  CONFIRMED: 15,
+  SEVERE: 30,
+  CRITICAL: 30,
 } as const;
 
 /** EMA alpha for domain score smoothing (higher = more recent weight) */
@@ -152,8 +157,27 @@ export const KNOWN_DOMAINS = [
   'kotak.com', 'yesbank.in', 'bankofbaroda.in', 'pnbindia.in',
   // Indian UPI / Payments
   'paytm.com', 'phonepe.com', 'gpay.app',
-  // Global
-  'amazon.com', 'paypal.com', 'google.com', 'facebook.com', 'instagram.com',
-  'twitter.com', 'linkedin.com', 'microsoft.com', 'apple.com', 'netflix.com',
-  'github.com', 'stackoverflow.com',
+  // Indian Government
+  'incometax.gov.in', 'uidai.gov.in', 'digilocker.gov.in', 'irctc.co.in',
+  // Global E-commerce
+  'amazon.com', 'ebay.com', 'walmart.com', 'etsy.com', 'aliexpress.com',
+  // Global Banking & Payments
+  'paypal.com', 'chase.com', 'bankofamerica.com', 'wellsfargo.com',
+  'hsbc.com', 'barclays.co.uk', 'stripe.com', 'wise.com', 'revolut.com',
+  // Crypto Exchanges
+  'binance.com', 'coinbase.com', 'kraken.com', 'crypto.com',
+  'metamask.io', 'phantom.app', 'opensea.io',
+  // Social Media & Communication
+  'google.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+  'linkedin.com', 'reddit.com', 'tiktok.com', 'snapchat.com',
+  'whatsapp.com', 'telegram.org', 'signal.org',
+  // Gaming & Entertainment
+  'steampowered.com', 'store.steampowered.com', 'epicgames.com',
+  'discord.com', 'twitch.tv', 'roblox.com', 'ea.com',
+  'netflix.com', 'spotify.com', 'youtube.com',
+  // Technology & Productivity
+  'microsoft.com', 'apple.com', 'github.com', 'stackoverflow.com',
+  'dropbox.com', 'zoom.us', 'slack.com', 'notion.so', 'adobe.com',
+  // Email & Cloud
+  'outlook.com', 'proton.me', 'icloud.com',
 ] as const;

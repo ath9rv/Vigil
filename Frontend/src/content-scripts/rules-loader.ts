@@ -2,6 +2,12 @@ import type { Rule, RuleSet, ModuleId } from '../shared/types';
 import { RULE_FILE_PATHS, WORKER_RULES_TIMEOUT_MS } from '../shared/constants';
 import { getStorageValue, setStorageValue } from '../shared/storage';
 
+// ─── In-Memory Rule Cache ───────────────────────────────────────────────────
+// Rules are immutable between extension updates. Cache them in memory after
+// first load to eliminate 5 fetch + 5 storage writes per scan cycle.
+
+const memoryCache = new Map<ModuleId, Rule[]>();
+
 function getStorageKeyForModule(module: ModuleId): 'rules_m1' | 'rules_m2' | 'rules_m3' | 'rules_m4' | 'rules_m5' {
   switch (module) {
     case 'M1': return 'rules_m1';
@@ -22,7 +28,7 @@ async function fetchFromBundle(module: ModuleId): Promise<Rule[]> {
   const data: RuleSet = await response.json();
   
   if (data.module.startsWith(module) && Array.isArray(data.rules)) {
-    // Cache the rule set
+    // Cache the rule set to storage (cold-start fallback)
     const key = getStorageKeyForModule(module);
     await setStorageValue(key, data);
     return data.rules;
@@ -44,17 +50,36 @@ function timeout(ms: number): Promise<void> {
 }
 
 export async function loadRules(module: ModuleId): Promise<Rule[]> {
+  // Fast path: return from in-memory cache (zero I/O)
+  const cached = memoryCache.get(module);
+  if (cached) return cached;
+
   try {
-    return await Promise.race([
+    const rules = await Promise.race([
       fetchFromBundle(module),
       timeout(WORKER_RULES_TIMEOUT_MS).then(() => { throw new Error('Timeout'); })
     ]);
+    memoryCache.set(module, rules);
+    return rules;
   } catch {
-    const cached = await getCachedRules(module);
-    if (cached.length > 0) return cached;
+    const storageCached = await getCachedRules(module);
+    if (storageCached.length > 0) {
+      memoryCache.set(module, storageCached);
+      return storageCached;
+    }
     // Fallback to fetch without timeout if cache is empty
-    return await fetchFromBundle(module);
+    const rules = await fetchFromBundle(module);
+    memoryCache.set(module, rules);
+    return rules;
   }
+}
+
+/**
+ * Invalidate the in-memory rule cache. Call on extension update
+ * to pick up new rule definitions.
+ */
+export function invalidateRuleCache(): void {
+  memoryCache.clear();
 }
 
 export function loadM1Rules(): Promise<Rule[]> {

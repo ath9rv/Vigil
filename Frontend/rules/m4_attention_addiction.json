@@ -1,6 +1,6 @@
 {
   "module": "M4_attention_addiction",
-  "version": "2026.09.01.1",
+  "version": "2026.09.08.1",
   "rules": [
     {
       "id": "M4-001",
@@ -37,6 +37,160 @@
         "case_insensitive": true
       },
       "explanation_template": "Auto-playing the next piece of content removes natural stopping cues, encouraging binge consumption."
+    },
+    {
+      "id": "M4-003",
+      "name": "infinite_scroll_trap",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "MEDIUM",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "[class*='sentinel'], [class*='infinite-scroll'], [class*='load-more']",
+        "structural_check": {
+          "type": "missing_nearby_element",
+          "expected_nearby": "[class*='pagination'], [class*='page-number'], [class*='prev'], [class*='next']",
+          "proximity_px": 2000
+        },
+        "case_insensitive": true
+      },
+      "explanation_template": "Pages with endlessly loading content and no pagination controls to create a trap."
+    },
+    {
+      "id": "M4-004",
+      "name": "fake_notification_badge",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "MEDIUM",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='badge'], [class*='notification-dot'], [class*='unread-count']",
+        "text_patterns": [
+          "^\\d+$",
+          "\\d+\\+"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Persistent notification dots or badges with numeric values used to grab attention."
+    },
+    {
+      "id": "M4-005",
+      "name": "pseudo_currency_obfuscation",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "HIGH",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='price'], [class*='cost'], button, [class*='buy'], [class*='purchase']",
+        "text_patterns": [
+          "\\d+\\s*(gems|coins|tokens|credits|v-bucks|robux|diamonds)",
+          "(gems|coins|tokens|credits|v-bucks|robux|diamonds)\\s*\\d+"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Use of non-standard currency units makes real-world price comparison difficult."
+    },
+    {
+      "id": "M4-006",
+      "name": "spin_to_win_loot_box",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "HIGH",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "button, [role='button'], [class*='button']",
+        "text_patterns": [
+          "spin",
+          "lucky draw",
+          "mystery box",
+          "loot box",
+          "gacha",
+          "prize wheel",
+          "scratch card"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Gambling-like mechanics disguised as engagement tools."
+    },
+    {
+      "id": "M4-007",
+      "name": "time_delayed_reward",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "MEDIUM",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "span, div, p, [class*='reward'], [class*='bonus']",
+        "text_patterns": [
+          "come back in \\d+",
+          "ready in \\d+",
+          "available in \\d+",
+          "cooldown",
+          "recharging"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Time-delayed rewards creating artificial engagement loops."
+    },
+    {
+      "id": "M4-008",
+      "name": "daily_login_reward",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "MEDIUM",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "span, div, p, h1, h2, h3",
+        "text_patterns": [
+          "day \\d+ of \\d+",
+          "daily reward",
+          "login bonus",
+          "consecutive day",
+          "daily streak"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Daily login rewards or streaks designed to compel regular returns to the service."
+    },
+    {
+      "id": "M4-009",
+      "name": "autoplay_chain",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "LOW",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[class*='up-next'], [class*='playing-next'], [class*='autoplay']",
+        "text_patterns": [
+          "up next",
+          "playing next",
+          "auto-playing"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Enhanced autoplay functionality encouraging continuous consumption."
+    },
+    {
+      "id": "M4-010",
+      "name": "dark_pattern_newsletter_popup",
+      "module": "M4",
+      "statute_ref": "Attention Exploitation",
+      "severity": "MEDIUM",
+      "selector_strategy": "structural",
+      "match": {
+        "target": "[class*='modal'] button, [class*='popup'] button, [class*='newsletter'] button",
+        "structural_check": {
+          "type": "visibility_suppressed",
+          "threshold": 0.5
+        },
+        "text_patterns": [
+          "^(no thanks|close|dismiss|skip)$",
+          "i prefer paying full price",
+          "no, i don'?t want a discount"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "Newsletter popups with dismiss buttons that are hard to find or use confirm-shaming."
     }
   ]
 }

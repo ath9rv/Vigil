@@ -37,7 +37,15 @@
               "wickedid",
               "wt_zmc",
               "mkt_tok",
-              "s_cid"
+              "s_cid",
+              "ttclid",
+              "twclid",
+              "epik",
+              "rdid",
+              "li_fat_id",
+              "_kx",
+              "irclickid",
+              "ScCid"
             ]
           }
         }

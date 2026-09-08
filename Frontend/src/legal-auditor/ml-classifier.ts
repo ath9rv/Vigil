@@ -56,6 +56,11 @@ export const LEGAL_CATEGORY_LABELS: Record<string, LegalClauseCategory> = {
   'This clause describes account termination or unilateral suspension': 'TERMINATION',
   'This clause describes liability disclaimers or warranty limitations': 'LIABILITY',
   'This clause describes broad content licensing or intellectual property rights': 'CONTENT_LICENSE',
+  'This clause describes automatic subscription renewal or recurring billing': 'AUTO_RENEWAL',
+  'This clause describes requiring users to indemnify or hold the company harmless': 'INDEMNIFICATION',
+  'This clause describes governing law, jurisdiction, or legal venue': 'GOVERNING_LAW',
+  'This clause describes unilateral price or fee increases': 'PRICE_CHANGE',
+  'This clause describes data breach notification or security incident procedures': 'DATA_BREACH',
 };
 
 const LABELS = Object.keys(LEGAL_CATEGORY_LABELS);
@@ -232,7 +237,7 @@ function checkNegation(text: string, category: LegalClauseCategory): boolean {
   // Categories where negation matters
   const negationRelevant: LegalClauseCategory[] = [
     'DATA_SALE', 'DATA_SHARING', 'ARBITRATION', 'CLASS_ACTION',
-    'AI_TRAINING', 'CONTENT_LICENSE',
+    'AI_TRAINING', 'CONTENT_LICENSE', 'AUTO_RENEWAL', 'PRICE_CHANGE',
   ];
 
   if (!negationRelevant.includes(category)) return false;
@@ -252,6 +257,11 @@ function checkNegation(text: string, category: LegalClauseCategory): boolean {
     CLASS_ACTION: ['class action'],
     AI_TRAINING: ['train', 'training', 'machine learning'],
     CONTENT_LICENSE: ['license', 'reproduce', 'modify'],
+    AUTO_RENEWAL: ['renew', 'recurring', 'subscription'],
+    INDEMNIFICATION: ['indemnify', 'hold harmless'],
+    GOVERNING_LAW: ['jurisdiction', 'governing law', 'venue'],
+    PRICE_CHANGE: ['price', 'fee', 'charge'],
+    DATA_BREACH: ['breach', 'security incident', 'notification'],
   };
 
   const phrases = keyPhrases[category] || [];

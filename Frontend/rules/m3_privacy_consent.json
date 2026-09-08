@@ -30,17 +30,36 @@
       "severity": "HIGH",
       "selector_strategy": "structural",
       "match": {
-        "target": "input[type='checkbox']",
+        "target": "input[type='checkbox'], [role='checkbox'], [role='switch']",
         "structural_check": {
           "type": "pre_checked_checkbox",
-          "reference_selector": "form, [class*='signup'], [class*='register'], [class*='cookie']"
+          "reference_selector": "form, [class*='signup'], [class*='register'], [class*='cookie'], [class*='consent']"
         },
         "text_patterns": [
           "agree to", "send me", "subscribe", "marketing", "updates", "share my data", "promotions"
         ],
         "case_insensitive": true
       },
-      "explanation_template": "A consent checkbox for marketing or data sharing is pre-ticked. Valid consent requires your active opt-in."
+      "explanation_template": "A consent checkbox or switch for marketing or data sharing is pre-ticked. Valid consent requires your active opt-in."
+    },
+    {
+      "id": "M3-004",
+      "name": "cookie_wall",
+      "module": "M3",
+      "statute_ref": "EDPB Guidelines 05/2020 on Consent — Cookie walls violate freely-given consent",
+      "severity": "HIGH",
+      "selector_strategy": "text_pattern",
+      "match": {
+        "target": "[id*='cookie-wall'], [class*='cookie-wall'], [id*='consent-wall'], [class*='consent-wall'], [id*='sp_message_container'], .qc-cmp2-container, div[role='dialog']",
+        "text_patterns": [
+          "accept.*to (continue|read|access|view|browse)",
+          "please (accept|allow) cookies to (browse|continue|read)",
+          "access to this (website|site) is only possible if you accept",
+          "disable your ad blocker or accept cookies"
+        ],
+        "case_insensitive": true
+      },
+      "explanation_template": "A cookie wall blocks access to content unless you agree to tracking. Under global privacy standards (GDPR, DPDP), consent cannot be coerced as a condition of access."
     }
   ]
 }

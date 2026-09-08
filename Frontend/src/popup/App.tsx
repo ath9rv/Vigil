@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { usePermissionState } from './hooks/usePermissionState';
 import { Onboarding } from './components/Onboarding';
 import { StrictPrivacyModal } from './components/StrictPrivacyModal';
-import { DeepAuditModal } from './components/DeepAuditModal';
 import { PermissionDashboard } from './components/PermissionDashboard';
 import { AssessmentGauge } from './components/AssessmentGauge';
 import { FindingList } from './components/FindingList';
@@ -28,7 +27,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<NavigationTab>('OVERVIEW');
   const [showSettings, setShowSettings] = useState(false);
   const [showStrictJIT, setShowStrictJIT] = useState(false);
-  const [showDeepAuditJIT, setShowDeepAuditJIT] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   
   // Data States
@@ -728,17 +726,6 @@ export default function App() {
           onCancel={() => setShowStrictJIT(false)} 
           onGrantSite={handleGrantStrictSite}
           onGrantAll={handleGrantStrictAll}
-        />
-      )}
-
-      {showDeepAuditJIT && (
-        <DeepAuditModal 
-          documentsFound={legalDocsFound}
-          onCancel={() => setShowDeepAuditJIT(false)}
-          onAudit={(targetUrl) => {
-            setShowDeepAuditJIT(false);
-            handleAuditDocument(targetUrl);
-          }}
         />
       )}
 

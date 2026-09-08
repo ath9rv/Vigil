@@ -19,7 +19,6 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['@xenova/transformers'],
       input: {
         popup: resolve(__dirname, 'src/popup/index.html'),
         defender: resolve(__dirname, 'src/content-scripts/inject-defender.ts'),

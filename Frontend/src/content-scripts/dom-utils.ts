@@ -53,13 +53,17 @@ export function querySelectorAllDeep(
             queue.push({ root: node.shadowRoot, depth: item.depth + 1 });
           }
 
-          // 2. Discover custom element hosts in light DOM
-          // Target custom element tags (containing hyphen) or elements with shadow roots
-          const customHosts = node.querySelectorAll(':not(:defined), [data-shadow-host], *');
-          for (let i = 0; i < customHosts.length; i++) {
-            const sr = customHosts[i].shadowRoot;
-            if (sr && !visitedRoots.has(sr)) {
-              queue.push({ root: sr, depth: item.depth + 1 });
+          // 2. Discover custom element hosts and shadow roots in linear time
+          const doc = node.ownerDocument || (node instanceof Document ? node : document);
+          if (doc && typeof doc.createTreeWalker === 'function') {
+            const walker = doc.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
+            let current = walker.nextNode() as Element | null;
+            while (current) {
+              const sr = current.shadowRoot;
+              if (sr && !visitedRoots.has(sr)) {
+                queue.push({ root: sr, depth: item.depth + 1 });
+              }
+              current = walker.nextNode() as Element | null;
             }
           }
         } catch {

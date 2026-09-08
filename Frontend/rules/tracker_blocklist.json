@@ -186,5 +186,63 @@
         "other"
       ]
     }
+  },
+  {
+    "id": 1008,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "analytics.tiktok.com",
+        "sc-static.net",
+        "tr.snapchat.com",
+        "ct.pinterest.com",
+        "snap.licdn.com"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 1009,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "clarity.ms",
+        "amplitude.com",
+        "cdn.amplitude.com",
+        "app.posthog.com",
+        "us.posthog.com",
+        "heapanalytics.com",
+        "cdn.heapanalytics.com",
+        "pendo.io",
+        "cdn.pendo.io",
+        "clevertap-prod.com",
+        "appsflyer.com",
+        "branch.io",
+        "bnc.lt",
+        "adjust.com",
+        "app.adjust.com"
+      ],
+      "resourceTypes": [
+        "script",
+        "image",
+        "xmlhttprequest",
+        "sub_frame",
+        "ping",
+        "other"
+      ]
+    }
   }
 ]

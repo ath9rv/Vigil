@@ -1,11 +1,12 @@
 import type { Rule, Finding, ScanCompleteMessage } from '../shared/types';
-import { KNOWN_DOMAINS } from '../shared/constants';
+import { KNOWN_DOMAINS, SCAN_TIMEOUT_MS } from '../shared/constants';
 import { getStorageValue, setStorageValue } from '../shared/storage';
 import { loadM1Rules, loadM2Rules, loadM3Rules, loadM4Rules, loadM5Rules } from './rules-loader';
 import { isSameSite } from '../shared/domain-intelligence';
 import { isRelevantForM2 } from './relevance-gate';
 import { showAmbientAlert } from './ambient-shield';
 import { createForensicAnalysis } from '../evidence/forensics';
+import { performanceGovernor } from '../observability/governor';
 import {
   extractActivityCounter,
   hasCommerceContext,
@@ -167,9 +168,20 @@ export async function scanPage(): Promise<void> {
 
   // ─── General Rules (M1, M3, M4, M5) ───────────────────────────────────────
   const customEvidenceRules = new Set(['M1-001', 'M1-004', 'M1-005', 'M1-007', 'M1-008', 'M4-002', 'M5-001']);
-  const generalRules = [...m1Rules, ...m3Rules, ...m4Rules, ...m5Rules]
-    .filter(rule => !customEvidenceRules.has(rule.id));
-  for (const rule of generalRules) {
+
+  // P0/P1: Security & Privacy rules (M1, M3) always execute
+  const p1Rules = [...m1Rules, ...m3Rules].filter(rule => !customEvidenceRules.has(rule.id));
+  // P2: Contextual/enrichment rules (M4, M5) respect governor state
+  const p2Rules = [...m4Rules, ...m5Rules].filter(rule => !customEvidenceRules.has(rule.id));
+
+  const governedRules = performanceGovernor.shouldExecute('P2_CONTEXTUAL')
+    ? [...p1Rules, ...p2Rules]
+    : p1Rules; // Under pressure, skip M4/M5 — they're UX enrichment, not safety
+
+  for (const rule of governedRules) {
+    // Scan timeout budget: abort if we've exceeded the budget
+    if (performance.now() - startTime > SCAN_TIMEOUT_MS) break;
+
     if (matchedRuleIds.has(rule.id)) continue;
 
     if (rule.selector_strategy === 'text_pattern' && rule.match.text_patterns) {
@@ -193,7 +205,8 @@ export async function scanPage(): Promise<void> {
         if (matchedRuleIds.has(rule.id)) break;
 
         if (check.type === 'pre_checked_checkbox') {
-          if ((el as HTMLInputElement).checked && check.reference_selector) {
+          const isChecked = (el as HTMLInputElement).checked || el.getAttribute('aria-checked') === 'true';
+          if (isChecked && check.reference_selector) {
             const containers = querySelectorAllDeep(check.reference_selector);
             for (const c of containers) {
               if (c.contains(el)) {
@@ -466,8 +479,9 @@ export async function scanPage(): Promise<void> {
       }
     }
 
-    // M2-006: Urgency Language Detector
-    if (!matchedRuleIds.has('M2-006') && passwordInputs.length > 0 && m2001Match) {
+    // M2-006: Urgency Language Detector (Decoupled: flags confirmed when lookalike, suggestive when on untrusted host)
+    const isUntrustedAuthHost = !isRecognizedIdentityProvider(domain) && !KNOWN_DOMAINS.some(k => isSameSite(domain, k));
+    if (!matchedRuleIds.has('M2-006') && passwordInputs.length > 0 && (m2001Match || isUntrustedAuthHost)) {
       const text = document.body.textContent || '';
       const urgencyPatterns = [
         /your account (has been|will be|is) (suspended|locked|compromised|restricted)/i,
@@ -485,23 +499,27 @@ export async function scanPage(): Promise<void> {
       
       if (matchCount >= 2) {
         matchedRuleIds.add('M2-006');
+        const severity = m2001Match ? 'CONFIRMED' : 'SUGGESTIVE';
+        const reviewStatus = m2001Match ? 'CONFIRMED' : 'REVIEW_NEEDED';
         findings.push({
           id: crypto.randomUUID(),
           ruleId: 'M2-006',
           ruleName: 'urgency_language_detector',
           module: 'M2',
-          severity: 'CONFIRMED',
-          confidenceState: 'CONFIRMED',
-          reviewStatus: 'CONFIRMED',
+          severity,
+          confidenceState: m2001Match ? 'CONFIRMED' : 'OBSERVED',
+          reviewStatus,
           statuteRef: '',
-          explanation: 'Urgency language detected alongside a login form. Phishing sites often use urgency to manipulate users.',
+          explanation: m2001Match
+            ? 'Urgency language detected alongside a login form on a brand lookalike. Phishing sites often use panic language to force hasty credential submission.'
+            : 'Account urgency or threat language detected near a password field on an unverified domain. Verify the legitimacy of this service before entering credentials.',
           elementSelector: 'body',
           elementRect: { top: 0, left: 0, width: 0, height: 0 },
           pageUrl: window.location.href,
           detectedAt: new Date().toISOString(),
           context: makeFindingContext('Urgency text patterns detected', createForensicAnalysis({
-            confidence: 'CONFIRMED',
-            reviewStatus: 'CONFIRMED',
+            confidence: m2001Match ? 'CONFIRMED' : 'SUGGESTIVE',
+            reviewStatus,
             observed: ['Multiple urgency language patterns near a login form.'],
             coverage: { dom: true }
           }))
@@ -587,6 +605,13 @@ export async function scanPage(): Promise<void> {
 
   // ─── Finalize & DevTools Logging ──────────────────────────────────────
   const duration = performance.now() - startTime;
+
+  // Report scan cycle to PerformanceGovernor for adaptive load shedding
+  performanceGovernor.reportCycle({
+    mutationsInWindow: findings.length,
+    windowDurationMs: duration,
+    scanDurationMs: duration,
+  });
   
   // Developer Console Integration
   if (findings.length > 0) {
