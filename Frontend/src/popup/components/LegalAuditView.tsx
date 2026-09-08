@@ -34,8 +34,11 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
   const [locatingFindingId, setLocatingFindingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!selectedDocUrl && discoveredDocs.length > 0) {
-      setSelectedDocUrl(discoveredDocs[0].url);
+    if (discoveredDocs.length > 0) {
+      const validUrls = discoveredDocs.map(d => d.url);
+      if (!selectedDocUrl || !validUrls.includes(selectedDocUrl)) {
+        setSelectedDocUrl(discoveredDocs[0].url);
+      }
     }
   }, [discoveredDocs, selectedDocUrl]);
 
@@ -68,11 +71,11 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
         });
         setTimeout(() => setLocatingFindingId(null), 1500);
       } else if (sourceUrl && sourceUrl.startsWith('http')) {
-        // Navigate active tab to source policy page, then scroll and highlight as soon as it loads!
-        chrome.tabs.update(activeTab.id, { url: sourceUrl }, (updatedTab) => {
-          if (updatedTab?.id) {
+        // Open the policy document in a new tab so navigating does not close the extension popup!
+        chrome.tabs.create({ url: sourceUrl, active: true }, (newTab) => {
+          if (newTab?.id) {
             const listener = (tabId: number, info: chrome.tabs.TabChangeInfo) => {
-              if (tabId === updatedTab.id && info.status === 'complete') {
+              if (tabId === newTab.id && info.status === 'complete') {
                 chrome.tabs.onUpdated.removeListener(listener);
                 setTimeout(() => {
                   chrome.tabs.sendMessage(tabId, {
@@ -139,6 +142,7 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
             </select>
             
             <button
+              type="button"
               onClick={() => onRunAudit(selectedDocUrl || discoveredDocs[0]?.url || currentUrl || domain)}
               disabled={isAuditing}
               className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
@@ -160,6 +164,7 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
               No direct policy links found in footer. You can audit the current page directly.
             </p>
             <button
+              type="button"
               onClick={() => onRunAudit(currentUrl || domain)}
               disabled={isAuditing}
               className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
@@ -299,6 +304,7 @@ export function LegalAuditView({ legalFindings, discoveredDocs, isAuditing, onRu
                     <div className="flex justify-between items-center pt-1 text-[10px] text-gray-400">
                       <span>Source: {finding.evidence?.sourceType || 'DOCUMENT'}</span>
                       <button 
+                        type="button"
                         onClick={() => handleLocateOnPage(finding)}
                         disabled={locatingFindingId === finding.id}
                         className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 text-blue-700 font-bold rounded text-[10px] transition-colors flex items-center gap-1 shadow-xs"

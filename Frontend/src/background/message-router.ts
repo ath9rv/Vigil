@@ -152,11 +152,14 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
       // Delegate to score aggregation logic
       await aggregateScores(allFindings, ctx);
       
-      // Atomically cache the findings for this domain without racing other tabs
-      await atomicUpdateStorage('findings_cache', (cache) => ({
-        ...cache,
-        [domain]: allFindings
-      }));
+      // Atomically cache the findings for this domain without racing other tabs or clobbering legal findings
+      await atomicUpdateStorage('findings_cache', (cache) => {
+        const existingLegal = (cache[domain] || []).filter(f => f.category === 'LEGAL');
+        return {
+          ...cache,
+          [domain]: [...allFindings.filter(f => f.category !== 'LEGAL'), ...existingLegal]
+        };
+      });
       await atomicUpdateStorage('scan_coverage', reports => ({
         ...reports,
         [domain]: {

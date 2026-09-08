@@ -212,13 +212,14 @@ export default function App() {
         // 3. Load cookies for active tab domain
         loadCookiesForDomain(domain, targetTab.id);
 
-        // 4. Load findings cache for active tab domain
-        chrome.storage.local.get(['findings_cache', 'vigil_tracker_reports', 'vigil_tracker_report', 'scan_coverage'], (res) => {
-          if (res.findings_cache && res.findings_cache[domain]) {
-            setRawFindings(res.findings_cache[domain]);
-          } else {
-            setRawFindings([]);
-          }
+        // 4. Load findings cache for active tab domain, including legal findings
+        chrome.storage.local.get(['findings_cache', 'legal_findings_cache', 'vigil_tracker_reports', 'vigil_tracker_report', 'scan_coverage'], (res) => {
+          const domainFindings: Finding[] = (res.findings_cache && res.findings_cache[domain]) || [];
+          const legalCache: Finding[] = (res.legal_findings_cache && res.legal_findings_cache[domain]) || [];
+          const existingLegal = domainFindings.filter((f: Finding) => f.category === 'LEGAL');
+          const finalLegal = existingLegal.length > 0 ? existingLegal : legalCache;
+          const merged = [...domainFindings.filter((f: Finding) => f.category !== 'LEGAL'), ...finalLegal];
+          setRawFindings(merged);
           // Do not display a previous tab's report. Old single-report storage
           // is accepted only when it declares that it belongs to this domain.
           const report: TrackerReport | null = res.vigil_tracker_reports?.[domain]
@@ -253,12 +254,30 @@ export default function App() {
 
   // A scan continues after the popup opens. Reflect the completed DOM/network
   // stages immediately instead of leaving users with a stale coverage label.
+  // Preserves any audited legal findings when DOM scanner updates findings_cache.
   useEffect(() => {
     if (!currentDomain) return;
     const listener = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
       if (area !== 'local') return;
       if (changes.findings_cache) {
-        setRawFindings(changes.findings_cache.newValue?.[currentDomain] || []);
+        const incoming: Finding[] = changes.findings_cache.newValue?.[currentDomain] || [];
+        setRawFindings(prev => {
+          const prevLegal = prev.filter(f => f.category === 'LEGAL');
+          const incomingLegal = incoming.filter(f => f.category === 'LEGAL');
+          if (incomingLegal.length === 0 && prevLegal.length > 0) {
+            return [...incoming.filter(f => f.category !== 'LEGAL'), ...prevLegal];
+          }
+          return incoming;
+        });
+      }
+      if (changes.legal_findings_cache) {
+        const incomingLegal: Finding[] = changes.legal_findings_cache.newValue?.[currentDomain] || [];
+        if (incomingLegal.length > 0) {
+          setRawFindings(prev => {
+            const nonLegal = prev.filter(f => f.category !== 'LEGAL');
+            return [...nonLegal, ...incomingLegal];
+          });
+        }
       }
       if (changes.scan_coverage) {
         setScanCoverage(changes.scan_coverage.newValue?.[currentDomain] || null);
@@ -427,43 +446,76 @@ export default function App() {
         });
       }
 
+      let combined: Finding[] = [];
       setRawFindings(prev => {
-        const existingExcerpts = new Set(prev.map(f => f.evidence?.excerpt || ''));
+        const nonLegal = prev.filter(f => f.category !== 'LEGAL');
+        const existingLegal = prev.filter(f => f.category === 'LEGAL');
+        const existingExcerpts = new Set(existingLegal.map(f => f.evidence?.excerpt || ''));
         const fresh = newFindings.filter(f => !existingExcerpts.has(f.evidence?.excerpt || ''));
-        const combined = [...prev, ...fresh];
-        chrome.storage.local.get('findings_cache', (res) => {
-          const cache = res.findings_cache || {};
-          cache[currentDomain] = combined;
-          chrome.storage.local.set({ findings_cache: cache });
-        });
+        combined = [...nonLegal, ...existingLegal, ...fresh];
         return combined;
       });
+
+      // Persist to both legal_findings_cache and findings_cache
+      const legalFindingsForDomain = combined.filter(f => f.category === 'LEGAL');
+      try {
+        const storageData = await chrome.storage.local.get(['findings_cache', 'legal_findings_cache']);
+        const fCache = storageData.findings_cache || {};
+        const lCache = storageData.legal_findings_cache || {};
+        
+        fCache[currentDomain] = combined;
+        lCache[currentDomain] = legalFindingsForDomain;
+        
+        await chrome.storage.local.set({
+          findings_cache: fCache,
+          legal_findings_cache: lCache
+        });
+      } catch (storageErr) {
+        console.warn('Vigil: Failed to persist legal findings to storage', storageErr);
+      }
 
       // Switch to Legal tab automatically to see results
       setActiveTab('LEGAL');
     } catch (err: any) {
       console.error('Deep Audit Error:', err);
-      setRawFindings(prev => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          category: 'LEGAL',
-          severity: 'INFO',
-          confidence: 'SUGGESTIVE',
-          reviewStatus: 'REVIEW_NEEDED',
-          ruleId: 'LEGAL-AUDIT_NOTICE',
-          ruleName: 'Policy Access Restricted',
-          interpretation: `NOTICE: Could not automatically fetch external policy (${err?.message || 'CORS/Protected'}). Navigate directly to the policy page and click "Audit Current Page" to analyze live.`,
-          evidence: {
-            sourceType: 'DOCUMENT',
-            sourceUrl: targetUrl || currentUrl,
-            capturedAt: Date.now(),
-            documentHash: '',
-            excerpt: `Target: ${targetUrl || currentUrl}`,
-            context: 'Host server protected or authentication-walled.'
-          }
+      const noticeFinding: Finding = {
+        id: crypto.randomUUID(),
+        category: 'LEGAL',
+        severity: 'INFO',
+        confidence: 'SUGGESTIVE',
+        reviewStatus: 'REVIEW_NEEDED',
+        ruleId: 'LEGAL-AUDIT_NOTICE',
+        ruleName: 'Policy Access Restricted',
+        interpretation: `NOTICE: Could not automatically fetch external policy (${err?.message || 'CORS/Protected'}). Navigate directly to the policy page and click "Audit Current Page" to analyze live.`,
+        evidence: {
+          sourceType: 'DOCUMENT',
+          sourceUrl: targetUrl || currentUrl,
+          capturedAt: Date.now(),
+          documentHash: '',
+          excerpt: `Target: ${targetUrl || currentUrl}`,
+          context: 'Host server protected or authentication-walled.'
         }
-      ]);
+      };
+
+      setRawFindings(prev => {
+        const nonMatching = prev.filter(f => f.ruleId !== 'LEGAL-AUDIT_NOTICE');
+        return [...nonMatching, noticeFinding];
+      });
+
+      try {
+        const storageData = await chrome.storage.local.get(['findings_cache', 'legal_findings_cache']);
+        const fCache = storageData.findings_cache || {};
+        const lCache = storageData.legal_findings_cache || {};
+        const currentFindings = fCache[currentDomain] || [];
+        const updated = [...currentFindings.filter((f: Finding) => f.ruleId !== 'LEGAL-AUDIT_NOTICE'), noticeFinding];
+        fCache[currentDomain] = updated;
+        lCache[currentDomain] = [noticeFinding];
+        await chrome.storage.local.set({
+          findings_cache: fCache,
+          legal_findings_cache: lCache
+        });
+      } catch {}
+
       setActiveTab('LEGAL');
     } finally {
       setIsAuditing(false);
@@ -614,13 +666,19 @@ export default function App() {
               </button>
               
               <button 
-                onClick={() => setActiveTab('LEGAL')}
+                type="button"
+                onClick={() => {
+                  setActiveTab('LEGAL');
+                  if (legalFindings.length === 0 && legalDocsFound.length > 0 && !isAuditing) {
+                    handleAuditDocument(legalDocsFound[0].url);
+                  }
+                }}
                 className="relative flex flex-col items-start p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-sky-300 hover:shadow-premium text-left transition-all duration-300 overflow-hidden"
               >
                 <span className="text-xl mb-1.5 drop-shadow-sm">⚖️</span>
                 <span className="font-extrabold text-sm text-slate-900 leading-tight mb-0.5">Deep Audit</span>
                 <span className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">
-                  {legalDocsFound.length} Policies
+                  {legalFindings.length > 0 ? `${legalFindings.length} Audited` : `${legalDocsFound.length} Policies`}
                 </span>
               </button>
             </div>

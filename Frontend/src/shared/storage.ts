@@ -18,6 +18,7 @@ const STORAGE_DEFAULTS: StorageSchema = {
   vigil_tracker_report: null,
   vigil_tracker_reports: {},
   scan_coverage: {},
+  legal_findings_cache: {},
 };
 
 // ─── Typed Storage Access ───────────────────────────────────────────────────

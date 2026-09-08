@@ -614,7 +614,8 @@ export async function scanPage(): Promise<void> {
   }
 
   const cache = await getStorageValue('findings_cache');
-  cache[domain] = findings;
+  const existingLegal = (cache[domain] || []).filter(f => f.category === 'LEGAL');
+  cache[domain] = [...findings.filter(f => f.category !== 'LEGAL'), ...existingLegal];
   await setStorageValue('findings_cache', cache);
 
   const msg: ScanCompleteMessage = {

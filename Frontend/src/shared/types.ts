@@ -494,5 +494,6 @@ export interface StorageSchema {
   vigil_threat_prefixes?: any;
   vigil_threat_state?: any;
   vigil_threat_confirm_cache?: any;
+  legal_findings_cache?: Record<string, Finding[]>;
   [key: `tosdr_${string}`]: any;
 }
