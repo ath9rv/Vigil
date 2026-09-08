@@ -1,12 +1,13 @@
 {
   "name": "vigil-extension",
-  "version": "2.1.0",
+  "version": "2.1.0-rc.1",
   "description": "Vigil — Universal Web Trust & Safety Shield Browser Extension",
-  "author": "Atharv <mailxatharv@gmail.com>",
+  "author": "Vigil Project Contributors",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

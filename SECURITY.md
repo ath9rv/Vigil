@@ -6,8 +6,9 @@ Only the latest release of Project Vigil is actively supported with security upd
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| 2.1.x   | :white_check_mark: |
+| 2.0.x   | :white_check_mark: |
+| < 2.0   | :x:                |
 
 ## Security Architecture & Core Commitments
 

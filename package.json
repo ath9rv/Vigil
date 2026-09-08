@@ -1,0 +1,28 @@
+{
+  "name": "vigil",
+  "version": "2.1.0-rc.1",
+  "private": true,
+  "description": "Vigil — Cognitive Firewall & Autonomous Privacy Shield for Chromium",
+  "scripts": {
+    "build": "npm run build --prefix Frontend",
+    "test": "npm test --prefix Frontend",
+    "typecheck": "npm run typecheck --prefix Frontend",
+    "test:browser": "npm test --prefix tests/browser",
+    "test:adversarial-server": "node tests/adversarial/server.js",
+    "test:all": "npm test && npm run test:browser"
+  },
+  "keywords": [
+    "browser-extension",
+    "privacy",
+    "anti-fingerprinting",
+    "dark-patterns",
+    "manifest-v3",
+    "cognitive-firewall"
+  ],
+  "author": "Vigil Project Contributors",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ath9rv/Vigil.git"
+  }
+}

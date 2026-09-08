@@ -19,7 +19,7 @@ All scaffolded test theater has been eliminated. The defender, ambient shield, a
 
 ### 2.1 Unit & Reasoning Engine Battery (`vitest`)
 ```text
- RUN  v2.1.9 D:/Browex/Frontend
+ RUN  v2.1.9 Frontend
 
  Test Files  29 passed (29)
       Tests  193 passed (193)

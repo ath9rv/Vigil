@@ -1,159 +1,246 @@
-# VIGIL — Cognitive Firewall & Autonomous Privacy Shield
+﻿# VIGIL — Cognitive Firewall & Autonomous Privacy Shield
 
-[![Protocol v5.0.0 Ratified](https://img.shields.io/badge/QA%2FQC%20Standard-Protocol%20v5.0.0-00E5FF.svg)](#governance--qaqc-standard)
-[![Unit Tests](https://img.shields.io/badge/Unit%20Tests-113%2F113%20Passing-00E676.svg)](#test-verification--evidence-ledger)
-[![Browser Acceptance](https://img.shields.io/badge/Playwright%20E2E-13%2F13%20Passing-00E676.svg)](#test-verification--evidence-ledger)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Manifest V3](https://img.shields.io/badge/Chromium-MV3%20Compliant-FFD600.svg)](#architecture)
+[![Release](https://img.shields.io/badge/Release-v2.1.0--rc.1-00E5FF.svg)](docs/release/V2.1-RC1-CERTIFICATION.md)
+[![Certification](https://img.shields.io/badge/QA%20Certification-Passed-00E676.svg)](docs/release/V2.1-RC1-CERTIFICATION.md)
+[![Manifest V3](https://img.shields.io/badge/Chromium-MV3%20Compliant-FFD600.svg)](Frontend/manifest.json)
 [![Zero Telemetry](https://img.shields.io/badge/Privacy-100%25%20Zero--Telemetry-purple.svg)](PRIVACY.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **Vigil** is an advanced open-source, client-side browser extension engineered to neutralize deceptive commerce (dark patterns), reverse-engineer cookie behavioral DNA, parse complex legal terms with zero false-positives, and sanitize stealth browser fingerprinting—without ever collecting or transmitting your personal browsing data.
+> **Vigil** is an open-source, client-side cognitive firewall and autonomous browser trust shield for Chromium (Manifest V3). It neutralizes deceptive commerce (dark patterns), stops browser fingerprinting, reverse-engineers cookie behavioral DNA, audits predatory legal terms, and sanitizes tracking telemetry—**100% locally with zero cloud telemetry or personal data leakage**.
 
-📘 **New to Vigil?** Open [`HOW_TO_USE.txt`](HOW_TO_USE.txt) in Windows Notepad for a simple, 30-second quick-start walkthrough!
-
----
-
-## 🚀 The Three Core Pillars of Vigil
-
-Vigil abandons the traditional "static blocklist" approach to privacy. Instead, it operates using three highly advanced local engines:
-
-### 1. 🧬 Behavioral Cookie DNA Engine
-Unlike basic tools that rely on lists of known cookie names, Vigil treats browser storage like genetic material.
-* **Structural Forensics:** Extracts the Shannon Entropy of cookie values to differentiate between benign preference flags and unique tracker IDs.
-* **Lifespan & Persistence:** Calculates cross-site recurrence and long-term persistence tracking.
-* **Security & Access Flags:** Detects dangerous network transmissions, heavily penalizing `SameSite=None` cookies that lack the `Secure` flag.
-* **Auth Safeguards:** Identifies cryptographic JWT signatures and HTTP-only protections to guarantee zero false positives on legitimate login sessions.
-
-### 2. ⚖️ 19-Dimensional Legal Auditor
-Vigil acts as your personal, automated paralegal. It actively discovers Terms of Service and Privacy Policies in page footers and scans them for predatory clauses.
-* **Precision Negation Engine:** Understands context. It knows the difference between *"We reserve the right to sell your data"* (WARNING) and *"We do not sell your data"* (FAIR).
-* **The "Nitpicker" Upgrade:** Scans for 19 specific legal traps, including:
-  * Extreme **Indemnification** (forcing you to pay their legal fees).
-  * **Unilateral Price Changes** and **Auto-Renewal** traps.
-  * **Forced Arbitration**, **Class Action Waivers**, and offshore **Governing Law**.
-  * **AI / LLM Training** on your private messages.
-* **"Locate on Page":** Automatically scrolls the window and physically highlights the offending legal clause in bright yellow directly on the screen.
-
-### 3. 🛡️ DOM & Dark Pattern Scanner
-Websites use psychological tricks to manipulate your behavior. Vigil's scanner pierces through complex web architecture (including Shadow DOMs) to expose these traps.
-* **Deceptive Commerce (M1):** Detects fake countdown timers (False Urgency), pre-checked insurance boxes (Basket Sneaking), hidden post-selection fees (Drip Pricing), and subscription traps.
-* **Privacy Consent (M3):** Warns you when "Reject All" buttons are visually suppressed (opacity lowered) to force you into accepting tracking cookies.
-* **Social Proof (M5):** Identifies fake herd-mentality metrics ("15 people are looking at this room") and hidden "Sponsored" ad labels.
-* **Threat Shield (M2):** Detects domain typosquatting (e.g., `amozon.com`) and flags credential-stealing phishing forms.
+📘 **Quick Start in 30 Seconds:** Open [`HOW_TO_USE.txt`](HOW_TO_USE.txt) in any text editor for simple, step-by-step setup instructions!
 
 ---
 
-## 🏗️ Architecture Overview
+## 1. What Vigil Is
 
-Vigil operates strictly within the Chromium Manifest V3 sandbox, ensuring high performance without memory leaks or page slowdowns.
+Vigil is an active defensive layer embedded directly into the browser runtime. Rather than functioning as a passive, static list of blocked domains, Vigil monitors DOM structures, network telemetry, cookie lifecycles, and legal policies dynamically. It protects users from subtle cognitive manipulation, manipulative checkout urgency, and intrusive fingerprinting while rigorously ensuring the underlying website remains functional and visually intact.
+
+---
+
+## 2. Why It Exists
+
+The modern web is fraught with covert cognitive traps:
+* **Deceptive Commerce:** Artificial scarcity, looping countdown clocks, hidden subscription opt-ins, and drip pricing designed to induce panic purchases.
+* **Stealth Fingerprinting:** Advanced canvas perturbation probes, WebGL shader compilation timing, and hardware inspection scripts tracking users across sessions without cookies.
+* **Predatory Legal Contracts:** Multi-page Terms of Service contracts concealing forced binding arbitration, class action waivers, unilateral price change clauses, and AI training rights over user data.
+* **Aggressive Tracking Networks:** Third-party ad beacons disguised via first-party subdomains (CNAME cloaking) and ubiquitous tracking parameters appended to shared URLs.
+
+Traditional extensions either rely on easily bypassed static blocklists or naively delete page elements—breaking checkouts and causing broken layouts. Vigil was built to provide **verifiable, safe, and autonomous client-side defense**.
+
+---
+
+## 3. Core Capabilities
+
+* **🧬 Behavioral Cookie DNA Engine:** Evaluates the Shannon entropy, cross-site recurrence, security flags (`Secure`, `HttpOnly`, `SameSite`), and cryptographic JWT signatures of active cookies to distinguish genuine auth sessions from tracking IDs.
+* **🛡️ DOM & Deceptive Pattern Scanner:** Inspects Shadow DOMs and standard DOM subtrees across 5 specialized modules:
+  * *M1: Deceptive Commerce* (False urgency, drip pricing, hidden fees)
+  * *M2: Threat Shield* (Typosquatting, credential harvesting on unverified domains)
+  * *M3: Privacy Consent* (Hidden or suppressed "Reject All" buttons)
+  * *M4: Attention Addiction* (Infinite scroll traps, notification hijacking)
+  * *M5: Social Proof* (Manufactured viewer counts, deceptive activity tickers)
+* **⚖️ 19-Dimensional Legal Auditor:** Offline NLP/heuristic parser that categorizes clauses across 19 critical risk vectors (arbitration, data sale, liability caps) with negation precision, featuring a 1-click "Locate on Page" yellow highlighter.
+* **🕶️ MAIN-World Stealth Camouflage (`defender.js`):** Perturbs Canvas and WebGL parameters while cloaking prototype methods using `makeNative`, ensuring third-party anti-fingerprint detectors (e.g. CreepJS) observe standard `[native code]` representations without raising "Lie Detected" flags.
+* **⚡ Declarative Network Shield (DNR):** Built-in rulesets blocking over 100 tracking networks, stripping URL tracking parameters (`utm_source`, `fbclid`, `gclid`), and upgrading HTTP connections to HTTPS.
+
+---
+
+## 4. Architecture: The Two Locked Invariants
+
+Vigil separates detection from intervention via two foundational invariants:
 
 ```text
-                               THE VIGIL ARCHITECTURE PIPELINE
-                                              │
-      ┌───────────────────────────────────────┼───────────────────────────────────────┐
-      ▼                                       ▼                                       ▼
-[NETWORK LAYER (DNR)]               [PAGE EXECUTION WORLDS]                 [BACKGROUND WORKER]
-├── Multi-Channel Telemetry         ├── MAIN World: defender.js             ├── Service Worker Event Loop
-│   Sanitizer (Stripping IDs)       │   (Hardware Persona, Canvas, WebGL)   ├── AsyncMutex Storage Serializer
-├── Cookie & Network Observer       ├── ISOLATED World: content-scripts     ├── Reputation & Correlation Engine
-│   (Behavioral DNA Engine)         │   (Dark Patterns, Threat Shield)      ├── Local Threat Heuristic Engine
-└── HTTPS Upgrade Enforcer          └── Shadow DOM: ambient-shield.ts       └── Legal SLM Classifier
+       INVARIANT 1                                 INVARIANT 2
+┌─────────────────────────┐                 ┌─────────────────────────┐
+│ Detection Authority     │                 │ Evidence                │
+│           ≠             │                 │    ≠                    │
+│ Mutation Authority      │                 │ Intent                  │
+└─────────────────────────┘                 └─────────────────────────┘
 ```
 
-### The Moral Hazard Cap
-Vigil features a dual-grading system (**Reputation Grade** and **Protected Grade**). However, it operates under a strict Moral Hazard Cap. If a site is actively phishing or hosting severe deceptive forms, Vigil will *never* give it a good grade, even if it successfully blocked the trackers. Phishing sites are hard-capped at an **F**.
+1. **Detection Authority ≠ Mutation Authority:**
+   Identifying a suspicious pattern grants *zero* intrinsic right to modify the DOM. Every action must be independently authorized by a Safety Plane that evaluates the element's structural **Blast Radius** (form presence, clickable density, layout centrality).
+2. **Evidence ≠ Intent:**
+   Raw DOM changes are registered as immutable facts (`RawObservation`). Interpretations are treated as hypotheses. Vigil explicitly logs rejected counter-inferences, preventing false accusations on legitimate timers (e.g., banking timeouts or live ticket sales).
+
+### Pipeline Flow
+
+```text
+  OBSERVE                  DECIDE                   ACT                  GOVERN
+┌──────────────┐         ┌──────────────┐         ┌──────────────┐     ┌────────────────┐
+│ Scanners     │         │ TrustEngine  │         │ Two-Axis Gate│     │ Differential   │
+│ & Monitors   ├──►-►-►──│ Ingestion &  ├──►-►-►──│ & Atomic     ├──►──│ Health Check   │
+│ (Raw Facts)  │         │ Graph Index  │         │ Transaction  │     │ & Explain Mode │
+└──────────────┘         └──────────────┘         └──────────────┘     └────────────────┘
+```
 
 ---
 
-## 🛠️ Developer Setup & Installation
+## 5. Protection Modes
+
+Users can tailor Vigil's posture to their browsing preferences:
+
+| Mode | Observation & Graph | DOM Mutation | Differential Check | Intended Use |
+| :--- | :---: | :---: | :---: | :--- |
+| **`ACTIVE`** (Default) | ✅ Enabled | ✅ Authorized `SAFE` + `CAUTIOUS` | ✅ Enforced with rollback | Full autonomous defense |
+| **`SAFE_ONLY`** | ✅ Enabled | ✅ Only `SAFE` (Blast Radius $<0.2$) | ✅ Enforced with rollback | Conservative browsing |
+| **`OBSERVE_ONLY`** | ✅ Enabled | ❌ **Disabled** (Dry Run) | ℹ️ Diagnostic only | Auditing without changes |
+| **`OFF`** | ❌ Disabled | ❌ **Disabled** | ❌ Disabled | Bypassed globally |
+
+---
+
+## 6. Explain Mode & 1-Click Restore
+
+Vigil makes every decision fully explainable. Through the **Explain Mode** interface:
+* **Why Vigil Acted:** Plain-English breakdown showing exact observed facts and the evaluated blast radius score.
+* **What Vigil Did NOT Conclude:** Transparent ledger of rejected counter-hypotheses.
+* **1-Click Restore:** If an intervention disrupts a user workflow, clicking "Restore Original" immediately rolls back all applied DOM changes to their pre-intervention snapshot.
+
+---
+
+## 7. How Detection Works
+
+Detection runs asynchronously within bounded CPU budgets ($<30$ms per scan):
+1. Content script scanners monitor the page using a throttled `MutationObserver` event bus.
+2. Elements matching declarative rule patterns are evaluated against contextual exemptions (e.g. `data-auction-end`, security session attributes).
+3. Findings are enriched with cryptographic provenance hashes and pushed to the background `TrustEngine`.
+4. Ingestion is bounded to `MAX_NODES_PER_NAVIGATION = 500` nodes to guarantee zero memory leaks on single-page applications.
+
+---
+
+## 8. How Intervention Works
+
+When an element is flagged for potential intervention:
+1. **Blast Radius Estimation:** Evaluates form tags, button counts, input fields, and layout criticality.
+2. **Two-Axis Authorization Gate:** Both Detection Confidence (`HIGH` or `MODERATE`) and Structural Safety (`SAFE` or `CAUTIOUS`) must permit mutation.
+3. **Atomic Transaction (`InterventionTransaction`):** Captures a baseline snapshot of styles and attributes.
+4. **Differential Comparator:** Checks post-mutation health ($\Delta \text{Errors} = 0$, clickable element stability). If an anomaly is detected, the transaction triggers an **immediate causal rollback**.
+
+---
+
+## 9. Privacy Model
+
+* **100% Local Execution:** All heuristic classification, legal analysis, and threat parsing occur inside the user's browser memory.
+* **Zero Telemetry:** No remote analytics, tracking beacons, error reporters (e.g. Sentry), or external logging endpoints.
+* **Zero Secret Storage:** The extension requires no cloud API keys or user accounts.
+* For full policy details, see [`PRIVACY.md`](PRIVACY.md) and [`docs/security/telemetry-privacy.md`](docs/security/telemetry-privacy.md).
+
+---
+
+## 10. Installation
+
+### From Pre-Built Package
+1. Clone or download this repository.
+2. Open Chromium (Chrome, Brave, Edge, or Opera) and navigate to `chrome://extensions/`.
+3. Enable **Developer mode** (top-right toggle).
+4. Click **Load unpacked** (top-left button).
+5. Select the `Frontend/dist` folder inside the cloned repository.
+
+---
+
+## 11. Development Workflow
 
 ### Prerequisites
 * **Node.js**: `v20.x` or `v24.x`
 * **NPM**: `v10.x` or `v11.x`
-* **Chromium Browser**: Google Chrome, Brave, Chromium, or Microsoft Edge (MV3 compatible)
 
-### 1. Build the Extension
+### Setup & Build Commands (from Repository Root)
 ```bash
-# Navigate to Frontend directory
-cd Frontend
+# Install extension dependencies
+npm install --prefix Frontend
 
-# Install dependencies
-npm install
+# Install browser testing dependencies
+npm install --prefix tests/browser
 
-# Compile TypeScript and bundle distribution
+# Compile TypeScript and bundle production extension (output: Frontend/dist)
 npm run build
-```
-Build output is generated cleanly into `Frontend/dist/` in under 3 seconds.
 
-### 2. Load into Chromium Browser
-1. Open your browser and navigate to `chrome://extensions/` (or `brave://extensions/`).
-2. Toggle **Developer mode** in the top-right corner.
-3. Click **Load unpacked**.
-4. Select the `D:\Browex\Frontend\dist` directory.
-5. Vigil is now active and protecting your browser!
+# Run TypeScript typecheck across all modules
+npm run typecheck
+```
 
 ---
 
-## 🧪 Test Verification & Evidence Ledger
+## 12. Automated Testing
 
-All verification complies with **Vigil Master QA/QC Protocol v5.0.0**. Vigil is built on a strict **zero false-positive** philosophy.
+All verification is automated and reproducible directly from the repository root:
 
-### Unit Test Suite (Vitest) — 113 / 113 Passing (0.92s)
 ```bash
-cd Frontend
+# Run Vitest unit & integration test suites (51 suites, 337+ tests)
 npm test
-```
-```text
-✓ src/legal-auditor/classifier.test.ts     (20 tests) — 19-Dimensional Legal Traps & Negation Precision
-✓ src/network/cookie-classifier.test.ts    (9 tests)  — Google, Meta, Cloudflare, Session classification
-✓ src/network/behavioral-dna.test.ts       (10 tests) — Entropy, cross-site, transmission flag scoring
-✓ src/correlation/grade.test.ts            (7 tests)  — Reputation grade clamping and moral hazard
-✓ src/content-scripts/scanner-rules.test.ts(8 tests)  — DOM manipulation & dark pattern heuristics
-✓ src/legal-auditor/tosdr-consent.test.ts  (5 tests)  — 5-fold behavioral privacy consent
-✓ src/threat-intel/engine.test.ts          (5 tests)  — Typosquatting, Homoglyphs, Malformed URLs
-✓ src/shared/storage.concurrency.test.ts   (2 tests)  — AsyncMutex 50-worker lost-update elimination
-... and more (19 suites total)
+
+# Run Playwright browser acceptance suite (13 tests in live Chromium)
+npm run test:browser
+
+# Run the complete test battery
+npm run test:all
 ```
 
-### Browser E2E Adversarial Suite (Playwright) — 13 / 13 Passing (7.70s)
-Executes directly against local adversarial test harnesses in real Chromium:
-```bash
-# Terminal 1: Start the local adversarial test server
-cd D:\Browex
-node tests/adversarial/server.js
+For detailed methodologies and scenario breakdowns, see [`docs/testing/methodology.md`](docs/testing/methodology.md) and [`docs/release/V2.1-RC1-CERTIFICATION.md`](docs/release/V2.1-RC1-CERTIFICATION.md).
 
-# Terminal 2: Run the Playwright adversarial suite
-cd D:\Browex\tests\browser
-npx playwright test
-```
+---
+
+## 13. Project Structure
+
 ```text
-ok  1 [chromium] defender.audio.spec.ts       — OfflineAudioContext & AudioBuffer perturbation consistency
-ok  2 [chromium] defender.canvas.spec.ts      — Offscreen probe mitigation & visible canvas non-interference
-ok  3 [chromium] defender.cname.spec.ts       — Subdomain cloaking detection vs first-party traffic
-ok  4 [chromium] defender.evasion.spec.ts     — Opaque endpoint paths and nested/mixed-case payloads
-ok  5 [chromium] defender.hardware.spec.ts    — 8C/8GB/24b normalization, descriptor & CreepJS lie checks
-ok  6 [chromium] defender.race.spec.ts        — Dynamic iframes, inline evaluation, and SPA navigation
-ok  7 [chromium] defender.regression.spec.ts  — Canvas paths, WebGL shader compilation, forms, standard fetch
-ok  8 [chromium] defender.telemetry.spec.ts   — sendBeacon, fetch, and XHR across JSON, URLSearchParams, queries
-ok  9 [chromium] defender.webgl.spec.ts       — WebGL 1 & 2 vendor/renderer masking while preserving 3D limits
-ok 10 [chromium] fingerprint.spec.ts: STAGE A — Dynamic MAIN-world defender registration
-ok 11 [chromium] fingerprint.spec.ts: STAGE B — Standalone defender mitigates early canvas probes
-ok 12 [chromium] fingerprint.spec.ts: STAGE B2— Cross-API mitigation covers toDataURL and getImageData
-ok 13 [chromium] fingerprint.spec.ts: STAGE B3— Hardware persona stealth & native prototype lie checks
+Vigil/
+├── docs/                           # Documentation suite
+│   ├── README.md                   # Navigational documentation router
+│   ├── architecture/
+│   │   ├── current/                # Production architecture & runtime specs
+│   │   └── historical/             # Foundational requirements & design specs
+│   ├── release/                    # RC1 certification & phase milestone ledgers
+│   ├── security/                   # Zero-telemetry & privacy audit documentation
+│   └── testing/                    # Test architecture & QA methodology
+├── Frontend/                       # Chromium extension package (Manifest V3)
+│   ├── calibration/                # Empirical calibration test corpus
+│   ├── dist/                       # Compiled production bundle
+│   ├── public/                     # Static icons and assets
+│   ├── rules/                      # Declarative Net Request (DNR) JSON rulesets
+│   ├── src/
+│   │   ├── background/             # MV3 background service worker & message router
+│   │   ├── certification/          # RC1 lifecycle, self-protection & corpus suites
+│   │   ├── content-scripts/        # DOM scanners, CMP handler, urgency neutralizer
+│   │   ├── evidence/               # TrustEngine, EvidenceGraph, temporal correlator
+│   │   ├── intervention/           # Blast radius, transaction engine, comparator
+│   │   ├── legal-auditor/          # 19-dimensional legal parser & negation engine
+│   │   ├── network/                # Behavioral Cookie DNA & tracker statistics
+│   │   ├── observability/          # Performance governor & priority task scheduler
+│   │   ├── popup/                  # React 18 popup UI & Explain Mode components
+│   │   ├── shared/                 # Shared types, constants, and AsyncMutex storage
+│   │   └── threat-intel/           # Local typosquatting & homoglyph heuristic engine
+│   ├── manifest.json               # Chromium extension manifest
+│   ├── package.json                # Extension package configuration
+│   └── vite.config.ts              # Vite + CRXJS build configuration
+├── tests/
+│   ├── adversarial/                # Local fixture server for live E2E scenarios
+│   └── browser/                    # Playwright Chromium test scenarios
+├── CHANGELOG.md                    # Keep-a-Changelog release log
+├── CONTRIBUTING.md                 # Contributor guidelines and architecture rules
+├── HOW_TO_USE.txt                  # Quick-start walkthrough for text editors
+├── LICENSE                         # Apache 2.0 License
+├── package.json                    # Root workspace developer scripts
+├── PRIVACY.md                      # Zero-telemetry privacy policy
+├── SECURITY.md                     # Vulnerability disclosure policy
+└── .gitignore                      # Git ignore patterns
 ```
 
 ---
 
-## ⚖️ License & Security
+## 14. Known Limitations
 
-* **License:** Licensed under the [Apache License, Version 2.0](LICENSE).
-* **Security:** For vulnerability disclosure guidelines, see [SECURITY.md](SECURITY.md).
-* **Privacy:** For details on our zero-telemetry architecture, see [PRIVACY.md](PRIVACY.md).
+* **Closed Shadow DOMs:** Browsers restrict content script access to closed shadow roots by design. Vigil inspects all open shadow roots and fallback DOM trees.
+* **Canvas-Rendered UIs:** Non-DOM applications (e.g. web games rendered on a single canvas element) cannot have text elements inspected via standard DOM queries.
+* **Offline First:** Vigil avoids querying external cloud reputation APIs for privacy; novel zero-day domains rely on local heuristic detection.
 
 ---
 
-## 📬 Maintainer & Contact
+## 15. Security & Responsible Disclosure
 
-* **Lead Developer:** Atharv ([@ath9rv](https://github.com/ath9rv))
-* **Contact & Inquiries:** [mailxatharv@gmail.com](mailto:mailxatharv@gmail.com)
-* **GitHub Repository:** [https://github.com/ath9rv/Vigil.git](https://github.com/ath9rv/Vigil.git)
+We treat security and privacy vulnerabilities with utmost priority. For confidential vulnerability reporting, response SLAs, and supported versions, refer to [`SECURITY.md`](SECURITY.md).
+
+---
+
+## 16. License
+
+Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE) for terms.
