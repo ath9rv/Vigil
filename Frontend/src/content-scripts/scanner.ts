@@ -43,42 +43,7 @@ function calculateSimilarity(domain: string, knownDomain: string): number {
   return Math.round(((maxLength - distance) / maxLength) * 100);
 }
 
-// ─── Deep DOM Traversal (Shadow DOM Piercing) ─────────────────────────────
-
-/**
- * Searches the DOM deeply, piercing through Shadow DOM boundaries.
- * Standard querySelectorAll cannot see inside Web Components. This ensures
- * no dark patterns can hide inside shadow roots.
- */
-function querySelectorAllDeep(selector: string, root: Document | Element | ShadowRoot = document): Element[] {
-  const results: Element[] = [];
-  const queue: (Document | Element | ShadowRoot)[] = [root];
-  
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    if ('querySelectorAll' in node) {
-      try {
-        // Find matches in the current light DOM / root
-        results.push(...Array.from(node.querySelectorAll(selector)));
-      } catch {
-        // Invalid selector syntax - safely proceed without crashing
-        return results;
-      }
-      
-      // Find all elements that might have a shadow root and queue them
-      try {
-        const allElements = node.querySelectorAll('*');
-        for (let i = 0; i < allElements.length; i++) {
-          if (allElements[i].shadowRoot) {
-            queue.push(allElements[i].shadowRoot!);
-          }
-        }
-      } catch {}
-    }
-  }
-  // Deduplicate array
-  return Array.from(new Set(results));
-}
+import { querySelectorAllDeep } from './dom-utils';
 
 const repeatedModals = new WeakSet<Element>();
 const activityCounterHistory = new WeakMap<Element, number>();

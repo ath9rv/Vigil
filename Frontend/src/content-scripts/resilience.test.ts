@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import cookieRules from '../../rules/cookie_consent_rules.json';
 import m1Rules from '../../rules/m1_deceptive_commerce.json';
 import m2Rules from '../../rules/m2_threat_shield.json';
@@ -36,5 +36,35 @@ describe('Vigil Rule Engine Syntax & Resilience Verification', () => {
         }
       }
     }
+  });
+
+  it('new M1 urgency neutralization rules have valid structure', () => {
+    const newRules = m1Rules.rules.filter((r: any) => r.id === 'M1-001b' || r.id === 'M1-001c');
+    expect(newRules.length).toBe(2);
+    
+    for (const rule of newRules) {
+      // Must have a neutralization directive
+      expect(rule.neutralization).toBeDefined();
+      expect(rule.neutralization!.action).toBeDefined();
+      expect(rule.neutralization!.style_override).toBeDefined();
+      expect(rule.neutralization!.description).toBeDefined();
+      
+      // Must have valid text patterns
+      expect(rule.match.text_patterns).toBeDefined();
+      expect(rule.match.text_patterns!.length).toBeGreaterThan(0);
+      
+      // Must have context_required to prevent false positives
+      expect(rule.match.context_required).toBeDefined();
+      expect(rule.match.context_required!.ancestor_selector).toBeDefined();
+      
+      // Severity must be valid
+      expect(['low', 'medium', 'high', 'severe']).toContain(rule.severity);
+    }
+  });
+
+  it('all M1 rules have unique IDs', () => {
+    const ids = m1Rules.rules.map((r: any) => r.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(ids.length);
   });
 });

@@ -1,6 +1,7 @@
 import { showAmbientAlert } from './ambient-shield';
 import { isSameSite } from '../shared/domain-intelligence';
 import { VigilDOMEventBus } from '../observation/event-bus';
+import { querySelectorAllDeep } from './dom-utils';
 /**
  * Adversarial Defense & Behavioral Observer.
  * Defends against adversarial evasion techniques:
@@ -108,14 +109,15 @@ function observeCountdownClocks(): void {
           // If a timer has ticked down 3 times dynamically, flag it as an active urgency mechanism
           if (state.decrementCount === 3) {
             target.setAttribute('data-vigil-urgency-timer', 'true');
-            // Log or trigger ambient badge if within an e-commerce checkout context
-            const isCartOrCheckout = !!document.querySelector('[class*="cart"], [class*="checkout"], [id*="cart"], [id*="checkout"], button[class*="buy"], button[class*="pay"]');
+            const isCartOrCheckout = querySelectorAllDeep(
+              '[class*="cart"], [class*="checkout"], [id*="cart"], [id*="checkout"], button[class*="buy"], button[class*="pay"]'
+            ).length > 0;
             if (isCartOrCheckout) {
               showAmbientAlert({
                 id: 'coercive-timer-detected',
                 type: 'DARK_PATTERN',
                 title: 'Manufactured Urgency Detected',
-                message: 'This page is running a dynamic countdown timer to pressure your purchasing decision. Verify if the offer or reservation is truly expiring.',
+                message: 'This page is running a dynamic countdown timer to pressure your purchasing decision. Vigil is actively neutralizing the urgency display.',
                 details: `Timer element: ${timeStr}`
               });
             }

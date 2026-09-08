@@ -3,10 +3,14 @@ import type { ModuleId, Finding, ModuleScore, DomainTrustData } from '../shared/
 import type { ScanContext } from '../shared/scan-context';
 import { SEVERITY_PENALTIES, SCORE_EMA_ALPHA, SCORE_CAUTION_THRESHOLD, SCORE_DANGER_THRESHOLD, BADGE_COLORS } from '../shared/constants';
 import { registerMessageHandlers } from './message-router';
+import { initializeLegalML } from '../legal-auditor/auditor';
 
 // Initialize storage and strict privacy policies on install/startup
 chrome.runtime.onInstalled.addListener(async () => {
   await initializeStorage();
+
+  // Phase 2: Initialize Local ML Legal Classifier (non-blocking)
+  initializeLegalML();
   
   // V2: WebRTC IP Leak Protection
   // Forces WebRTC to only use the default public interface, hiding the user's true local IP

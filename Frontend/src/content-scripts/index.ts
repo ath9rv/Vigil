@@ -5,6 +5,7 @@ import { ReactiveWebVitalsObserver } from './reactive-web-vitals';
 import { initCookieConsentHandler } from './cookie-consent-handler';
 import { runTrackerAnalysis } from './tracker-analysis';
 import { initAdversarialObserver } from './adversarial-observer';
+import { initUrgencyNeutralizer } from './urgency-neutralizer';
 import './highlighter';
 
 async function bootstrap() {
@@ -63,8 +64,11 @@ async function bootstrap() {
 
   // 5. Adversarial & Form Submit Observer
   initAdversarialObserver();
+
+  // 6. Urgency Neutralization (Active countdown/scarcity freeze)
+  initUrgencyNeutralizer();
   
-  // 6. Third-Party Tracker Analysis (runs after page loads fully)
+  // 7. Third-Party Tracker Analysis (runs after page loads fully)
   setTimeout(() => {
     runTrackerAnalysis();
   }, 3000);

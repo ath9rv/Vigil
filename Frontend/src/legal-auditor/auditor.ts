@@ -2,6 +2,11 @@ import { DocumentExtractionResult } from './types';
 import { filterCandidateClauses, executeLocalSLM } from './classifier';
 import { Finding } from '../evidence/evidence';
 import { fetchTosDrService } from './tosdr-client';
+import {
+  initMLClassifier,
+  isMLClassifierReady,
+  classifyWithML,
+} from './ml-classifier';
 
 export async function processLegalDocument(extraction: DocumentExtractionResult): Promise<Finding[]> {
   console.log(`Vigil: Analyzing document ${extraction.title} (${extraction.hash})`);
@@ -50,8 +55,20 @@ export async function processLegalDocument(extraction: DocumentExtractionResult)
   const candidates = filterCandidateClauses(extraction.clauses);
   console.log(`Vigil: Filtered down to ${candidates.length} candidate clauses.`);
   
-  // 2. SLM Inference
-  const assessments = await executeLocalSLM(candidates);
+  // 2. Classification Pipeline: ML First → Keyword Fallback
+  let assessments;
+  
+  // Attempt ML classification if the model is ready
+  if (isMLClassifierReady()) {
+    console.log('Vigil: Using ML classifier for clause assessment');
+    assessments = await classifyWithML(candidates);
+  }
+  
+  // Fallback to keyword-based classifier if ML is unavailable or returned null
+  if (!assessments || assessments.length === 0) {
+    console.log('Vigil: Using keyword-based classifier for clause assessment');
+    assessments = await executeLocalSLM(candidates);
+  }
   
   // 3. Evidence Construction & Finding Generation
   for (const assessment of assessments) {
@@ -92,4 +109,22 @@ export async function processLegalDocument(extraction: DocumentExtractionResult)
   }
   
   return findings;
+}
+
+/**
+ * Initialize the ML classifier on extension startup.
+ * Called from the background service worker.
+ * Non-blocking: failures are logged but don't prevent the extension from working.
+ */
+export async function initializeLegalML(): Promise<void> {
+  try {
+    const success = await initMLClassifier();
+    if (success) {
+      console.log('Vigil: Legal ML classifier ready');
+    } else {
+      console.log('Vigil: Legal ML classifier unavailable, using keyword fallback');
+    }
+  } catch (err) {
+    console.warn('Vigil: Legal ML initialization error:', err);
+  }
 }
