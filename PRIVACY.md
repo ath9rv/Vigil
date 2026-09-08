@@ -53,7 +53,7 @@ Vigil offers an optional deep legal audit powered by the open-source [ToS;DR](ht
 
 | Permission | Purpose |
 |:---|:---|
-| `host_permissions: ["<all_urls>"]` | Real-time DOM scanning for dark patterns and phishing on arbitrary domains. Content scripts analyze locally, never transmit. |
+| `host_permissions: ["<all_urls>"]` | Real-time DOM scanning for dark patterns and credential theft on arbitrary domains. Content scripts analyze locally, never transmit. |
 | `declarativeNetRequest` | Native browser-engine blocking of 100+ tracking domains. No JS observes raw requests. |
 | `declarativeNetRequestWithHostAccess` | Strips URL tracking params (`fbclid`, `gclid`, `utm_*`) via native redirect transforms. |
 | `declarativeNetRequestFeedback` | Reads blocked tracker counts for popup UI display. No URLs stored or transmitted. |
@@ -62,7 +62,7 @@ Vigil offers an optional deep legal audit powered by the open-source [ToS;DR](ht
 | `scripting` | Injects `defender.js` into MAIN world for anti-fingerprinting. |
 | `privacy` | Sets `webRTCIPHandlingPolicy` to prevent local IP leakage through VPN tunnels. No other privacy settings are touched. |
 | `activeTab` | Temporary tab access during popup interaction for legal doc highlighting. |
-| `notifications` | Local desktop alerts for critical phishing detection. No personal data in notifications. |
+| `notifications` | Local desktop alerts for critical credential theft detection (typosquatting, form-action mismatches). No personal data in notifications. |
 
 Full per-permission justifications: [`docs/security/CHROME_WEB_STORE_JUSTIFICATIONS.md`](docs/security/CHROME_WEB_STORE_JUSTIFICATIONS.md)
 

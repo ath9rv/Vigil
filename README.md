@@ -36,7 +36,7 @@ Traditional extensions either rely on static blocklists (easily bypassed) or nai
 | Layer | Capability | How |
 |:---:|:---|:---|
 | 🧬 | **Behavioral Cookie DNA** | Measures Shannon entropy, JWT structure, cross-site recurrence, and security flags to distinguish auth sessions from tracking IDs |
-| 🛡️ | **5-Module Dark Pattern Scanner** | Detects deceptive commerce (M1), credential phishing (M2), suppressed consent (M3), attention addiction (M4), and manufactured social proof (M5) across DOM and Shadow DOM |
+| 🛡️ | **5-Module Dark Pattern Scanner** | Detects deceptive commerce (M1), typosquatting & credential theft (M2), suppressed consent (M3), attention addiction (M4), and manufactured social proof (M5) across DOM and Shadow DOM |
 | ⚖️ | **19-Dimension Legal Auditor** | Offline NLP engine parsing arbitration, data sale, liability, AI training, and 15 more risk vectors with negation precision — then highlights the exact clause on the page |
 | 🕶️ | **Stealth Anti-Fingerprinting** | MAIN-world `defender.js` perturbs Canvas/WebGL/Audio readbacks while passing CreepJS native-code lie detection checks |
 | ⚡ | **Declarative Network Shield** | 100+ tracker domains blocked, URL tracking params stripped (`utm_*`, `fbclid`, `gclid`), HTTP→HTTPS upgrades — all via Chrome's native DNR engine |

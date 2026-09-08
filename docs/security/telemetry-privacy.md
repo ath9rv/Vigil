@@ -58,7 +58,7 @@ See [`PRIVACY.md`](../../PRIVACY.md) for the full call-site consent architecture
 | `scripting` | MAIN-world `defender.js` injection | Anti-fingerprinting only |
 | `privacy` | WebRTC IP leak protection | Only `webRTCIPHandlingPolicy`, no other settings |
 | `activeTab` | Temporary tab access during popup use | Ephemeral, user-initiated only |
-| `notifications` | Local phishing alerts | No personal data in notifications |
+| `notifications` | Local credential-theft alerts | No personal data in notifications |
 
 Full per-permission justification text: [`CHROME_WEB_STORE_JUSTIFICATIONS.md`](CHROME_WEB_STORE_JUSTIFICATIONS.md)
 

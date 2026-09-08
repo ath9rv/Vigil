@@ -9,7 +9,7 @@
 ## Part 1: Single Purpose Description
 
 > **Single Purpose Statement (for CWS Store Listing):**  
-> Vigil is a client-side web trust and safety shield that protects users in real-time against deceptive dark patterns, phishing credential theft, intrusive tracking cookies, and device fingerprinting using 100% on-device heuristic analysis.
+> Vigil is a client-side web trust and safety shield that protects users in real-time against deceptive dark patterns (fake urgency, hidden fees, pre-ticked subscription traps), intrusive tracking cookies, browser fingerprinting, and predatory legal terms using 100% on-device heuristic analysis.
 
 ---
 
@@ -20,7 +20,7 @@ Below is the exact text to enter into the Chrome Web Store Developer Dashboard u
 ### 1. `host_permissions: ["<all_urls>"]`
 ```text
 Vigil is a universal browsing safety extension that must evaluate page structures across arbitrary web origins in real-time. Broad host permissions are required to:
-1. Detect client-side credential theft (e.g. fake login forms posting passwords to third-party endpoints) on arbitrary domains before credentials are submitted.
+1. Detect credential theft attempts (e.g. typosquatting lookalike domains and form-action mismatches posting credentials to third-party endpoints) on arbitrary domains before credentials are submitted.
 2. Scan page DOMs in local memory for deceptive dark patterns (such as hidden subscription traps, drip pricing, and counterfeit urgency timers).
 3. Enforce declarative tracker blocking and anti-fingerprinting defenses across any site the user visits.
 
@@ -78,7 +78,7 @@ Safeguard: Access is strictly ephemeral and granted only during active user enga
 
 ### 9. `notifications`
 ```text
-Required to display high-priority local desktop notifications when critical phishing attacks, typosquatting domains, or form action mismatches (credential theft) are detected in real-time.
+Required to display high-priority local desktop notifications when typosquatting domains, form-action mismatches (credential theft attempts), or severe deceptive patterns are detected in real-time.
 
 Safeguard: Notifications are generated entirely on-device and contain no personal information.
 ```
@@ -108,3 +108,16 @@ In the **"Privacy practices"** tab of the Chrome Web Store Developer Dashboard:
 Under the **Data disclosure / Privacy Policy link** section:
 * State:
   > "Vigil is 100% on-device by default. All dark pattern detection, cookie analysis, heuristic threat scoring, and legal clause analysis run locally in the browser. The only external network call is an optional, user-initiated query to the open-source ToS;DR Phoenix API (https://api.tosdr.org/) when the user explicitly requests an external terms-of-service audit. The query transmits only the public domain name (with credentials omitted) and never transmits user identity, cookies, browsing history, or personal data. Consent is strictly opt-in and enforced at the network call site."
+
+### 4. Privacy Policy Public URL Field
+In the **"Privacy policy"** URL field on the Developer Dashboard:
+```text
+https://ath9rv.github.io/Vigil/privacy.html
+```
+
+> **How to activate GitHub Pages (30 seconds):**
+> 1. Go to repository **Settings** &rarr; **Pages** (`https://github.com/ath9rv/Vigil/settings/pages`)
+> 2. Under **Build and deployment &rarr; Branch**, select **`main`** and **`/ (root)`**
+> 3. Click **Save**
+> 4. The policy will be live at `https://ath9rv.github.io/Vigil/privacy.html` (both `privacy.html` and `docs/privacy.html` are included in the repository).
+

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Vigil Web Trust & Safety Shield</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --badge-bg: rgba(56, 189, 248, 0.1);
+      --badge-text: #38bdf8;
+      --success-bg: rgba(74, 222, 128, 0.1);
+      --success-text: #4ade80;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --accent: #0284c7;
+        --accent-hover: #0369a1;
+        --badge-bg: #e0f2fe;
+        --badge-text: #0369a1;
+        --success-bg: #dcfce7;
+        --success-text: #15803d;
+      }
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      margin-bottom: 1rem;
+    }
+    .badge.success {
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    .meta {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    p, ul {
+      margin-bottom: 1.25rem;
+      color: var(--text);
+    }
+    ul {
+      padding-left: 1.5rem;
+    }
+    li {
+      margin-bottom: 0.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      text-align: left;
+    }
+    th {
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      font-weight: 600;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+    pre code {
+      background: transparent;
+      padding: 0;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    footer {
+      margin-top: 3rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge success">100% On-Device by Default</span>
+      <span class="badge">Zero Telemetry</span>
+      <h1>Privacy Policy — Vigil</h1>
+      <div class="meta">
+        <strong>Extension:</strong> Vigil — Web Trust & Safety Shield<br>
+        <strong>Effective Date:</strong> September 8, 2026<br>
+        <strong>Architecture:</strong> Client-Side Local Execution · Zero Analytics
+      </div>
+    </header>
+
+    <h2>1. Core Commitment</h2>
+    <p>
+      Project Vigil is built on an absolute, non-negotiable architectural invariant: 
+      <strong>a browser trust and safety tool must never become a surveillance or tracking vector.</strong>
+    </p>
+    <ul>
+      <li><strong>No browsing history</strong> is collected, transmitted, or stored on remote servers — ever.</li>
+      <li><strong>No keystrokes, form inputs, passwords, or credentials</strong> are monitored, captured, or transmitted.</li>
+      <li><strong>Zero third-party analytics SDKs:</strong> Vigil contains no Google Analytics, Mixpanel, Segment, Datadog, Sentry, or PostHog.</li>
+      <li><strong>Zero tracking identifiers:</strong> Vigil does not create cross-session IDs, device fingerprints, or advertising beacons.</li>
+      <li><strong>Local storage only:</strong> All user settings and score caches reside exclusively in <code>chrome.storage.local</code> on your device.</li>
+    </ul>
+
+    <h2>2. 100% On-Device Processing</h2>
+    <p>
+      Every core security, privacy, and heuristic scanning pipeline in Vigil executes locally on your CPU and inside browser memory:
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Pipeline</th>
+          <th>What It Does</th>
+          <th>Execution Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>DOM Dark-Pattern Scanner</strong></td>
+          <td>Detects deceptive design (drip pricing, fake countdown urgency, pre-ticked subscription traps)</td>
+          <td>Local CPU / In-Memory</td>
+        </tr>
+        <tr>
+          <td><strong>Behavioral Cookie DNA</strong></td>
+          <td>Analyzes cookie Shannon entropy, expiration, and security flags (Secure, HttpOnly, SameSite)</td>
+          <td>Local CPU / In-Memory</td>
+        </tr>
+        <tr>
+          <td><strong>Credential Shield</strong></td>
+          <td>Detects typosquatting, homoglyphs, and form-action mismatches before credential dispatch</td>
+          <td>Local CPU / In-Memory</td>
+        </tr>
+        <tr>
+          <td><strong>Anti-Fingerprinting</strong></td>
+          <td>Perturbs Canvas, WebGL, and AudioContext readbacks with deterministic noise</td>
+          <td>Local Page Context</td>
+        </tr>
+        <tr>
+          <td><strong>Legal Document Auditor</strong></td>
+          <td>Classifies terms of service and privacy policies across 19 risk vectors using an on-device NLP parser</td>
+          <td>Local CPU / In-Memory</td>
+        </tr>
+        <tr>
+          <td><strong>WebRTC Protection</strong></td>
+          <td>Configures interface policy to block STUN/ICE local IP address leakage through VPNs</td>
+          <td>Browser Network Stack</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      Raw cookie values, authentication tokens, and user inputs are strictly discarded after entropy/flag calculation and are never persisted or exported.
+    </p>
+
+    <h2>3. External Network Requests & Call-Site Consent Invariant</h2>
+    <p>
+      By default, Vigil dispatches <strong>zero outbound network requests</strong> during installation, startup, background operations, or browsing.
+    </p>
+    <h3>Optional Third-Party Integration: ToS;DR Phoenix API</h3>
+    <p>
+      Vigil provides an optional deep legal audit feature powered by the open-source <a href="https://tosdr.org/" target="_blank" rel="noopener">ToS;DR (Terms of Service; Didn't Read)</a> database.
+    </p>
+    <ul>
+      <li><strong>Default State:</strong> <strong>OFF (Disabled).</strong> Vigil relies exclusively on its on-device legal parser.</li>
+      <li><strong>Call-Site Consent Enforcement:</strong> Consent is verified directly at the network execution point (<code>tosdr-client.ts</code>), not merely in the UI. No network socket can open without explicit user consent.</li>
+      <li><strong>Data Sent (When Explicitly Consented):</strong> HTTPS GET to <code>https://api.tosdr.org/service/v1/?url=&lt;domain&gt;</code> transmitting <strong>only the public registered domain name</strong> (e.g. <code>example.com</code>). Full URLs, paths, query parameters, referrers, cookies, and user IDs are strictly excluded (<code>credentials: 'omit'</code>).</li>
+      <li><strong>Instant Cache Purge on Revocation:</strong> Revoking consent immediately deletes all cached ToS;DR data for that domain from <code>chrome.storage.local</code> and halts all outbound queries.</li>
+    </ul>
+
+    <h2>4. Extension Permissions Explained</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Permission</th>
+          <th>Purpose & Safeguard</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>host_permissions: ["&lt;all_urls&gt;"]</code></td>
+          <td>Required to analyze page DOM structures for dark patterns, credential theft forms, and tracker scripts on visited sites. All processing is strictly in-memory and client-side.</td>
+        </tr>
+        <tr>
+          <td><code>declarativeNetRequest</code></td>
+          <td>Blocks network requests to 100+ known tracking, advertising, and fingerprinting domains using Chrome's native engine.</td>
+        </tr>
+        <tr>
+          <td><code>declarativeNetRequestWithHostAccess</code></td>
+          <td>Strips tracking query parameters (such as <code>fbclid</code>, <code>gclid</code>, <code>utm_*</code>) via native redirect transformations without executing JavaScript.</td>
+        </tr>
+        <tr>
+          <td><code>declarativeNetRequestFeedback</code></td>
+          <td>Reads rule match counts via <code>getMatchedRules()</code> solely to display blocked tracker statistics in the popup UI. No browsing history or URLs are recorded or transmitted.</td>
+        </tr>
+        <tr>
+          <td><code>storage</code></td>
+          <td>Stores local configuration, allowlists/denylists, and cached scores in <code>chrome.storage.local</code> on the user's disk.</td>
+        </tr>
+        <tr>
+          <td><code>cookies</code></td>
+          <td>Read-only inspection of cookie metadata (lifespan, security flags, entropy) to identify pre-consent tracking cookies. Raw values and session tokens are never saved or sent.</td>
+        </tr>
+        <tr>
+          <td><code>scripting</code></td>
+          <td>Injects the anti-fingerprinting script (<code>defender.js</code>) into the page main world to neutralize device fingerprinting.</td>
+        </tr>
+        <tr>
+          <td><code>privacy</code></td>
+          <td>Sets <code>webRTCIPHandlingPolicy</code> to <code>default_public_interface_only</code> to prevent private LAN IP leakage through VPN tunnels. Does not touch any other browser settings.</td>
+        </tr>
+        <tr>
+          <td><code>activeTab</code></td>
+          <td>Grants temporary access when the popup is opened to highlight detected deceptive elements in the DOM.</td>
+        </tr>
+        <tr>
+          <td><code>notifications</code></td>
+          <td>Displays local desktop alerts when critical typosquatting or credential theft forms are detected.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Content Security Policy</h2>
+    <pre><code>script-src 'self'; object-src 'self'</code></pre>
+    <p>
+      Vigil enforces a strict Content Security Policy forbidding remote script evaluation, <code>eval()</code>, and CDN script loaders.
+      All code runs from within the packaged extension.
+    </p>
+
+    <h2>6. Open Source & Verification</h2>
+    <p>
+      Vigil is licensed under the Apache 2.0 License. The source code, build scripts, and test batteries are fully public for audit:
+    </p>
+    <p>
+      <strong>GitHub Repository:</strong> <a href="https://github.com/ath9rv/Vigil" target="_blank" rel="noopener">https://github.com/ath9rv/Vigil</a><br>
+      <strong>Contact:</strong> <a href="mailto:mailxatharv@gmail.com">mailxatharv@gmail.com</a>
+    </p>
+
+    <footer>
+      <p>&copy; 2026 Vigil Project. Published under Apache 2.0 License.</p>
+    </footer>
+  </div>
+</body>
+</html>

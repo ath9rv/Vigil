@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vigil — Web Trust & Safety Shield",
-  "description": "Detects dark patterns, phishing, and deceptive design on any website. Grounded in CCPA & DPDP law.",
+  "description": "Autonomous cognitive firewall detecting dark patterns, tracking cookies, device fingerprinting, and predatory terms on any website.",
   "version": "2.1.0",
   "version_name": "2.1.0-rc.1",
   "icons": {
