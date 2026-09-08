@@ -57,7 +57,11 @@ export function highlightAllFindings(findings: Finding[]): void {
 }
 
 // Listen for highlight requests
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (chrome.runtime?.id && sender?.id && sender.id !== chrome.runtime.id) {
+    console.warn('[Vigil Security] Message rejected in highlighter: untrusted sender.id', sender.id);
+    return;
+  }
   if (message.type === 'HIGHLIGHT_REQUEST') {
     chrome.storage.local.get(['findings_cache'], (result) => {
       const cache = result.findings_cache || {};

@@ -16,6 +16,39 @@ import { trustEngine } from '../evidence/trust-engine';
  */
 export function registerMessageHandlers(): void {
   chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
+    // 1. Sender Authentication: Must strictly match extension ID
+    if (chrome.runtime?.id && sender?.id && sender.id !== chrome.runtime.id) {
+      console.warn('[Vigil Security] Message rejected: untrusted sender.id', sender.id);
+      sendResponse({ success: false, error: 'Unauthorized: untrusted sender ID' });
+      return false;
+    }
+
+    // 2. Tab Context & Origin Verification for PageBoundMessages
+    if ('context' in message && message.context) {
+      const { tabId, hostname } = message.context;
+
+      // Verify that message claims to come from the tab that actually sent it
+      if (sender.tab && sender.tab.id !== undefined && tabId && sender.tab.id !== tabId) {
+        console.warn(`[Vigil Security] Cross-tab message spoofing blocked: reported tabId ${tabId} != sender tab ${sender.tab.id}`);
+        sendResponse({ success: false, error: 'Unauthorized: tabId spoofing detected' });
+        return false;
+      }
+
+      // Verify origin matches the sender URL
+      if (sender.url && hostname) {
+        try {
+          const senderHost = new URL(sender.url).hostname;
+          if (senderHost && senderHost !== hostname && !sender.url.startsWith('chrome-extension://')) {
+            console.warn(`[Vigil Security] Cross-origin message spoofing blocked: reported hostname ${hostname} != sender host ${senderHost}`);
+            sendResponse({ success: false, error: 'Unauthorized: origin spoofing detected' });
+            return false;
+          }
+        } catch {
+          // If URL parsing fails, ignore sender host check
+        }
+      }
+    }
+
     // Stale message guard for PageBoundMessages
     if ('context' in message && message.type !== 'NAVIGATION_STARTED') {
       const { tabId, navigationId } = message.context;
@@ -320,8 +353,11 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
     case 'GET_RULES':
     case 'HIGHLIGHT_REQUEST':
     case 'REPORT_FINDING':
+      return { success: true, stub: true };
+
     default:
-      // Stub for remaining message types to gracefully handle them
-      return { success: true };
+      // Fail closed on unsupported or unknown message types
+      console.warn(`[Vigil Security] Rejected unsupported message type: ${(message as any)?.type}`);
+      return { success: false, error: `Unsupported or unknown message type: ${(message as any)?.type}` };
   }
 }

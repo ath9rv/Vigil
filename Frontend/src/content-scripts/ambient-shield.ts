@@ -158,23 +158,66 @@ export function showAmbientAlert(options: AmbientAlertOptions): void {
   const isNotice = options.type === 'CANARY_BREAKAGE';
   card.className = `vigil-card ${isWarning ? 'warning' : isNotice ? 'notice' : ''}`;
 
-  const icon = options.type === 'CRITICAL_SECURITY' ? '🚨' : isWarning ? '⚠️' : '🛡️';
+  const iconText = options.type === 'CRITICAL_SECURITY' ? '🚨' : isWarning ? '⚠️' : '🛡️';
 
-  card.innerHTML = `
-    <div class="vigil-header">
-      <div class="vigil-title">
-        <span>${icon}</span>
-        <span>${escapeHtml(options.title)}</span>
-      </div>
-      <button class="vigil-close" title="Dismiss">✕</button>
-    </div>
-    <div class="vigil-body">${escapeHtml(options.message)}</div>
-    ${options.details ? `<div class="vigil-details">${escapeHtml(options.details)}</div>` : ''}
-    <div class="vigil-actions">
-      <button class="vigil-btn vigil-btn-secondary" id="dismiss-btn">Dismiss</button>
-      ${options.primaryActionLabel ? `<button class="vigil-btn vigil-btn-primary" id="primary-btn">${escapeHtml(options.primaryActionLabel)}</button>` : ''}
-    </div>
-  `;
+  // 1. Header
+  const header = document.createElement('div');
+  header.className = 'vigil-header';
+
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'vigil-title';
+
+  const iconSpan = document.createElement('span');
+  iconSpan.textContent = iconText;
+
+  const titleSpan = document.createElement('span');
+  titleSpan.textContent = options.title;
+
+  titleDiv.appendChild(iconSpan);
+  titleDiv.appendChild(titleSpan);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'vigil-close';
+  closeBtn.title = 'Dismiss';
+  closeBtn.textContent = '✕';
+
+  header.appendChild(titleDiv);
+  header.appendChild(closeBtn);
+  card.appendChild(header);
+
+  // 2. Body
+  const bodyDiv = document.createElement('div');
+  bodyDiv.className = 'vigil-body';
+  bodyDiv.textContent = options.message;
+  card.appendChild(bodyDiv);
+
+  // 3. Details (if any)
+  if (options.details) {
+    const detailsDiv = document.createElement('div');
+    detailsDiv.className = 'vigil-details';
+    detailsDiv.textContent = options.details;
+    card.appendChild(detailsDiv);
+  }
+
+  // 4. Actions
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'vigil-actions';
+
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'vigil-btn vigil-btn-secondary';
+  dismissBtn.id = 'dismiss-btn';
+  dismissBtn.textContent = 'Dismiss';
+  actionsDiv.appendChild(dismissBtn);
+
+  let primaryBtn: HTMLButtonElement | null = null;
+  if (options.primaryActionLabel) {
+    primaryBtn = document.createElement('button');
+    primaryBtn.className = 'vigil-btn vigil-btn-primary';
+    primaryBtn.id = 'primary-btn';
+    primaryBtn.textContent = options.primaryActionLabel;
+    actionsDiv.appendChild(primaryBtn);
+  }
+  card.appendChild(actionsDiv);
 
   // Attach handlers
   const dismiss = () => {
@@ -183,11 +226,11 @@ export function showAmbientAlert(options: AmbientAlertOptions): void {
     if (options.onDismiss) options.onDismiss();
   };
 
-  card.querySelector('.vigil-close')?.addEventListener('click', dismiss);
-  card.querySelector('#dismiss-btn')?.addEventListener('click', dismiss);
+  closeBtn.addEventListener('click', dismiss);
+  dismissBtn.addEventListener('click', dismiss);
 
-  if (options.primaryActionLabel) {
-    card.querySelector('#primary-btn')?.addEventListener('click', () => {
+  if (primaryBtn) {
+    primaryBtn.addEventListener('click', () => {
       if (options.onPrimaryAction) options.onPrimaryAction();
       dismiss();
     });
@@ -210,10 +253,4 @@ export function dismissAmbientAlert(id: string): void {
     card.remove();
     activeAlerts.delete(id);
   }
-}
-
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }

@@ -21,6 +21,9 @@
     "service_worker": "src/background/service-worker.ts",
     "type": "module"
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "declarative_net_request": {
     "rule_resources": [
       { "id": "tracker_blocklist", "enabled": true, "path": "rules/tracker_blocklist.json" },

@@ -1,5 +1,6 @@
 import { getWebRiskState, applyWebRiskDiff, resetWebRiskDatabase } from './local-index';
 import { WebRiskState, HashPrefixEntry } from './types';
+import { validateSafeExternalUrl } from '../shared/url-security';
 
 /**
  * Synchronizes offline threat intelligence feeds.
@@ -24,8 +25,22 @@ export async function syncWebRiskThreatList(proxyEndpoint?: string): Promise<voi
     return;
   }
 
+  // Strict anti-SSRF validation on proxyEndpoint
+  const validation = validateSafeExternalUrl(proxyEndpoint);
+  if (!validation.valid || !validation.url) {
+    console.error(`[Vigil Security] Threat sync proxyEndpoint rejected: ${validation.reason}`);
+    return;
+  }
+
   try {
-    const res = await fetch(proxyEndpoint, { method: 'GET' });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(validation.url.toString(), { 
+      method: 'GET',
+      credentials: 'omit',
+      signal: controller.signal
+    });
+    clearTimeout(timer);
     if (!res.ok) throw new Error(`Threat feed sync failed: ${res.status}`);
     
     const data = await res.json();

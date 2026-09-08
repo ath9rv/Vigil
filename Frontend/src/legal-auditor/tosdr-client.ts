@@ -49,6 +49,12 @@ export async function setTosDrConsent(domain: string, granted: boolean): Promise
 }
 
 export async function fetchTosDrService(domain: string, requireExplicitConsent = true): Promise<TosDrService | null> {
+  // Validate domain format (reject localhost, raw IP, path traversal)
+  if (!domain || typeof domain !== 'string' || !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(domain)) {
+    console.warn(`[Vigil Security] Invalid domain for ToS;DR query: ${domain}`);
+    return null;
+  }
+
   // Option C + Option A Privacy Enforcement: Zero network egress without affirmative user consent
   if (requireExplicitConsent) {
     const hasConsent = await getTosDrConsent(domain);
@@ -72,6 +78,8 @@ export async function fetchTosDrService(domain: string, requireExplicitConsent =
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(`https://api.tosdr.org/service/v1/?url=${encodeURIComponent(domain)}`, {
+      method: 'GET',
+      credentials: 'omit',
       signal: controller.signal
     });
     

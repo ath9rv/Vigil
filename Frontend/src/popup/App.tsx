@@ -15,6 +15,7 @@ import { DetailedCookie, classifyCookie, parseDocumentCookies } from '../network
 import { recordCookieObservation } from '../network/behavioral-store';
 import { Finding } from '../evidence/evidence';
 import type { ScanCoverageReport, TrackerReport } from '../shared/types';
+import { validateSafeExternalUrl, fetchBoundedText } from '../shared/url-security';
 
 type NavigationTab = 'OVERVIEW' | 'COOKIES' | 'LEGAL';
 
@@ -309,11 +310,14 @@ export default function App() {
           }
         }
       } else {
-        // Fetch external linked policy HTML
+        // Fetch external linked policy HTML with strict anti-SSRF enforcement
+        const validation = validateSafeExternalUrl(finalUrl);
+        if (!validation.valid) {
+          throw new Error(`Security Exception: Cannot audit document at unverified location. ${validation.reason}`);
+        }
+
         try {
-          const res = await fetch(finalUrl, { credentials: 'omit' });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const html = await res.text();
+          const { text: html, finalUrl: safeUrl } = await fetchBoundedText(finalUrl, 2 * 1024 * 1024, 10000);
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, 'text/html');
           const root = doc.querySelector('main, article, [role="main"], .legal-content, .terms-content, .policy-content') || doc.body;
@@ -323,8 +327,12 @@ export default function App() {
             const bodyText = (root as HTMLElement).innerText || doc.body.innerText || '';
             texts = bodyText.split(/\n\s*\n/).map(t => t.trim().replace(/\s+/g, ' ')).filter(t => t.length >= 20);
           }
-          pageTitle = doc.title || finalUrl;
-        } catch (fetchErr) {
+          pageTitle = doc.title || safeUrl;
+        } catch (fetchErr: any) {
+          // If blocked due to SSRF, re-throw immediately and do NOT fall back to arbitrary scraping
+          if (fetchErr.message?.includes('SSRF Blocked') || fetchErr.message?.includes('Security Exception')) {
+            throw fetchErr;
+          }
           console.warn('Vigil: External fetch failed, falling back to active tab DOM extraction:', fetchErr);
           const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
           if (tab && tab.id) {

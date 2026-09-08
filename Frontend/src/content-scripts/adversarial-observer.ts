@@ -20,6 +20,24 @@ export function initAdversarialObserver(): void {
     const hasPassword = !!form.querySelector('input[type="password"]');
     const rawAction = form.getAttribute('action') || form.action || '';
     
+    // Intercept javascript: form submission vectors on sensitive forms
+    if (hasPassword && rawAction.trim().toLowerCase().startsWith('javascript:')) {
+      e.preventDefault();
+      e.stopPropagation();
+      showAmbientAlert({
+        id: 'javascript-action-blocked',
+        type: 'CRITICAL_SECURITY',
+        title: 'Credential Theft Intercepted',
+        message: 'This login form attempted to execute inline JavaScript instead of submitting securely.',
+        details: `Action: ${rawAction.slice(0, 100)}`,
+        primaryActionLabel: 'Proceed Anyway (Unsafe)',
+        onPrimaryAction: () => {
+          form.submit();
+        }
+      });
+      return false;
+    }
+
     if (rawAction && rawAction.startsWith('http')) {
       try {
         const actionUrl = new URL(rawAction, window.location.href);
@@ -46,8 +64,8 @@ export function initAdversarialObserver(): void {
             return false;
           }
         }
-      } catch {
-        // Invalid URL, continue
+      } catch (err) {
+        console.warn('[Vigil Security] Form action URL parse failed:', err);
       }
     }
   }, true); // Use capture phase to precede any page listeners
