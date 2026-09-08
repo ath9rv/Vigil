@@ -106,6 +106,10 @@ export class InterventionTransaction {
     };
   }
 
+  public get state(): TransactionState {
+    return this.record.state;
+  }
+
   /**
    * Checks whether the transaction has become stale due to expiration, detachment,
    * node replacement, or context drift.

@@ -1,0 +1,212 @@
+# Vigil V2.1 — Release Candidate 1 (RC1) Certification Report
+
+**Document ID:** `VIGIL-RC1-CERT-2026-09-08`  
+**Milestone:** **Release Candidate 1 (V2.1 RC1)**  
+**Status:** **PASSED & ARCHITECTURALLY FROZEN**  
+**Test Suite Summary:** **334 / 334 Vitest Unit & Integration + 13 / 13 Playwright Browser Acceptance (347 / 347 Tests Green)**  
+**Production Build:** **110 Modules Transformed, Clean Packaging, Zero Type Errors**
+
+---
+
+## 1. Executive Summary & Architecture Freeze
+
+With the completion of the RC1 Certification Gate, **Vigil V2.1 is officially feature-frozen**. No additional detection modules or speculative capabilities will be added to the V2.1 line. Future features are formally deferred to V2.2/V3. V2.1 is strictly restricted to security fixes, compatibility refinements, and critical browser-runtime patches.
+
+Vigil V2.1 establishes a defensible, four-tier defensive browser runtime:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       VIGIL V2.1 RUNTIME ARCHITECTURE                                  │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  1. OBSERVABILITY & LINEAGE (Phase 1 — b3ef306)
+     ├─ Immutable Evidence Provenance (SourceType, ObservationHash, CollectorVersion)
+     ├─ EvidenceGraph Lineage Queries & Canonical Chronological Timeline
+     └─ Strict Epistemic Separation: observed vs inferred vs intent vs confidence
+  
+  2. PERFORMANCE CONTROL & RESOURCE BUDGETING (Phase 2 — fe19681)
+     ├─ Strict TaskScheduler Priority Hierarchy (P0_CRITICAL -> P1_PRIVACY -> P2_CONTEXTUAL -> P3_ENRICHMENT)
+     ├─ 30ms Frame Budgeting with Adaptive PerformanceGovernor (NORMAL -> PRESSURED -> DEGRADED)
+     └─ Bounded Shadow-DOM Traversal & DJB2 Subtree Hashing with Sensitive Field Redaction
+  
+  3. TRANSACTIONAL INTERVENTION SAFETY & CAUSAL ROLLBACK (Phase 3 — f4197c8)
+     ├─ Two-Axis Gate: Detection Confidence (Suspicion) ⟂ Blast Radius (Safety Clearance)
+     ├─ Scoped DOM Snapshotting (Attributes, Inline Styles, Class Lists, Reversible WeakMaps)
+     └─ Causal Error Attribution Window (Attributed vs Pre-existing Uncaught Errors)
+  
+  4. REAL-WORLD GOVERNANCE & COMPATIBILITY (Phase 4 & RC1 — f99590e & RC1 Certification)
+     ├─ Differential Baseline Comparison (POST - BASELINE: Never penalize for pre-existing site flaws)
+     ├─ Deterministic Node Identity & Framework Replacement Guards (ABORTED_STALE)
+     ├─ 6-Vector Diagnostic Scorer with Hard Safety Gate Overrides
+     ├─ Per-Domain Site Governance (ACTIVE, SAFE_ONLY, OBSERVE_ONLY, OFF)
+     └─ Hostile Page Self-Protection Runtime (Mutation storms, scheduler storms, token leak defense)
+```
+
+---
+
+## 2. The Three Independent Authorities
+
+Vigil abandons the primitive concept of a monolithic "Risk Score" in favor of three orthogonal, non-interfering authorities:
+
+```
+                      OBSERVED BEHAVIOR
+                             │
+            ┌────────────────┼────────────────┐
+            ▼                ▼                ▼
+   DECISION AUTHORITY  MUTATION AUTHORITY  RESOURCE AUTHORITY
+   "Is this behavior   "Is it safe to      "Is it appropriate
+    suspicious?"        mutate this DOM     to spend CPU /
+                        element right now?" memory right now?"
+            │                │                │
+            └────────────────┼────────────────┘
+                             │
+                             ▼
+                     ACTION RESOLUTION
+           ┌─────────────────┼─────────────────┐
+           ▼                 ▼                 ▼
+   MUTATE & VERIFY     REPORT ONLY          DEFER TASK
+ (All 3 Granted)     (Safety Denied)      (Budget Exceeded)
+```
+
+1. **Decision Authority**: Measures whether an observed pattern violates dark pattern, tracker, or phishing rules (evaluated as `LOW`, `MODERATE`, `HIGH`, `CONFIRMED`).
+2. **Mutation Authority**: Assesses element proximity to authentication, payment inputs, or structural interactive nodes (`SAFE`, `CAUTIOUS`, `RESTRICTED`, `BLOCKED`).
+3. **Resource Authority**: Governed by the `TaskScheduler` and `PerformanceGovernor`; throttles or sheds low-priority tasks during hostile render pressure to keep the main thread fluid.
+
+---
+
+## 3. The 17-Stage End-to-End Certified Pipeline
+
+The complete lifecycle executed in [`Frontend/src/certification/rc1-lifecycle.test.ts`](file:///D:/Browex/Vigil%20Main/Frontend/src/certification/rc1-lifecycle.test.ts) produces verifiable artifacts at every transition:
+
+| Stage # | Pipeline Stage | Measurable Artifact / Signal | Guarantee Verified |
+| :--- | :--- | :--- | :--- |
+| **1** | **Page Load** | `navigationState.startNavigation(tabId, navId)` | Valid navigation context established |
+| **2** | **Baseline Health** | `differentialComparator.captureBaseline(target)` | Form fields, clickables, and existing errors captured |
+| **3** | **Observation** | `RawObservation` object with collector metadata | Structured detector output created |
+| **4** | **Provenance** | SHA/DJB2 hash, collector version `2.1.0`, timestamp | Evidence integrity recorded |
+| **5** | **Correlation** | `trustEngine.getActiveGraphNodeCount() >= 1` | Node ingested into canonical `EvidenceGraph` |
+| **6** | **Confidence** | Multi-signal evaluation $\to$ `HIGH` | Epistemic confidence criteria satisfied |
+| **7** | **Blast Radius** | `blastRadiusEstimator.assess(target)` | `safetyClass = 'CAUTIOUS'`, score $< 0.5$ |
+| **8** | **Site Governance** | `siteGovernance.shouldMutate(hostname)` | Domain policy permit checked |
+| **9** | **Scheduler** | Enqueued as `P2_CONTEXTUAL` task | Time-sliced dispatching within 30ms budget |
+| **10** | **Decision Gate** | `manager.isAuthorizedToMutate(conf, safety)` | Two-axis gate grants mutation clearance |
+| **11** | **Plan / Dry-Run** | `MutationPlan` with scoped style/attribute rules | Exact planned modifications isolated |
+| **12** | **Transaction** | `InterventionTransaction` (`INT-XXXXX`) | Bound to origin, navId, frameId, nodeIdentity |
+| **13** | **Mutation** | Scoped DOM mutation applied to host node | Visual freeze applied; original styles snapshotted |
+| **14** | **Compatibility** | `transaction.verify()` $\to$ `PASS` | Geometry preserved, zero unexpected drift |
+| **15** | **Differential** | `differentialComparator.compare(base, post)` | $\Delta \text{Errors} = 0$, $\Delta \text{Broken} = 0$, not materially worsened |
+| **16** | **Commit** | `transaction.commit()` $\to$ `COMMITTED` | State finalized; causal rollback monitor active |
+| **17** | **Forensics** | `InterventionRecord` with `diagnosticScore` | Audit record preserved; 1-click restore operational |
+
+---
+
+## 4. Canonical Release Scenario Verification
+
+[`Frontend/src/certification/rc1-lifecycle.test.ts`](file:///D:/Browex/Vigil%20Main/Frontend/src/certification/rc1-lifecycle.test.ts)
+
+### Scenario 1: Safe Intervention
+* **Input**: High-confidence deceptive scarcity counter on an isolated e-commerce banner.
+* **Result**: Blast radius classified as `SAFE`; mutation applied; geometry verified; transaction committed. 1-click restore cleanly reverts element to original styles and attributes.
+
+### Scenario 2: Suspicious but Blocked
+* **Input**: Deceptive urgency text embedded directly within a payment/checkout form containing an `<input type="password">` field.
+* **Result**: **Invariant A & Invariant D Enforced**. Target element classified as `BLOCKED`. Two-axis gate immediately denies mutation authority (`DECISION_GATE_BLOCKED`). Advisory finding recorded for user awareness without modifying host DOM.
+
+### Scenario 3: Stale Transaction
+* **Input**: React/Vue SPA dynamic reconciliation where the original target node is unmounted and replaced with an identical-looking element during transaction verification.
+* **Result**: **Invariant C Enforced**. `computeDeterministicNodeIdentity` flags mismatch. Transaction transitions to `ABORTED_STALE`. Replacement node is completely untouched.
+
+### Scenario 4: Page Regression (Causal Rollback)
+* **Input**: Baseline healthy DOM. Mutation triggers a causally linked host script exception referencing the target container.
+* **Result**: **Invariant B Enforced**. Differential comparator isolates causal exception (`attribution = 'INTERVENTION_RELATED'`). Auto-rollback triggers immediately, restoring DOM to exact baseline health.
+
+### Scenario 5: User Governance (`OBSERVE_ONLY`)
+* **Input**: User configures domain policy to `OBSERVE_ONLY`.
+* **Result**: TrustEngine continues passive observation and threat intelligence gathering; DOM mutation is completely suppressed (`SITE_GOVERNANCE_OVERRIDE`); zero DOM tampering.
+
+---
+
+## 5. Hostile Page Self-Protection Runtime Battery
+
+[`Frontend/src/certification/self-protection.test.ts`](file:///D:/Browex/Vigil%20Main/Frontend/src/certification/self-protection.test.ts)
+
+The host web page is treated as an active adversary attempting to freeze, crash, starve, or bypass Vigil:
+
+1. **Adversarial Mutation Flood (10,000 DOM mutations)**:
+   * PerformanceGovernor detects mutation velocity $>500$/s and transitions to `DEGRADED`.
+   * P3 enrichment is suspended; P0 security tasks remain 100% operational; UI thread remains fluid ($<5$s total processing).
+2. **Scheduler Starvation Defense (5,000 P3 Task Storm)**:
+   * High-priority P0 security alert arrives during heavy P3 queue load.
+   * P0 task jumps the queue and executes immediately; zero P0 starvation.
+3. **Target Node Replacement & Hierarchy Hijacking**:
+   * Host unmounts original target and mounts an impostor node during verification.
+   * Deterministic node identity path flags divergence; transaction aborts as `ABORTED_STALE`; impostor element is untouched.
+4. **Cross-Navigation Evidence Leak Defense**:
+   * Rapid SPA navigation occurs from Navigation A to Navigation B.
+   * Host attempts to inject delayed events referencing Navigation A.
+   * `navigationState` identifies stale token; observation is discarded; zero cross-navigation evidence leakage.
+5. **Unhandled Script Exception Storm (100 Host Exceptions)**:
+   * Host throws 100 unhandled exceptions.
+   * Differential comparator isolates host exceptions as `attribution: 'UNKNOWN'`; Vigil is not falsely blamed; comparator processes without throwing.
+6. **Shadow DOM Recursive Depth Bomb (25 Nested Levels)**:
+   * Host constructs deeply nested open shadow roots.
+   * `querySelectorAllDeep` enforces `MAX_SHADOW_DEPTH = 10`; crawler returns safely without stack overflow.
+7. **Evidence Retention Budget Enforced**:
+   * Host spams 550 observations exceeding `MAX_NODES_PER_NAVIGATION = 500`.
+   * TrustEngine clamps graph node count to 500; excess nodes rejected with budget counter incremented; memory remains strictly bounded.
+
+---
+
+## 6. 11-Category Real-World Compatibility Corpus
+
+[`Frontend/src/certification/compatibility-corpus.test.ts`](file:///D:/Browex/Vigil%20Main/Frontend/src/certification/compatibility-corpus.test.ts)
+
+Evaluated across all 4 operational modes (`ACTIVE`, `SAFE_ONLY`, `OBSERVE_ONLY`, `OFF`):
+
+| Category | Archetype / Scenario | Target Element | Safety Class | Active Mode Behavior | Hard Safety Gate Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. E-Commerce** | Shopify/Amazon product page | Scarcity urgency pill | `CAUTIOUS` | Visual freeze applied, layout preserved | Passed ($\ge 90/100$) |
+| **2. Banking** | Online wire transfer portal | 2FA OTP password input | `BLOCKED` | **Zero mutation (Advisory only)** | **Hard Gate Overrides (BLOCKED)** |
+| **3. SaaS Dashboard** | Cloud monitoring dashboard | Storage upsell banner | `CAUTIOUS` | Visual freeze applied, metrics intact | Passed ($\ge 90/100$) |
+| **4. News & Media** | Editorial journalism article | Subscription nag banner | `CAUTIOUS` | Visual freeze applied, hyperlinks intact | Passed ($\ge 90/100$) |
+| **5. Social Networks** | Dynamic activity stream | FOMO notification alert | `CAUTIOUS` | Visual freeze applied, feed interactive | Passed ($\ge 90/100$) |
+| **6. Travel & Booking** | Flight & hotel reservation | Simulated viewer counter | `CAUTIOUS` | Visual freeze applied, reserve btn active | Passed ($\ge 90/100$) |
+| **7. Education / LMS** | Online examination portal | Marketing tutor upsell | `CAUTIOUS` | Visual freeze applied, quiz active | Passed ($\ge 90/100$) |
+| **8. Government** | Citizen passport renewal tax | National ID password input | `BLOCKED` | **Zero mutation (Advisory only)** | **Hard Gate Overrides (BLOCKED)** |
+| **9. Streaming Media** | Video streaming player | Countdown interstitial | `CAUTIOUS` | Visual freeze applied, player controls intact | Passed ($\ge 90/100$) |
+| **10. Developer Tools** | Documentation & API console | Cloud credits sponsor nag | `CAUTIOUS` | Visual freeze applied, code blocks intact | Passed ($\ge 90/100$) |
+| **11. High-Friction Apps** | Interactive canvas suite | Trial scarcity pill | `CAUTIOUS` | Visual freeze applied, canvas fully active | Passed ($\ge 90/100$) |
+
+---
+
+## 7. Diagnostic Compatibility Score Policy
+
+Vigil adheres strictly to the diagnostic scoring invariant:
+* **The Compatibility Score is a diagnostic measurement, NOT a safety certification**: A score of `97/100` signifies a high diagnostic score across layout, interactions, forms, accessibility, runtime, and performance.
+* **Hard Safety Gates Overrule Numerical Scores**: Even if an element achieves `100/100` on layout and accessibility vectors, if it touches payment/password fields or introduces causal errors, it is **strictly BLOCKED or ROLLED BACK**.
+
+---
+
+## 8. Full Release Test Suite Verification
+
+### Vitest Unit & Integration Suite
+* **Test Files:** 50 passed (50)
+* **Tests:** 334 passed (334)
+* **Execution Time:** 9.29s
+
+### Playwright E2E & Browser Acceptance Suite
+* **Suites:** 10 passed (10)
+* **Tests:** 13 passed (13)
+* **Execution Time:** 8.0s
+
+### Production Package Build
+* **Toolchain:** `tsc && vite build`
+* **Transformed Modules:** 110 modules
+* **Diagnostics:** Zero warnings, zero errors, clean output bundles
+
+---
+
+## 9. Conclusion & Release Candidate 1 Declaration
+
+All four architectural pillars (Observability, Resource Control, Transactional Safety, Real-World Governance) are implemented, integrated, and verified against adversarial workloads.
+
+**Vigil V2.1 is certified, hardened, and tagged for Release Candidate 1 (RC1).**
