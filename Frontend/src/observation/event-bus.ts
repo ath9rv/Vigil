@@ -7,6 +7,8 @@
  * to subscribed detectors (e.g. Consent, Dark Patterns, Countdown).
  */
 
+import { metricsCollector } from '../observability/metrics';
+
 export type VigilDOMEventType = 'NODE_ADDED' | 'SUBTREE_CHANGED' | 'TEXT_CHANGED' | 'ATTRIBUTE_CHANGED';
 export type SemanticRegion = 'CONSENT' | 'CHECKOUT' | 'LOGIN' | 'GENERAL' | 'UNKNOWN';
 
@@ -36,6 +38,8 @@ class VigilDOMEventBusImpl {
     if (this.observer) return;
 
     this.observer = new MutationObserver((mutations) => {
+      metricsCollector.increment('mutation_callbacks_count', 1);
+      metricsCollector.increment('nodes_received_count', mutations.length);
       this.pendingMutations.push(...mutations);
       
       if (this.coalesceTimeout === null) {
@@ -92,6 +96,8 @@ class VigilDOMEventBusImpl {
     const affectedNodes = new Set<Node>();
     const events: VigilDOMEvent[] = [];
     const timestamp = Date.now();
+
+    metricsCollector.increment('coalesced_mutations_count', mutations.length);
 
     for (const mutation of mutations) {
       if (mutation.type === 'childList') {

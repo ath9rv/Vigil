@@ -1,5 +1,6 @@
 import type { ScanContext } from '../shared/scan-context';
 import type { EvidenceSourceType } from './evidence';
+import type { RawObservation, ObservationProvenance } from '../shared/types';
 
 export type EvidenceRelation = 
   | 'SUPPORTS' 
@@ -13,6 +14,14 @@ export interface EvidenceProvenance {
   collector: string;
   collectorVersion: string;
   observationId: string;
+  source?: 'DOM' | 'NETWORK' | 'STORAGE' | 'POLICY' | 'DEFENDER' | 'TEST_LAB';
+  detectorId?: string;
+  timestamp?: number;
+  frameId?: string;
+  origin?: string;
+  evidenceType?: string;
+  collectionMethod?: string;
+  rawObservation?: RawObservation;
 }
 
 export interface EvidenceNode<T = unknown> {
@@ -37,6 +46,12 @@ export interface EvidenceEdge {
 
 export interface EvidenceSubgraph {
   nodes: EvidenceNode[];
+  edges: EvidenceEdge[];
+}
+
+export interface NodeTrace {
+  node: EvidenceNode;
+  provenance: EvidenceProvenance;
   edges: EvidenceEdge[];
 }
 
@@ -86,6 +101,48 @@ export class EvidenceGraph {
    */
   public getNodesByNavigationId(navigationId: string): EvidenceNode[] {
     return Array.from(this.nodes.values()).filter(n => n.navigationId === navigationId);
+  }
+
+  /**
+   * Trace back node to its exact source provenance.
+   */
+  public getNodeProvenance(nodeId: string): EvidenceProvenance | undefined {
+    return this.nodes.get(nodeId)?.provenance;
+  }
+
+  /**
+   * Retrieve the raw observation that produced this node, if retained.
+   */
+  public getSourceObservation(nodeId: string): RawObservation | undefined {
+    return this.nodes.get(nodeId)?.provenance?.rawObservation;
+  }
+
+  /**
+   * Query all nodes produced by a specific detector ID.
+   */
+  public getNodesByDetector(detectorId: string): EvidenceNode[] {
+    return Array.from(this.nodes.values()).filter(n => n.provenance?.detectorId === detectorId);
+  }
+
+  /**
+   * Query all nodes matching an evidence type.
+   */
+  public getNodesByEvidenceType(evidenceType: string): EvidenceNode[] {
+    return Array.from(this.nodes.values()).filter(n => n.provenance?.evidenceType === evidenceType);
+  }
+
+  /**
+   * Encapsulated complete trace of an evidence node (node, provenance, and edges).
+   */
+  public getNodeTrace(nodeId: string): NodeTrace | undefined {
+    const node = this.nodes.get(nodeId);
+    if (!node) return undefined;
+    const edges = Array.from(this.edgesByNode.get(nodeId) || []);
+    return {
+      node,
+      provenance: node.provenance,
+      edges,
+    };
   }
 
   /**

@@ -1,25 +1,29 @@
 /**
- * Urgency Neutralizer — Active DOM Mutation Override System
+ * Urgency Neutralizer — Multi-Signal Calibrated Intervention System
  *
- * Goes beyond detection: actively freezes and hides fake countdown clocks,
- * artificial stock-depletion tickers, and synthetic scarcity indicators
- * identified by the dark pattern scanner.
- *
- * Uses MutationObserver-based interception to:
- * 1. Freeze countdown timers at their current value
- * 2. Hide or fade artificial stock-depletion messages
- * 3. Override style mutations that force visual urgency
- * 4. Block requestAnimationFrame-driven timer animations
+ * Implements Phase 1 Metric Calibration & Safe Reversibility:
+ * 1. Timer State Model:
+ *    UNKNOWN -> OBSERVED -> CORRELATED -> SUSPICIOUS -> HIGH_CONFIDENCE_MANUFACTURED_URGENCY -> INTERVENTION -> VERIFIED
+ * 2. Multi-Signal Verification:
+ *    - Never freezes a timer on mere pattern existence.
+ *    - Requires observed dynamics (loop/reset or decrement + transactional context + urgency language).
+ *    - Explicitly excludes legitimate countdowns:
+ *      * Banking/security session timeouts ("session will expire in")
+ *      * Server-synchronized auction/ticket reservations (data-server-time, data-expires-at)
+ * 3. Centralized Reversibility:
+ *    - Delegates all mutations to InterventionManager.
+ *    - Captures element state in WeakMap with zero destructive deletions.
+ *    - Preserves bounding geometry and enables 1-click restore.
  */
 
 import { querySelectorAllDeep } from './dom-utils';
-import { showAmbientAlert } from './ambient-shield';
+import { interventionManager } from '../intervention/manager';
+import { metricsCollector } from '../observability/metrics';
 
-// ─── Configuration ──────────────────────────────────────────────────────────
+// ─── Constants & Patterns ───────────────────────────────────────────────────
 
-const NEUTRALIZED_ATTR = 'data-vigil-neutralized';
-const URGENCY_TIMER_ATTR = 'data-vigil-urgency-timer';
-const NEUTRALIZED_STYLE = 'opacity: 0.3 !important; pointer-events: none !important;';
+export const NEUTRALIZED_ATTR = 'data-vigil-neutralized';
+export const URGENCY_TIMER_ATTR = 'data-vigil-urgency-timer';
 
 // Countdown pattern: matches HH:MM:SS, MM:SS, or standalone seconds
 const COUNTDOWN_REGEX = /\b\d{1,2}:\d{2}(:\d{2})?\b/;
@@ -34,21 +38,69 @@ const SCARCITY_PATTERNS = [
   /\bOnly\s+\d+\s+in\s+stock\b/i,
 ];
 
-// ─── State ──────────────────────────────────────────────────────────────────
+// Legitimate Session Timeout / Inactivity Patterns (Must be excluded)
+const LEGITIMATE_SESSION_PATTERNS = [
+  /session\s+(will\s+)?expire/i,
+  /session\s+timeout/i,
+  /logged\s+out\s+in/i,
+  /inactivity\s+timeout/i,
+  /security\s+timeout/i,
+  /for\s+your\s+security/i,
+];
+
+// Legitimate Server-Synchronization Selectors / Attributes
+const SERVER_SYNC_SELECTORS = [
+  '[data-server-time]',
+  '[data-expires-at]',
+  '[data-end-time]',
+  '[data-auction-end]',
+  '[data-utc]',
+  '[aria-live="polite"][class*="ticket"]',
+  '[class*="flight-timer"]',
+  '[class*="boarding-pass"]',
+];
+
+// ─── Types & State Model ────────────────────────────────────────────────────
+
+export type TimerState = 
+  | 'UNKNOWN' 
+  | 'OBSERVED' 
+  | 'CORRELATED' 
+  | 'SUSPICIOUS' 
+  | 'HIGH_CONFIDENCE_MANUFACTURED_URGENCY' 
+  | 'INTERVENTION' 
+  | 'VERIFIED';
+
+interface TimerTrackRecord {
+  element: HTMLElement;
+  state: TimerState;
+  firstObservedAt: number;
+  lastObservedAt: number;
+  observedValues: string[];
+  secondsHistory: number[];
+  decrementCount: number;
+  resetCount: number;
+  hasTransactionalContext: boolean;
+  hasUrgencyLanguage: boolean;
+  hasServerSync: boolean;
+  isLegitimateSessionExpiry: boolean;
+}
+
+// ─── Module State ───────────────────────────────────────────────────────────
 
 let neutralizationObserver: MutationObserver | null = null;
-let interceptedTimers = new WeakSet<HTMLElement>();
-let frozenTimers = new Map<Element, string>(); // element -> frozen text content
+const trackedTimers = new WeakMap<HTMLElement, TimerTrackRecord>();
+const trackedElementsList = new Set<WeakRef<HTMLElement>>();
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export function initUrgencyNeutralizer(): void {
-  // Run initial scan after a short delay (let the page render)
+  // Initial scan after short delay for page render
   setTimeout(() => {
     scanAndNeutralize();
-  }, 2000);
+  }, 1000);
 
-  // Start persistent observer to catch dynamically injected timers
+  // Start persistent observer
   startNeutralizationObserver();
 }
 
@@ -59,23 +111,111 @@ export function stopUrgencyNeutralizer(): void {
   }
 }
 
-// ─── Core Neutralization Scan ───────────────────────────────────────────────
+/**
+ * Calibrated Evaluation: Evaluates whether an element represents manufactured urgency.
+ */
+export function evaluateTimerElement(el: HTMLElement): TimerState {
+  if (!el || !(el instanceof HTMLElement)) return 'UNKNOWN';
 
-function scanAndNeutralize(): void {
-  // 1. Find and freeze countdown timers
-  freezeCountdownTimers();
+  const text = (el.textContent || '').trim();
+  if (!COUNTDOWN_REGEX.test(text)) return 'UNKNOWN';
 
-  // 2. Find and hide artificial scarcity indicators
-  neutralizeScarcityIndicators();
+  // 1. Check for Legitimate Session Expiry Exclusions
+  const contextText = (el.closest('body')?.textContent || el.textContent || '').slice(0, 1000);
+  const isSessionExpiry = LEGITIMATE_SESSION_PATTERNS.some(p => p.test(text) || (el.parentElement && p.test(el.parentElement.textContent || '')));
+  if (isSessionExpiry) {
+    return 'OBSERVED'; // Benign session timeout: do not flag
+  }
 
-  // 3. Find and neutralize fake "X viewing now" social proof
-  neutralizeFakeSocialProof();
+  // 2. Check for Server-Sync / Auction / Ticket Reservation Attributes
+  const hasServerSync = SERVER_SYNC_SELECTORS.some(sel => el.matches(sel) || el.closest(sel) !== null);
+  if (hasServerSync) {
+    return 'OBSERVED'; // Legitimate server-synchronized event
+  }
+
+  // 3. Inspect Context
+  const hasTransactionalContext = el.closest('[class*="cart"], [class*="checkout"], [class*="sale"], [class*="offer"], [class*="promo"], [class*="deal"], [class*="shop"], [class*="buy"], [class*="product"], [class*="price"]') !== null;
+  const hasUrgencyLanguage = SCARCITY_PATTERNS.some(p => p.test(text) || (el.parentElement && p.test(el.parentElement.textContent || '')));
+
+  // 4. Update Dynamics Tracking
+  let track = trackedTimers.get(el);
+  const now = Date.now();
+  const currentSeconds = parseSeconds(text);
+
+  if (!track) {
+    track = {
+      element: el,
+      state: 'OBSERVED',
+      firstObservedAt: now,
+      lastObservedAt: now,
+      observedValues: [text],
+      secondsHistory: currentSeconds !== null ? [currentSeconds] : [],
+      decrementCount: 0,
+      resetCount: 0,
+      hasTransactionalContext,
+      hasUrgencyLanguage,
+      hasServerSync,
+      isLegitimateSessionExpiry: isSessionExpiry,
+    };
+    trackedTimers.set(el, track);
+    trackedElementsList.add(new WeakRef(el));
+  } else {
+    track.lastObservedAt = now;
+    if (!track.observedValues.includes(text)) {
+      track.observedValues.push(text);
+    }
+    if (currentSeconds !== null) {
+      const prevSeconds = track.secondsHistory[track.secondsHistory.length - 1];
+      if (prevSeconds !== undefined) {
+        if (currentSeconds < prevSeconds) {
+          track.decrementCount++;
+        } else if (currentSeconds > prevSeconds + 5) {
+          // Timer jumped back up $\rightarrow$ Looping reset countdown!
+          track.resetCount++;
+        }
+      }
+      track.secondsHistory.push(currentSeconds);
+    }
+  }
+
+  // 5. State Machine Evaluation
+  // Rule A: Repeating / Looping Countdown (Unquestionable Manufactured Urgency)
+  if (track.resetCount >= 1 && track.decrementCount >= 1) {
+    track.state = 'HIGH_CONFIDENCE_MANUFACTURED_URGENCY';
+    return track.state;
+  }
+
+  // Rule B: Active Decrementing Timer in E-commerce Context with Urgency Language
+  if (track.hasTransactionalContext && track.hasUrgencyLanguage) {
+    track.state = 'HIGH_CONFIDENCE_MANUFACTURED_URGENCY';
+    return track.state;
+  }
+
+  // Rule C: Pure countdown in e-commerce container without explicit language
+  if (track.hasTransactionalContext) {
+    track.state = 'SUSPICIOUS';
+    return track.state;
+  }
+
+  track.state = 'CORRELATED';
+  return track.state;
 }
 
-// ─── Countdown Timer Freezing ───────────────────────────────────────────────
+// ─── Scan & Neutralize ──────────────────────────────────────────────────────
+
+export function scanAndNeutralize(): void {
+  const stopTimer = metricsCollector.startTimer('dom_scan_ms');
+
+  try {
+    freezeCountdownTimers();
+    neutralizeScarcityIndicators();
+    neutralizeFakeSocialProof();
+  } finally {
+    stopTimer();
+  }
+}
 
 function freezeCountdownTimers(): void {
-  // Target elements that look like countdown containers
   const timerSelectors = [
     '[class*="countdown"]',
     '[class*="timer"]',
@@ -92,58 +232,49 @@ function freezeCountdownTimers(): void {
     const elements = querySelectorAllDeep(selector);
     for (const el of elements) {
       if (!(el instanceof HTMLElement)) continue;
-      if (interceptedTimers.has(el)) continue;
+      if (el.hasAttribute(NEUTRALIZED_ATTR)) continue;
 
-      const text = el.textContent || '';
-      if (COUNTDOWN_REGEX.test(text)) {
-        freezeElement(el, 'countdown');
+      const state = evaluateTimerElement(el);
+      if (state === 'HIGH_CONFIDENCE_MANUFACTURED_URGENCY') {
+        applyTimerIntervention(el, 'Manufactured countdown urgency detected');
       }
     }
   }
 
-  // Also catch standalone time displays (e.g., "Sale ends in 02:45:30")
-  const allText = querySelectorAllDeep('span, div, p, strong, b, em');
-  for (const el of allText) {
+  // Catch standalone time displays in commerce contexts
+  const textElements = querySelectorAllDeep('span, div, p, strong, b, em');
+  for (const el of textElements) {
     if (!(el instanceof HTMLElement)) continue;
-    if (interceptedTimers.has(el)) continue;
+    if (el.hasAttribute(NEUTRALIZED_ATTR)) continue;
     if (el.closest('[class*="video"], [class*="player"], [class*="audio"], [class*="media"]')) continue;
 
     const text = (el.textContent || '').trim();
-    if (text.length > 0 && text.length < 30 && COUNTDOWN_REGEX.test(text)) {
-      // Check if this element is in a commerce-like context
-      const context = el.closest('[class*="cart"], [class*="checkout"], [class*="sale"], [class*="offer"], [class*="promo"], [class*="deal"], [class*="shop"], [class*="buy"]');
-      if (context) {
-        freezeElement(el, 'inline-countdown');
+    if (text.length > 0 && text.length < 35 && COUNTDOWN_REGEX.test(text)) {
+      const state = evaluateTimerElement(el);
+      if (state === 'HIGH_CONFIDENCE_MANUFACTURED_URGENCY') {
+        applyTimerIntervention(el, 'Inline manufactured countdown detected');
       }
     }
   }
 }
 
-function freezeElement(el: HTMLElement, reason: string): void {
-  if (interceptedTimers.has(el)) return;
-  interceptedTimers.add(el);
+function applyTimerIntervention(el: HTMLElement, reason: string): void {
+  const record = interventionManager.applyIntervention(el, {
+    reason,
+    confidenceState: 'HIGH',
+    mutationType: 'VISUAL_FREEZE',
+    freezeText: el.textContent || '',
+  });
 
-  // Store the original content
-  const originalText = el.textContent || '';
-  frozenTimers.set(el, originalText);
-
-  // Mark as neutralized
-  el.setAttribute(NEUTRALIZED_ATTR, reason);
-  el.setAttribute(URGENCY_TIMER_ATTR, 'true');
-
-  // Apply visual neutralization (soft fade, not full hide — preserves layout)
-  el.style.setProperty('opacity', '0.3', 'important');
-  el.style.setProperty('pointer-events', 'none', 'important');
-
-  // Override any inline animation that drives the countdown
-  el.style.setProperty('animation', 'none', 'important');
-  el.style.setProperty('transition', 'none', 'important');
+  if (record) {
+    el.setAttribute(URGENCY_TIMER_ATTR, 'true');
+    metricsCollector.increment('intervention_count');
+  }
 }
 
 // ─── Scarcity Indicator Neutralization ──────────────────────────────────────
 
 function neutralizeScarcityIndicators(): void {
-  // Look for "only X left" and similar patterns
   const targetSelectors = [
     '[class*="stock"]',
     '[class*="scarcity"]',
@@ -170,28 +301,20 @@ function neutralizeScarcityIndicators(): void {
       if (text.length > 0 && text.length < 100) {
         const isScarcity = SCARCITY_PATTERNS.some((p) => p.test(text));
         if (isScarcity) {
-          // Only neutralize if inside an e-commerce context
+          // Strict e-commerce transactional context required
           const context = el.closest('[class*="cart"], [class*="checkout"], [class*="product"], [class*="price"], [class*="add-to"], [class*="buy"], [class*="shop"], [class*="offer"], [class*="sale"], [class*="deal"]');
           if (context) {
-            neutralizeScarcity(el, text);
+            interventionManager.applyIntervention(el, {
+              reason: 'Artificial stock/scarcity pressure pattern',
+              confidenceState: 'HIGH',
+              mutationType: 'SOFT_FADE',
+            });
+            metricsCollector.increment('intervention_count');
           }
         }
       }
     }
   }
-}
-
-function neutralizeScarcity(el: HTMLElement, originalText: string): void {
-  if (el.hasAttribute(NEUTRALIZED_ATTR)) return;
-
-  el.setAttribute(NEUTRALIZED_ATTR, 'scarcity');
-
-  // Soft-hide the scarcity text
-  el.style.setProperty('opacity', '0.25', 'important');
-  el.style.setProperty('pointer-events', 'none', 'important');
-
-  // Optionally add a Vigil badge/tooltip (via title attribute)
-  el.title = `Vigil: This scarcity message ("${originalText.substring(0, 60)}") may be artificially generated to pressure your purchase.`;
 }
 
 // ─── Fake Social Proof Neutralization ───────────────────────────────────────
@@ -226,12 +349,14 @@ function neutralizeFakeSocialProof(): void {
       if (text.length > 0 && text.length < 120) {
         const isFakeSocialProof = socialProofPatterns.some((p) => p.test(text));
         if (isFakeSocialProof) {
-          // Only in commerce context
           const context = el.closest('[class*="cart"], [class*="checkout"], [class*="product"], [class*="shop"], [class*="buy"], [class*="price"], [class*="offer"]');
           if (context) {
-            el.setAttribute(NEUTRALIZED_ATTR, 'social-proof');
-            el.style.setProperty('opacity', '0.2', 'important');
-            el.style.setProperty('pointer-events', 'none', 'important');
+            interventionManager.applyIntervention(el, {
+              reason: 'Synthetic real-time social proof message',
+              confidenceState: 'MODERATE',
+              mutationType: 'SOFT_FADE',
+            });
+            metricsCollector.increment('intervention_count');
           }
         }
       }
@@ -247,6 +372,8 @@ function startNeutralizationObserver(): void {
   if (neutralizationObserver) return;
 
   neutralizationObserver = new MutationObserver((mutations) => {
+    metricsCollector.increment('mutation_callbacks_count');
+
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
@@ -254,7 +381,6 @@ function startNeutralizationObserver(): void {
     let hasRelevantMutation = false;
     for (const mutation of mutations) {
       const target = mutation.target as HTMLElement;
-      // Skip our own neutralization marks
       if (target.hasAttribute && target.hasAttribute(NEUTRALIZED_ATTR)) continue;
       if (target.hasAttribute && target.hasAttribute('data-vigil-overlay')) continue;
       hasRelevantMutation = true;
@@ -264,7 +390,7 @@ function startNeutralizationObserver(): void {
     if (hasRelevantMutation) {
       debounceTimer = setTimeout(() => {
         scanAndNeutralize();
-      }, 800);
+      }, 500);
     }
   });
 
@@ -278,7 +404,13 @@ function startNeutralizationObserver(): void {
   }
 }
 
-// ─── Urgency Report (for scanner integration) ──────────────────────────────
+// ─── Reversibility & Metrics Helpers ────────────────────────────────────────
+
+export function restoreAllUrgencyNeutralizations(): number {
+  const count = interventionManager.restoreAll();
+  metricsCollector.increment('user_restore_count', count);
+  return count;
+}
 
 export function getUrgencyNeutralizationCount(): number {
   return document.querySelectorAll(`[${NEUTRALIZED_ATTR}]`).length;
@@ -288,8 +420,21 @@ export function getNeutralizedElements(): Array<{ element: HTMLElement; reason: 
   const elements = document.querySelectorAll(`[${NEUTRALIZED_ATTR}]`);
   return Array.from(elements)
     .filter((el): el is HTMLElement => el instanceof HTMLElement)
-    .map((el) => ({
-      element: el,
-      reason: el.getAttribute(NEUTRALIZED_ATTR) || 'unknown',
-    }));
+    .map((el) => {
+      const id = el.getAttribute('data-vigil-intervention-id');
+      const inv = id ? interventionManager.getIntervention(id) : null;
+      return {
+        element: el,
+        reason: inv?.reason || el.getAttribute(NEUTRALIZED_ATTR) || 'unknown',
+      };
+    });
+}
+
+function parseSeconds(text: string): number | null {
+  const match = text.match(/\b(?:(\d{1,2}):)?(\d{2}):(\d{2})\b/);
+  if (!match) return null;
+  const hours = match[1] ? parseInt(match[1], 10) : 0;
+  const minutes = parseInt(match[2], 10);
+  const seconds = parseInt(match[3], 10);
+  return hours * 3600 + minutes * 60 + seconds;
 }

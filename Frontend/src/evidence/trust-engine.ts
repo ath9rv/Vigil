@@ -79,6 +79,14 @@ export class TrustEngine {
         observationId: id,
         collector: observation.collector,
         collectorVersion: observation.collectorVersion,
+        source: observation.provenance?.source,
+        detectorId: observation.provenance?.detectorId || observation.collector,
+        timestamp: observation.provenance?.timestamp || observation.timestamp,
+        frameId: observation.provenance?.frameId || 'main',
+        origin: observation.provenance?.origin,
+        evidenceType: observation.provenance?.evidenceType || observation.sourceType,
+        collectionMethod: observation.provenance?.collectionMethod,
+        rawObservation: observation,
       }
     };
 

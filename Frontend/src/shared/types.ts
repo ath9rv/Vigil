@@ -212,6 +212,15 @@ export interface ForensicReport {
   evidenceNodeIds: string[];
   temporalCorrelationIds: string[];
   eligibility: VerdictEligibility;
+  
+  // Phase 1: Observability & Calibration Enhancements
+  observed?: string[];
+  inferred?: string[];
+  intent?: 'UNKNOWN' | 'BENIGN' | 'SUSPICIOUS' | 'MALICIOUS_UNPROVEN';
+  confidenceState?: 'UNSUPPORTED' | 'LOW' | 'MODERATE' | 'HIGH' | 'CONFIRMED' | 'CONTESTED';
+  actionTaken?: string;
+  canActionBeReversed?: boolean;
+  why?: string;
 }
 
 export interface EvidenceGraphRef {
@@ -236,6 +245,17 @@ export interface FindingContext {
 
 // ─── Phase 5: Trust Engine Integration ────────────────────────────────────────
 
+export interface ObservationProvenance {
+  source: 'DOM' | 'NETWORK' | 'STORAGE' | 'POLICY' | 'DEFENDER' | 'TEST_LAB';
+  detectorId: string;
+  navigationId?: string;
+  timestamp: number;
+  frameId?: string;
+  origin?: string;
+  evidenceType: string;
+  collectionMethod?: string;
+}
+
 export interface RawObservation {
   id: string;
   tabId: number;
@@ -246,6 +266,7 @@ export interface RawObservation {
   payload: any;
   collector: string;
   collectorVersion: string;
+  provenance?: ObservationProvenance;
 }
 
 export interface TrustEngineResult {
