@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 package-lock.json.bak
 
@@ -6,6 +6,7 @@ package-lock.json.bak
 dist/
 build/
 *.tsbuildinfo
+*.zip
 
 # Test & Coverage artifacts
 test-results/
