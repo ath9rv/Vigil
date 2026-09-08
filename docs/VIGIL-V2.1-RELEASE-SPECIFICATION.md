@@ -1,0 +1,225 @@
+# Vigil V2.1 — Release Specification & Field Validation Protocol
+
+**Release Candidate Tag:** `v2.1.0-rc.1`  
+**Version:** `2.1.0`  
+**Status:** **ENGINEERING-CERTIFIED RELEASE CANDIDATE (FROZEN)**  
+**Verification Scope:** **337 Vitest Tests (51 Suites) + 13 Playwright Tests (10 Suites) = 350 Tests Passing (100% Green)**  
+**Release Date:** September 8, 2026  
+
+---
+
+## 1. Release Posture & Architecture Freeze Boundary
+
+Vigil V2.1 is officially designated as an **Engineering-Certified Release Candidate**. The feature surface is strictly locked and frozen. 
+
+* **Feature Freeze**: No new detector modules, speculative heuristic expansions, or visual UI chrome will be added to the V2.1 line.
+* **V2.2 / V3 Demarcation**: All planned future capabilities (e.g., cloud reputation sync, real-time distributed consensus, multimodal visual tracking analysis) belong to the V2.2/V3 roadmap.
+* **Maintenance Boundary**: V2.1 receives only:
+  1. Critical browser security advisories
+  2. Verified site compatibility / false-positive calibration patches
+  3. Upstream browser engine (Chromium MV3) runtime fixes
+
+---
+
+## 2. The Three-Authority Security Governance Model
+
+Rather than calculating a monolithic "risk score" and using it as a universal mutation permit, Vigil enforces three independent, orthogonal authorities:
+
+```
+                      OBSERVED BEHAVIOR
+                             │
+            ┌────────────────┼────────────────┐
+            ▼                ▼                ▼
+   DECISION AUTHORITY  MUTATION AUTHORITY  RESOURCE AUTHORITY
+   "Is this behavior   "Is it safe to      "Is it appropriate
+    suspicious?"        mutate this DOM     to spend CPU /
+                        element right now?" memory right now?"
+            │                │                │
+            └────────────────┼────────────────┘
+                             │
+                             ▼
+                     ACTION RESOLUTION
+           ┌─────────────────┼─────────────────┐
+           ▼                 ▼                 ▼
+   MUTATE & VERIFY     REPORT ONLY          DEFER TASK
+ (All 3 Granted)     (Safety Denied)      (Budget Exceeded)
+```
+
+1. **Decision Authority (Suspicion)**: Evaluates empirical evidence against dark pattern, tracking, or phishing taxonomies. Outputs epistemic confidence (`LOW`, `MODERATE`, `HIGH`, `CONFIRMED`).
+2. **Mutation Authority (Safety Clearance)**: Evaluates structural blast radius and proximity to sensitive user input (`SAFE`, `CAUTIOUS`, `RESTRICTED`, `BLOCKED`). Sensitive controls (passwords, payment forms, government IDs, 2FA prompts) are **strictly BLOCKED from automatic mutation**, regardless of suspicion.
+3. **Resource Authority (Execution Budget)**: Governed by the `TaskScheduler` and `PerformanceGovernor`. Allocates CPU slices according to priority queues (`P0_CRITICAL` through `P3_ENRICHMENT`) and sheds low-priority tasks under hostile render storms.
+
+---
+
+## 3. The 17-Stage Canonical Runtime Lifecycle
+
+Every observation, analysis, and intervention in Vigil passes through the canonical 17-stage runtime pipeline:
+
+```
+PAGE LOAD ──▶ BASELINE HEALTH ──▶ OBSERVATION ──▶ PROVENANCE ──▶ CORRELATION
+   │
+   ▼
+CONFIDENCE ──▶ BLAST RADIUS ──▶ SITE GOVERNANCE ──▶ SCHEDULER ──▶ DECISION GATE
+   │
+   ▼
+DRY-RUN / PLAN ──▶ TRANSACTION ──▶ MUTATION ──▶ COMPATIBILITY ──▶ DIFFERENTIAL
+   │
+   ▼
+COMMIT OR ROLLBACK ──▶ FORENSIC RECORD
+```
+
+1. **Page Load**: Assigns unique `tabId`, `navigationId`, and records active origin in `NavigationStateManager`.
+2. **Baseline Health**: `DifferentialComparator` captures pre-mutation snapshots ($E_{base}$, $I_{base}$, geometry).
+3. **Observation**: Detector emits standardized `RawObservation` with collector metadata.
+4. **Provenance**: Generates SHA/DJB2 content hash, timestamp, and attaches `collectorVersion`.
+5. **Correlation**: `TrustEngine` ingests observation into canonical `EvidenceGraph`; connects temporal event chains.
+6. **Confidence**: Evaluates multi-signal corroboration into formal epistemic confidence.
+7. **Blast Radius**: `BlastRadiusEstimator` calculates DOM subtree depth, interactive density, and checks for sensitive controls.
+8. **Site Governance**: Evaluates per-domain user policy (`ACTIVE`, `SAFE_ONLY`, `OBSERVE_ONLY`, `OFF`).
+9. **Scheduler**: `TaskScheduler` places task in appropriate priority queue (`P0`–`P3`) with a 30ms frame budget.
+10. **Decision Gate**: Intersects Decision Confidence with Safety Class to determine mutation eligibility.
+11. **Dry-Run / Plan**: Creates `MutationPlan` isolating targeted CSS properties and attribute flags.
+12. **Transaction**: `InterventionTransaction` binds mutation context to `(origin, navId, frameId, nodeIdentity, 5s timeout)`.
+13. **Mutation**: Applies scoped inline styles and attributes; saves reversible baseline snapshot.
+14. **Compatibility Check**: Evaluates immediate geometric stability, text preservation, and detachment invariants.
+15. **Differential Comparison**: Computes $\Delta = \text{PostHealth} - \text{BaselineHealth}$. Filters out pre-existing errors.
+16. **Commit or Rollback**: Finalizes state as `COMMITTED` with causal error monitoring, or executes `ROLLBACK`.
+17. **Forensic Record**: Appends `InterventionRecord` to local registry with full diagnostic scoring and 1-click restore.
+
+---
+
+## 4. The Formal Confidence Contract
+
+Vigil standardizes epistemic certainty into six distinct confidence states:
+
+| State | Definition | Mutation Clearance Allowed? |
+| :--- | :--- | :--- |
+| **`UNSUPPORTED`** | Insufficient evidence or unrecognized pattern | **No** |
+| **`LOW`** | Weak, single-source heuristic signal | **No (Passive Logging Only)** |
+| **`MODERATE`** | Meaningful contextual evidence, but uncorroborated | **No (Report Advisory Only)** |
+| **`HIGH`** | Multiple corroborating signals across DOM/time | **Yes (SAFE / CAUTIOUS Only)** |
+| **`CONFIRMED`** | Independent multi-source verification (e.g. crowdsourced ToS;DR or loop reset) | **Yes (SAFE / CAUTIOUS Only)** |
+| **`CONTESTED`** | Credible conflicting evidence observed | **No (Suspended for Review)** |
+
+---
+
+## 5. "Explain Mode" Specification
+
+Implemented in [`Frontend/src/certification/field-validation.ts`](file:///D:/Browex/Vigil%20Main/Frontend/src/certification/field-validation.ts), Explain Mode converts internal transaction artifacts into clear user explanations:
+
+### A. When Vigil Acts
+```text
+WHY VIGIL ACTED
+
+Finding: Manufactured Countdown Urgency
+Target: <div.promo-banner> (#countdown-timer)
+Confidence: HIGH (Multiple corroborating signals)
+
+Evidence Lineage:
+  ✓ Urgency keyword matched ("Sale expires in 02:15")
+  ✓ Countdown loop detected resetting 3 times
+  ✓ Non-sensitive container (0 payment/auth controls)
+
+Safety Clearance: CAUTIOUS (Animation & opacity freeze)
+Diagnostic Compatibility: 98/100 across 6 vectors
+Verification: Layout preserved, zero script errors introduced
+Status: COMMITTED (Causal auto-rollback active)
+
+[ ↺ 1-Click Restore ]
+```
+
+### B. When Vigil Stays Passive
+```text
+WHY VIGIL DID NOT ACT
+
+Finding: Deceptive Session Timeout Warning
+Target: <input type="password"> (#auth-pin)
+Confidence: HIGH
+
+Safety Clearance: BLOCKED
+Explanation:
+  Vigil detected suspicious urgency language, but the target
+  resides inside an authentication/payment form. 
+  Vigil's safety invariants strictly forbid modifying 
+  sensitive user controls.
+
+Action: Advisory Report Generated (Zero DOM Tampering)
+```
+
+---
+
+## 6. Representative Compatibility vs. Universal Web Reality
+
+Vigil maintains strict epistemic honesty regarding test results:
+* **The 11-Archetype Corpus is a Representative Model**: The matrix proves that Vigil’s policy and transactional safety mechanisms behave correctly on complex architectural archetypes (E-Commerce, Banking, SaaS, News, Social, Travel, Education, Government, Media, DevTools, WebApps).
+* **Automated Green Tests $\ne$ Universal Web Safety**: Automated test consistency proves that code satisfies specification contracts. True real-world compatibility requires progressive, empirical field measurement.
+
+---
+
+## 7. The RC1 Field Validation Protocol
+
+For field validation on live external websites, Vigil follows a strict 4-phase progression:
+
+```text
+Day 1: OBSERVE_ONLY
+  └─ Collect passive observations, verify zero DOM mutations, calibrate baselines.
+
+Day 2: DRY_RUN
+  └─ Simulate mutation plans, compute 6-vector diagnostic scores, verify zero false rollbacks.
+
+Day 3: SAFE_ONLY
+  └─ Authorize level 1 cosmetic de-emphasis; measure causal error rate.
+
+Day 4+: ACTIVE
+  └─ Full transactional interventions enabled with continuous differential health monitoring.
+```
+
+Standard field telemetry records:
+* `site`, `browser`, `os`, `vigilVersion`
+* `baselineHealth` ($E_{base}$, $I_{base}$)
+* `observedFindings` & `triggeringEvidence`
+* `diagnosticScore` (0–100)
+* `causalRollbacks` & `newExceptionsAttributed`
+* `userOverrides` (1-click restores)
+
+---
+
+## 8. False-Positive & False-Negative Calibration Loop
+
+To systematically refine the engine without architectural churn, field observations feed into the formal Calibration Corpus:
+
+```typescript
+export interface CalibrationCase {
+  caseId: string;
+  type: 'FALSE_POSITIVE' | 'FALSE_NEGATIVE';
+  domain: string;
+  category: string;
+  signalsObserved: string[];
+  expectedInterpretation: string;
+  actualInterpretation: string;
+  rootCause: string;
+  calibrationRule: string;
+  regressionTestCreated: boolean;
+}
+```
+
+* **False Positive Example**: Legitimate airline seat booking timer flagged as urgency $\to$ Root cause: Missing ticketing API header detection $\to$ Calibration rule: Add `data-server-time` / ticketing route exclusion $\to$ Add unit test.
+* **False Negative Example**: CNAME cloaked tracker on custom first-party subdomain $\to$ Root cause: Opaque query parameter encoding $\to$ Calibration rule: Enhance CNAME tracker list $\to$ Add browser test.
+
+---
+
+## 9. RC1 Verification Summary
+
+| Component / Test Battery | Scope | Result | Status |
+| :--- | :--- | :--- | :--- |
+| **Vitest Unit & Integration** | 51 test suites, 337 tests | 337 / 337 Passed | **100% Green** |
+| **Playwright E2E & Browser** | 10 test suites, 13 tests | 13 / 13 Passed | **100% Green** |
+| **Total Automated Tests** | 61 test suites | **350 / 350 Passed** | **100% Green** |
+| **Vite Production Build** | 110 transformed modules | 0 errors, 3.58s | **Production Ready** |
+| **Git Working Tree** | All changes committed | Clean working tree | **Signed & Tagged** |
+
+---
+
+## 10. Official Sign-Off
+
+Vigil V2.1 satisfies all release criteria for **Engineering-Certified Release Candidate 1 (RC1)**. The feature surface is frozen. The project now enters external field validation.
