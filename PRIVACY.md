@@ -59,7 +59,7 @@ In compliance with Chromium Manifest V3 least-privilege standards, Vigil request
 | `storage` | Saves user preferences, site allowlists/denylists, and local heuristic scores in `chrome.storage.local`. All data remains strictly on the user's device. |
 | `cookies` | Allows read-only inspection of cookie metadata (expiration, flags, and entropy) to detect unauthorized pre-consent marketing trackers. Raw cookie values are never persisted or transmitted. |
 | `scripting` | Programmatically registers the isolated anti-fingerprinting defense script (`defender.js`) into the main world to neutralize aggressive Canvas/Audio tracking probes. |
-| `privacy` | Permits configuring browser privacy settings (such as WebRTC IP handling policy and network prediction controls) when the user enables Vigil's hardened privacy mode. |
+| `privacy` | Permits configuring `chrome.privacy.network.webRTCIPHandlingPolicy` to `'default_public_interface_only'` to prevent STUN/ICE queries from leaking the user's private LAN IP address or bypassing VPN interfaces. Vigil does not access or modify any other browser privacy settings. |
 | `activeTab` | Grants temporary elevated tab access when the user interacts with the extension popup (e.g., to highlight detected dark patterns or extract terms of service text). |
 | `notifications` | Displays local, on-device desktop alerts when high-confidence credential phishing or severe malicious threats are intercepted. |
 

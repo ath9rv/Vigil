@@ -64,9 +64,9 @@ Safeguard: All stored state remains strictly on the user's local disk. Vigil con
 
 ### 7. `privacy`
 ```text
-Required to provide users with optional browser-level privacy hardening controls via the chrome.privacy API, such as disabling WebRTC non-proxied UDP leaks and disabling predictive network pre-fetching.
+Required specifically to configure chrome.privacy.network.webRTCIPHandlingPolicy to 'default_public_interface_only'. This directly supports Vigil's anti-fingerprinting and identity protection purpose by preventing WebRTC local IP leakage. Without this setting, hostile websites and third-party trackers execute client-side STUN/ICE queries to bypass VPN tunnels and discover the user's private local LAN IP addresses (e.g. RFC 1918 subnets), creating an immutable network device fingerprint.
 
-Safeguard: Settings changes are only applied when explicitly activated by the user and can be toggled off at any time.
+Safeguard: Vigil's use of the chrome.privacy API is strictly confined to WebRTC network interface isolation. Vigil does not read, modify, or monitor browser history settings, autofill, passwords, or any other browser-level privacy configurations.
 ```
 
 ### 8. `activeTab`
