@@ -11,7 +11,7 @@ import { TrustEngine } from '../evidence/trust-engine';
 import { navigationState } from '../background/navigation-state';
 import { RawObservation } from '../shared/types';
 
-describe('Vigil V2.1 RC1 Certification: End-to-End Lifecycle & Canonical Scenarios', () => {
+describe('Vigil V5 Certification: End-to-End Lifecycle & Canonical Scenarios', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     interventionManager.clear();

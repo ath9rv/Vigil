@@ -1,5 +1,5 @@
 ================================================================================
-              VIGIL v2.1 — QUICK START GUIDE
+              VIGIL v5.0 — QUICK START GUIDE
 ================================================================================
 
   Your browser, with receipts.
@@ -8,7 +8,7 @@
   behavioral DNA, and audits predatory legal terms — 100% locally with
   zero cloud telemetry.
 
-  Version:    2.1.0-rc.1 (Feature-Frozen Release Candidate)
+  Version:    5.0.0 (Production Release)
   License:    Apache 2.0
   Repository: https://github.com/ath9rv/Vigil
 
@@ -124,5 +124,5 @@
 
 
 ================================================================================
-                     PROTECTED BY VIGIL v2.1
+                     PROTECTED BY VIGIL v5.0
 ================================================================================
