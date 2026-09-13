@@ -39,6 +39,8 @@ export type SeverityLevel = 'INFO' | 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED' | '
 export type ConfidenceLevel = 'OBSERVED' | 'SUGGESTIVE' | 'CONFIRMED' | 'INCONCLUSIVE';
 export type ReviewStatus = 'CONFIRMED' | 'REVIEW_NEEDED' | 'INCONCLUSIVE';
 
+import type { CanonicalForensicReport } from './forensic-report/types';
+
 export interface Finding {
   id: string;
   category: FindingCategory;
@@ -55,4 +57,7 @@ export interface Finding {
   
   // The immutable evidence backing this finding
   evidence: Evidence;
+
+  // Layer 3 Canonical Forensic Report (Explain Mode)
+  report?: CanonicalForensicReport;
 }

@@ -1,199 +1,143 @@
-<div align="center">
+# Vigil
 
-# 🛡️ VIGIL
+## Your browser, with receipts.
 
-### Your browser, with receipts.
+Vigil is a privacy and browser-security system designed to help people understand suspicious website behavior.
 
-[![Release](https://img.shields.io/badge/Release-v2.1.0--rc.1-00E5FF.svg)](docs/release/V2.1-RC1-CERTIFICATION.md)
-[![Tests](https://img.shields.io/badge/Tests-370%2F370%20Passing-00E676.svg)](#automated-testing)
-[![Manifest V3](https://img.shields.io/badge/Chromium-Manifest%20V3-FFD600.svg)](Frontend/manifest.json)
-[![Zero Telemetry](https://img.shields.io/badge/Telemetry-Zero-purple.svg)](PRIVACY.md)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+Instead of treating the web as simply **safe** or **unsafe**, Vigil builds an evidence-backed explanation of what happened, considers competing explanations, tests bounded counterfactuals, and shows the user why a conclusion was reached.
 
-**An open-source cognitive firewall for Chromium that detects dark patterns, neutralizes fingerprinting, reverse-engineers cookie DNA, and audits predatory legal terms — 100% on-device, zero cloud telemetry.**
+> **Vigil first learned how to know what it observed.**
+> **V4 is about learning how to reason about why it happened.**
 
-[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Privacy Model](#privacy-model)
+## What Vigil does
 
-</div>
+Vigil observes browser activity such as page changes, network/security signals, privacy disclosures, and suspicious interface behavior. It then evaluates those observations through a layered reasoning pipeline.
 
----
+The goal is not to accuse a website because something looks unusual. The goal is to determine what the available evidence actually supports.
 
-## The Problem
+### The epistemic ladder
 
-The modern web is an adversarial environment:
-
-- **Dark patterns** manufacture fake urgency, hide fees inside checkout flows, and pre-tick subscription traps.
-- **Fingerprinting scripts** track you across sessions without cookies using Canvas, WebGL, AudioContext, and hardware enumeration.
-- **Predatory legal terms** bury forced arbitration clauses, class-action waivers, and blanket AI training rights inside 40-page ToS contracts nobody reads.
-- **Tracker networks** disguise themselves via CNAME cloaking and first-party subdomain tricks to evade traditional blocklists.
-
-Traditional extensions either rely on static blocklists (easily bypassed) or naively delete page elements (breaking checkouts and layouts). Vigil was built to do better.
-
----
-
-## What Vigil Does
-
-| Layer | Capability | How |
-|:---:|:---|:---|
-| 🧬 | **Behavioral Cookie DNA** | Measures Shannon entropy, JWT structure, cross-site recurrence, and security flags to distinguish auth sessions from tracking IDs |
-| 🛡️ | **5-Module Dark Pattern Scanner** | Detects deceptive commerce (M1), typosquatting & credential theft (M2), suppressed consent (M3), attention addiction (M4), and manufactured social proof (M5) across DOM and Shadow DOM |
-| ⚖️ | **19-Dimension Legal Auditor** | Offline NLP engine parsing arbitration, data sale, liability, AI training, and 15 more risk vectors with negation precision — then highlights the exact clause on the page |
-| 🕶️ | **Stealth Anti-Fingerprinting** | MAIN-world `defender.js` perturbs Canvas/WebGL/Audio readbacks while passing CreepJS native-code lie detection checks |
-| ⚡ | **Declarative Network Shield** | 100+ tracker domains blocked, URL tracking params stripped (`utm_*`, `fbclid`, `gclid`), HTTP→HTTPS upgrades — all via Chrome's native DNR engine |
-| 🔒 | **WebRTC IP Leak Protection** | Forces `default_public_interface_only` policy to prevent STUN/ICE local IP discovery through VPN tunnels |
-
----
-
-## How It Works
-
-Vigil separates **observation** from **action** through two locked architectural invariants:
-
-```
-  Detection Authority ≠ Mutation Authority
-  Evidence ≠ Intent
+```text
+OBSERVE
+  ↓
+VERIFY
+  ↓
+CORRELATE
+  ↓
+TEST ALTERNATIVES
+  ↓
+CHECK COUNTERFACTUALS
+  ↓
+MEASURE AMBIGUITY
+  ↓
+ASK MODEL (only when necessary)
+  ↓
+RECONCILE
+  ↓
+AUTHORITATIVE DECIDE
+  ↓
+EXPLAIN
 ```
 
-Finding a suspicious element grants zero right to modify it. Every intervention must independently pass a structural safety gate.
+### The core architectural rule
 
-```
-  OBSERVE              DECIDE               ACT                GOVERN
-┌──────────┐        ┌──────────┐        ┌──────────┐       ┌───────────┐
-│ Scanners │──────► │ Trust    │──────► │ Two-Axis │─────► │ Differen- │
-│ & Moni-  │        │ Engine & │        │ Gate &   │       │ tial DOM  │
-│ tors     │        │ Evidence │        │ Atomic   │       │ Health    │
-│          │        │ Graph    │        │ Transact │       │ Check     │
-└──────────┘        └──────────┘        └──────────┘       └───────────┘
-     ▲                                       │                   │
-     │                                       ▼                   ▼
-     │                                  1-Click Restore    Auto-Rollback
-     └──────────────── Raw facts only, never conclusions ─────────┘
-```
+> **V4 is an inference consumer, never an evidence authority.**
 
-Every action is atomic, snapshotted, and reversible. If a post-intervention health check detects breakage, Vigil rolls back automatically.
+The deterministic TrustEngine remains the sole authority for canonical verdicts. Probabilistic reasoning is an optional advisory layer that can help resolve genuine ambiguity, but it cannot create evidence, mutate the evidence graph, or directly manufacture a Finding or Verdict.
 
----
+## Current architecture
 
-## Quick Start
-
-### Option A: Load Pre-Built Extension (30 seconds)
-
-1. Clone this repository
-2. Open `chrome://extensions/` in Chrome, Brave, or Edge
-3. Enable **Developer mode** (top-right toggle)
-4. Click **Load unpacked** → select `Frontend/dist`
-5. Pin Vigil to your toolbar
-
-> 📘 See [`HOW_TO_USE.txt`](HOW_TO_USE.txt) for a detailed walkthrough with screenshots.
-
-### Option B: Build From Source
-
-```bash
-# Install dependencies
-npm install --prefix Frontend
-npm install --prefix tests/browser
-
-# Build production extension
-npm run build
-
-# Load Frontend/dist as unpacked in chrome://extensions/
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ LAYER 3 — PRESENTATION & ACTION                                      │
+│ Forensic reports • Explain Mode • user-facing explanations            │
+│ Intervention execution • structured investigation export              │
+├────────────────────────────────────────────────────────────────────────┤
+│ LAYER 2 — V4 COGNITIVE REASONING                                     │
+│ Temporal events • causal candidates • competing hypotheses            │
+│ Counterfactual evaluation • bounded NLI assistance                   │
+├────────────────────────────────────────────────────────────────────────┤
+│ LAYER 1 — V2.1 TRUST SUBSTRATE                                       │
+│ RawObservation • provenance • EvidenceGraph • claims                  │
+│ contradictions • VerdictResolver                                     │
+├────────────────────────────────────────────────────────────────────────┤
+│ LAYER 0 — RUNTIME SAFETY                                             │
+│ MV3 lifecycle • governor • resource ceilings • UI isolation           │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Requirements:** Node.js v20+ · npm v10+
+## What is complete
 
----
+The current engineering baseline includes:
 
-## Protection Modes
+- Hardened V2.1 trust substrate and security invariants.
+- Immutable observation contracts and read-only V4 evidence boundaries.
+- Deterministic temporal and hypothesis reasoning.
+- Bounded counterfactual evidence evaluation.
+- Ambiguity gating before probabilistic reasoning.
+- Local NLI/ONNX Web Worker runtime integration with admission controls.
+- Immutable forensic report generation and Explain Mode.
+- Adversarial browser validation in real Chromium.
+- Chromium performance and resource profiling with repeated measurements.
 
-| Mode | Scans | Intervenes | Rollback | Use Case |
-|:---|:---:|:---:|:---:|:---|
-| **Active** (default) | ✅ | ✅ Safe + Cautious | ✅ | Full autonomous defense |
-| **Safe Only** | ✅ | ✅ Safe only | ✅ | Conservative browsing |
-| **Observe Only** | ✅ | ❌ Dry run | ℹ️ Diagnostic | Audit without changes |
-| **Off** | ❌ | ❌ | ❌ | Bypassed |
+The latest documented regression state is **96 frontend test files / 500 tests passing**, **27/27 Chromium browser specifications passing**, **0 TypeScript errors**, and a successful production Vite build.
 
----
+These figures describe the current recorded engineering baseline; they are not a universal claim about every website or every machine.
 
-## Privacy Model
+## Product direction
 
-**Vigil is 100% on-device by default.** No browsing history, keystrokes, form inputs, or credentials ever leave your machine.
+The technical engine is now treated as a certified foundation. The next phase is product and real-world validation rather than another major reasoning subsystem.
 
-- **Zero analytics SDKs** — no Google Analytics, Mixpanel, Sentry, or PostHog
-- **Zero tracking IDs** — no cross-device fingerprints or advertising identifiers
-- **Zero background egress** — the extension makes no network requests during normal browsing
-- **Explicit consent for optional features** — the ToS;DR crowdsourced legal lookup is off by default and gated by a non-bypassable call-site consent check before any network socket opens
+### Milestone 5 — Product & Real-World Validation
 
-Full details: [`PRIVACY.md`](PRIVACY.md) · Permission justifications: [`docs/security/CHROME_WEB_STORE_JUSTIFICATIONS.md`](docs/security/CHROME_WEB_STORE_JUSTIFICATIONS.md)
+**Phase 1 — Product & UX hardening**
+- First-run onboarding and calm zero-state.
+- Clear plain-English explanations.
+- User feedback / misclassification reporting.
+- Accessibility and responsive popup polish.
 
----
+**Phase 2 — Wild-web acceptance testing**
+- Controlled runs against real, complex websites.
+- React/Next.js hydration and SPA navigation.
+- Shadow DOM and client-side routing behavior.
+- False-positive calibration on legitimate promotions, pricing, consent, and reservation flows.
 
-## Automated Testing
+**Phase 3 — Release & store hardening**
+- Permission and manifest audit.
+- Privacy documentation and offline-processing guarantees.
+- Chrome Web Store packaging and release process.
 
-```bash
-# 357 Vitest unit & integration tests (52 suites)
-npm test
+No new detector or major reasoning layer is planned in this phase unless real-world evidence shows a clear need.
 
-# 13 Playwright browser acceptance tests in live Chromium
-npm run test:browser
+## Trust philosophy
 
-# Full verification battery
-npm run test:all
+Vigil separates three things that are often conflated:
+
+```text
+Model Assessment Confidence
+        ≠
+Vigil Epistemic Confidence
+        ≠
+Canonical Verdict
 ```
 
-Test coverage includes adversarial mutation storms (10,000 mutations/s), cross-navigation evidence isolation, CreepJS lie detection bypass, CNAME cloaking resistance, and an 11-category real-world site compatibility corpus.
+The model can help interpret language. The TrustEngine evaluates the broader evidence. The VerdictResolver owns the final canonical verdict.
 
----
+> **Vigil does not let intelligence create authority.**
 
-## Project Structure
+## Documentation map
 
-```
-Vigil/
-├── Frontend/                    # Chromium extension (Manifest V3)
-│   ├── src/
-│   │   ├── background/          # Service worker, message router, fast-lane alerts
-│   │   ├── content-scripts/     # DOM scanners, urgency neutralizer, defender
-│   │   ├── evidence/            # TrustEngine, EvidenceGraph, temporal correlator
-│   │   ├── intervention/        # Blast radius, transactions, auto-rollback
-│   │   ├── legal-auditor/       # NLP classifier, ToS;DR client, ML pipeline
-│   │   ├── network/             # Cookie DNA, behavioral scorer, tracker stats
-│   │   ├── observability/       # Performance governor, scheduler, metrics
-│   │   ├── popup/               # React 18 UI, onboarding, explain mode
-│   │   └── shared/              # Types, constants, storage, URL security
-│   ├── rules/                   # Declarative Net Request JSON rulesets
-│   ├── dist/                    # Production build output
-│   └── manifest.json
-├── tests/
-│   ├── browser/                 # Playwright E2E test scenarios
-│   └── adversarial/             # Local HTTP fixture server
-├── docs/                        # Architecture, release, security, testing docs
-├── PRIVACY.md                   # Zero-telemetry privacy policy
-├── SECURITY.md                  # Vulnerability disclosure policy
-├── CHANGELOG.md                 # Release history
-├── HOW_TO_USE.txt               # Plain-text quick start guide
-└── LICENSE                      # Apache 2.0
-```
+- `docs/ARCHITECTURE.md` — canonical architecture and governing doctrine.
+- `docs/EVOLUTION.md` — engineering progression and milestone record.
+- `docs/ROADMAP.md` — current product/release roadmap.
+- `docs/performance/` — performance budgets, Chromium baselines, certification.
+- `docs/security/` — security and epistemic invariants, threat model.
+- `docs/testing/` — test coverage and adversarial validation.
+- `docs/reasoning/` — NLI and reasoning specifications.
+- `docs/product/` — user-facing product principles and validation plan.
 
----
+## Status
 
-## Known Limitations
+**Vigil V4 technical engine: certified foundation.**
 
-- **Closed Shadow DOMs** — browsers restrict content script access to closed shadow roots by design
-- **Canvas-rendered UIs** — non-DOM applications (e.g. WebGL games) cannot have text elements inspected
-- **Offline-first** — Vigil avoids external reputation APIs for privacy; novel zero-day domains rely on local heuristic detection
-
----
-
-## Security & Disclosure
-
-We treat security vulnerabilities with utmost priority. See [`SECURITY.md`](SECURITY.md) for confidential reporting guidelines, response SLAs, and supported versions.
-
----
-
-## License
-
-Apache License 2.0 — see [`LICENSE`](LICENSE) for terms.
-
----
-
-<div align="center">
-<sub>Built with conviction that privacy tools should never become surveillance tools.</sub>
-</div>
+The next work is to turn that foundation into a product that ordinary people can understand, trust, and use on the open web.

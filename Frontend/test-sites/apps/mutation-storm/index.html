@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigil Adversarial Lab — Mutation Storm Churn</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #1e293b; }
+    .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; background: #fff; }
+    .btn { background: #dc2626; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-right: 0.5rem; }
+    .btn-secondary { background: #64748b; }
+    #metrics { margin-top: 1rem; font-family: monospace; background: #f8fafc; padding: 1rem; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Vigil Adversarial Lab: Hostile Mutation Storm</h1>
+  <p>Generates rapid bursts of up to 10,000 DOM mutations (detached nodes, attribute churn, observer flooding) to stress test Vigil's Adaptive Performance Governor.</p>
+
+  <div class="card">
+    <button class="btn" id="btnStartStorm">Trigger 10,000 Mutation Burst</button>
+    <button class="btn btn-secondary" id="btnReset">Reset Target</button>
+    <div id="metrics">Ready. Mutations fired: 0</div>
+    <div id="targetContainer" style="margin-top: 1rem; max-height: 200px; overflow: hidden; opacity: 0.5;"></div>
+  </div>
+
+  <script>
+    const target = document.getElementById('targetContainer');
+    const metrics = document.getElementById('metrics');
+    let totalMutations = 0;
+
+    function runMutations(count) {
+      const start = performance.now();
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        el.className = 'storm-node-' + i;
+        el.setAttribute('data-churn-id', String(i));
+        el.textContent = 'churn-' + i;
+        fragment.appendChild(el);
+      }
+      target.appendChild(fragment);
+      totalMutations += count;
+      const elapsed = Math.max(1, Math.round(performance.now() - start));
+      const rate = Math.round((count / elapsed) * 1000);
+      metrics.textContent = 'Storm complete! ' + totalMutations + ' mutations in ' + elapsed + 'ms (' + rate + ' mut/s).';
+      return { count, elapsed, rate };
+    }
+
+    window.triggerMutations = runMutations;
+
+    document.getElementById('btnStartStorm').addEventListener('click', () => {
+      runMutations(10000);
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      target.innerHTML = '';
+      totalMutations = 0;
+      metrics.textContent = 'Target cleared. Ready.';
+    });
+  </script>
+</body>
+</html>

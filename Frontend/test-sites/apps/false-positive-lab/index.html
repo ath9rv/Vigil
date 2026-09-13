@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigil Adversarial Lab — False-Positive Verification Suite</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 850px; margin: 2rem auto; padding: 0 1rem; color: #1e293b; }
+    .control-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; background: #fff; margin-bottom: 1.5rem; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; background: #dcfce7; color: #166534; }
+    .btn-consent { background: #1e293b; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Vigil Adversarial Lab: False-Positive Controls</h1>
+  <p>Proves that legitimate e-commerce patterns, shipping selections, tax disclosures, and neutral consent banners produce <strong>ZERO false accusations</strong>.</p>
+
+  <!-- Control 1: Itemized Regional Tax -->
+  <div class="control-card">
+    <span class="badge">Control 1: Itemized Tax</span>
+    <h3>Checkout with California Regional Sales Tax</h3>
+    <p>Base price: $50.00 | CA Sales Tax (7.25%): $3.63 | Total: $53.63</p>
+    <small>Vigil Result: Tax explicitly itemized post-address entry. Zero deceptive findings.</small>
+  </div>
+
+  <!-- Control 2: User-Selected Shipping -->
+  <div class="control-card">
+    <span class="badge">Control 2: Explicit Shipping Tier</span>
+    <h3>User-Selected Overnight Express Shipping</h3>
+    <div>
+      <label><input type="radio" name="shipping" checked /> Standard Ground (Free) — $50.00</label><br/>
+      <label><input type="radio" name="shipping" /> Priority Express (+$15.00) — $65.00</label>
+    </div>
+    <small>Vigil Result: User interaction explicitly accounts for price delta. Zero deceptive findings.</small>
+  </div>
+
+  <!-- Control 3: Responsive Viewport Shift -->
+  <div class="control-card">
+    <span class="badge">Control 3: Responsive Layout Shift</span>
+    <h3>Mobile Viewport Cart Restructuring</h3>
+    <p>Viewport resize from 1440px to 390px reorganizes cart into bottom sheet drawer with zero price mutations.</p>
+    <small>Vigil Result: Structural reorganization detected as non-deceptive responsive shift.</small>
+  </div>
+
+  <!-- Control 4: Legitimate Reservation Timer -->
+  <div class="control-card">
+    <span class="badge">Control 4: Monotonic Reservation Hold</span>
+    <h3>Live Concert Ticket Hold: <span id="holdTimer">08:45</span></h3>
+    <p>Timer is tied to an active server-side reservation epoch; monotonically decreases across reloads.</p>
+    <small>Vigil Result: Monotonic decrease verified. Zero fake-scarcity findings.</small>
+  </div>
+
+  <!-- Control 5: Symmetrical Neutral Cookie Banner -->
+  <div class="control-card">
+    <span class="badge">Control 5: Neutral CMP</span>
+    <h3>Cookie & Privacy Choices</h3>
+    <p>We respect your privacy. Choose your preferences below.</p>
+    <button class="btn-consent">Accept All</button>
+    <button class="btn-consent">Reject All</button>
+    <br/><br/>
+    <small>Vigil Result: Identical styling, equal visual prominence, single-click reject. Zero dark pattern findings.</small>
+  </div>
+</body>
+</html>

@@ -15,6 +15,7 @@ export interface AmbientAlertOptions {
 let hostElement: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
 const activeAlerts = new Map<string, HTMLElement>();
+export const MAX_ACTIVE_AMBIENT_ALERTS = 3;
 
 function ensureHost(): ShadowRoot {
   if (!hostElement || !document.contains(hostElement)) {
@@ -26,7 +27,8 @@ function ensureHost(): ShadowRoot {
     hostElement.style.zIndex = '2147483647';
     hostElement.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     
-    shadowRoot = hostElement.attachShadow({ mode: 'open' });
+    // Strict closed Shadow DOM prevents host page scripts from inspecting or tampering with the shield
+    shadowRoot = hostElement.attachShadow({ mode: 'closed' });
     
     const style = document.createElement('style');
     style.textContent = `
@@ -150,6 +152,14 @@ export function showAmbientAlert(options: AmbientAlertOptions): void {
   // Prevent duplicate alert by ID
   if (activeAlerts.has(options.id)) return;
 
+  // Enforce bounded alert ceiling: evict oldest alert if queue is full
+  if (activeAlerts.size >= MAX_ACTIVE_AMBIENT_ALERTS) {
+    const oldestKey = activeAlerts.keys().next().value;
+    if (oldestKey) {
+      dismissAmbientAlert(oldestKey);
+    }
+  }
+
   const shadow = ensureHost();
   const container = shadow.querySelector('.vigil-container')!;
 
@@ -252,5 +262,25 @@ export function dismissAmbientAlert(id: string): void {
   if (card) {
     card.remove();
     activeAlerts.delete(id);
+  }
+}
+
+/**
+ * Completely clears all ambient alerts and resets the host element.
+ * Call on tab navigation to prevent stale alerts across origin/navigation boundaries.
+ */
+export function clearAmbientAlerts(): void {
+  for (const [, card] of activeAlerts.entries()) {
+    try {
+      card.remove();
+    } catch {}
+  }
+  activeAlerts.clear();
+  if (hostElement && hostElement.parentNode) {
+    try {
+      hostElement.remove();
+    } catch {}
+    hostElement = null;
+    shadowRoot = null;
   }
 }

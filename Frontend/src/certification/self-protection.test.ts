@@ -136,6 +136,13 @@ describe('Vigil V2.1 RC1 Certification: Vigil Hostile Page Self-Protection & Def
       collectorVersion: '2.1.0',
       timestamp: Date.now(),
       payload: { data: 'nav-a-secret' },
+      provenance: {
+        source: 'DOM',
+        detectorId: 'test-detector',
+        navigationId: 'nav-A',
+        timestamp: Date.now(),
+        evidenceType: 'DOM_MUTATION',
+      },
     };
     trustEngine.observe(obsA);
     expect(trustEngine.getActiveGraphNodeCount()).toBe(1);
@@ -154,6 +161,13 @@ describe('Vigil V2.1 RC1 Certification: Vigil Hostile Page Self-Protection & Def
       collectorVersion: '2.1.0',
       timestamp: Date.now(),
       payload: { data: 'stale-nav-a-leak' },
+      provenance: {
+        source: 'DOM',
+        detectorId: 'test-detector',
+        navigationId: 'nav-A',
+        timestamp: Date.now(),
+        evidenceType: 'DOM_MUTATION',
+      },
     };
     trustEngine.observe(staleObsA);
 
@@ -171,6 +185,13 @@ describe('Vigil V2.1 RC1 Certification: Vigil Hostile Page Self-Protection & Def
       collectorVersion: '2.1.0',
       timestamp: Date.now(),
       payload: { data: 'nav-b-fresh' },
+      provenance: {
+        source: 'DOM',
+        detectorId: 'test-detector',
+        navigationId: 'nav-B',
+        timestamp: Date.now(),
+        evidenceType: 'DOM_MUTATION',
+      },
     };
     trustEngine.observe(obsB);
     expect(trustEngine.getActiveGraphNodeCount()).toBe(2);
@@ -249,6 +270,13 @@ describe('Vigil V2.1 RC1 Certification: Vigil Hostile Page Self-Protection & Def
         collectorVersion: '2.1.0',
         timestamp: Date.now() + i,
         payload: { index: i },
+        provenance: {
+          source: 'DOM',
+          detectorId: 'stress-detector',
+          navigationId,
+          timestamp: Date.now() + i,
+          evidenceType: 'DOM_MUTATION',
+        },
       });
     }
 

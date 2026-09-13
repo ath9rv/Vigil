@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Finding } from '../../evidence/evidence';
+import { ExplainModePanel } from './ExplainModePanel';
+import { ReportAdapter } from '../../evidence/forensic-report/report-adapter';
 
 interface Props {
   finding: Finding;
@@ -18,23 +20,28 @@ const SEVERITY_ICONS: Record<string, string> = {
   HIGH: '⚠️',
   MEDIUM: '👀',
   LOW: 'ℹ️',
-  INFO: '📝'
+  INFO: '📝',
 };
 
 export function FindingCard({ finding }: Props) {
-  const [showEvidence, setShowEvidence] = useState(false);
-  
+  const [showExplain, setShowExplain] = useState(false);
+
   const isThreat = finding.evidence?.sourceType === 'THREAT_INTEL';
   const headerColor = SEVERITY_COLORS[finding.severity] || SEVERITY_COLORS.INFO;
   const icon = SEVERITY_ICONS[finding.severity] || SEVERITY_ICONS.INFO;
-  const forensics = finding.evidence?.forensics;
+  const report = ReportAdapter.ensureCanonicalReport(finding);
 
   // Threat card rendering (Critical priority)
   if (isThreat) {
     return (
-      <div className="border-2 border-red-500 bg-white rounded-xl overflow-hidden mb-3">
-        <div className="bg-red-500 text-white px-4 py-2 font-bold flex items-center gap-2">
-          <span>🚨</span> {finding.ruleName?.toUpperCase()}
+      <div className="border-2 border-red-500 bg-white rounded-xl overflow-hidden mb-3 shadow-sm">
+        <div className="bg-red-500 text-white px-4 py-2 font-bold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>🚨</span> {finding.ruleName?.toUpperCase()}
+          </div>
+          <span className="text-[10px] bg-red-700 text-red-100 px-2 py-0.5 rounded font-mono font-bold">
+            {finding.confidence}
+          </span>
         </div>
         <div className="p-4 flex flex-col gap-3">
           <div>
@@ -45,144 +52,86 @@ export function FindingCard({ finding }: Props) {
             <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">Evidence</div>
             <div className="text-sm text-gray-800">{finding.interpretation}</div>
           </div>
-          <div className="flex gap-4">
-            <div>
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">Confidence</div>
-              <div className="text-sm font-bold text-gray-900">{finding.confidence}</div>
-            </div>
-            <div>
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">Status</div>
-              <div className="text-sm font-bold text-red-600">{finding.ruleName === 'Malware Distribution' ? 'KNOWN_MALWARE' : 'KNOWN_PHISHING'}</div>
-            </div>
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <button
+              onClick={() => setShowExplain(!showExplain)}
+              className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <span>🔍</span>
+              <span>{showExplain ? 'Hide Explanation ▾' : 'Why did Vigil flag this? ▸'}</span>
+            </button>
           </div>
+          {showExplain && <ExplainModePanel report={report} />}
         </div>
       </div>
     );
   }
 
-  // Standard Evidence Card
+  // Standard Evidence Card with Explain Mode
   return (
     <div className="border border-gray-200 bg-white rounded-xl overflow-hidden mb-3 shadow-sm">
-      <div className={`px-4 py-2 border-b flex items-center gap-2 text-sm font-bold ${headerColor}`}>
-        <span>{icon}</span> {finding.ruleName?.toUpperCase() || finding.category}
+      <div className={`px-4 py-2 border-b flex items-center justify-between text-sm font-bold ${headerColor}`}>
+        <div className="flex items-center gap-2">
+          <span>{icon}</span> {finding.ruleName?.toUpperCase() || finding.category}
+        </div>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/60 text-gray-700">
+          {finding.confidence} CONFIDENCE
+        </span>
       </div>
-      
+
       <div className="p-4">
         <div className="flex flex-wrap gap-2 mb-3">
           <span className="text-[10px] font-bold px-2 py-1 bg-gray-100 text-gray-600 rounded">
             {finding.category}
-          </span>
-          <span className="text-[10px] font-bold px-2 py-1 bg-gray-100 text-gray-600 rounded">
-            {finding.confidence} CONFIDENCE
           </span>
           {finding.reviewStatus === 'REVIEW_NEEDED' && (
             <span className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-800 rounded">
               REVIEW NEEDED
             </span>
           )}
-          {forensics && (
-            <span className={`text-[10px] font-bold px-2 py-1 rounded ${forensics.verdict === 'CONFIRMED' ? 'bg-green-100 text-green-800' : forensics.verdict === 'INCONCLUSIVE' ? 'bg-gray-100 text-gray-700' : 'bg-amber-100 text-amber-800'}`}>
-              {forensics.level} · {forensics.verdict.replace('_', ' ')}
-            </span>
-          )}
         </div>
-        
-        <p className="text-sm text-gray-800 font-medium mb-3">
+
+        <p className="text-sm text-gray-800 font-medium mb-3 leading-relaxed">
           {finding.interpretation}
         </p>
 
-        <button 
-          onClick={() => setShowEvidence(!showEvidence)}
-          className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-        >
-          {showEvidence ? 'Hide Evidence ▾' : 'Show Evidence ▸'}
-        </button>
+        {/* Explain Mode Trigger & Page Locator */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <button
+            onClick={() => setShowExplain(!showExplain)}
+            className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-blue-50 transition-colors"
+          >
+            <span>🔍</span>
+            <span>{showExplain ? 'Hide Explanation ▾' : 'Why did Vigil flag this? ▸'}</span>
+          </button>
 
-        {showEvidence && (
-          <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs text-gray-700">
-            {finding.evidence?.sourceType === 'DOCUMENT' && (
-              <>
-                <div className="mb-2 pb-2 border-b border-gray-200">
-                  <span className="font-bold">Source Document:</span>{' '}
-                  <a 
-                    href={finding.evidence?.sourceUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="truncate block text-blue-600 hover:underline"
-                  >
-                    {finding.evidence?.sourceUrl || 'N/A'}
-                  </a>
-                  {finding.evidence?.documentHash && (
-                    <span className="text-gray-400 font-mono text-[10px] block mt-1">Hash: {finding.evidence.documentHash.substring(0,16)}...</span>
-                  )}
-                </div>
-              </>
-            )}
-            
-            <div className="mb-2">
-              <span className="font-bold block mb-1">Exact excerpt:</span>
-              <div className="font-mono bg-white p-2 border border-gray-200 rounded whitespace-pre-wrap max-h-32 overflow-y-auto">
-                {finding.evidence?.excerpt || finding.evidence?.context || finding.interpretation || 'No excerpt available.'}
-              </div>
-            </div>
-
-            {forensics && (
-              <div className="space-y-2 border-t border-gray-200 pt-3 mt-3">
-                <div>
-                  <span className="font-bold block mb-1">What Vigil observed</span>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    {forensics.observed.map((item, index) => <li key={`observed-${index}`}>{item}</li>)}
-                  </ul>
-                </div>
-                {forensics.supportingEvidence.length > 0 && (
-                  <div>
-                    <span className="font-bold block mb-1">Why it may matter</span>
-                    <ul className="list-disc pl-4 space-y-0.5">
-                      {forensics.supportingEvidence.map((item, index) => <li key={`support-${index}`}>{item}</li>)}
-                    </ul>
-                  </div>
-                )}
-                {(forensics.contradictingEvidence.length > 0 || forensics.assumptions.length > 0) && (
-                  <div className="bg-amber-50 border border-amber-100 rounded p-2 text-amber-900">
-                    <span className="font-bold block mb-1">What could disprove this</span>
-                    <ul className="list-disc pl-4 space-y-0.5">
-                      {[...forensics.contradictingEvidence, ...forensics.assumptions].map((item, index) => <li key={`counter-${index}`}>{item}</li>)}
-                    </ul>
-                  </div>
-                )}
-                <div className="text-gray-500">
-                  Seen {forensics.temporal.observationCount} time{forensics.temporal.observationCount === 1 ? '' : 's'} · evidence coverage: {Object.entries(forensics.coverage).filter(([, covered]) => covered).map(([surface]) => surface).join(', ') || 'none'}
-                </div>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center text-gray-400 mt-2">
-              <div>
-                <span className="block">Captured: {finding.evidence?.capturedAt ? new Date(finding.evidence.capturedAt).toLocaleDateString() : 'N/A'}</span>
-                <span className="block">Source: {finding.evidence?.sourceType || 'DOM'}</span>
-              </div>
-              
-              {(finding.evidence?.sourceType === 'DOCUMENT' || finding.evidence?.sourceType === 'DOM' || !finding.evidence) && (finding.evidence?.excerpt || finding.interpretation) && (
-                <button 
-                  onClick={() => {
-                    const textToHighlight = finding.evidence?.excerpt || finding.interpretation;
-                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          {(finding.evidence?.sourceType === 'DOCUMENT' ||
+            finding.evidence?.sourceType === 'DOM' ||
+            !finding.evidence) &&
+            (finding.evidence?.excerpt || finding.interpretation) && (
+              <button
+                onClick={() => {
+                  const textToHighlight = finding.evidence?.excerpt || finding.interpretation;
+                  if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+                    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
                       if (tabs[0]?.id) {
                         chrome.tabs.sendMessage(tabs[0].id, {
                           type: 'VIGIL_HIGHLIGHT_TEXT',
-                          text: textToHighlight
+                          text: textToHighlight,
                         });
                       }
                     });
-                  }}
-                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-1 rounded text-xs font-bold transition-colors"
-                >
-                  Locate on Page
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+                  }
+                }}
+                className="text-gray-500 hover:text-gray-700 text-[11px] font-medium transition-colors"
+              >
+                Locate on Page ↗
+              </button>
+            )}
+        </div>
+
+        {/* Explain Mode Progressive Disclosure Panel (Levels 1, 2, 3 & Export) */}
+        {showExplain && <ExplainModePanel report={report} />}
       </div>
     </div>
   );

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigil Adversarial Lab — Evasive Urgency Simulation</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #1e293b; }
+    .banner { background: #fee2e2; border: 2px dashed #dc2626; border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .timer-text { font-size: 2.5rem; font-weight: 800; color: #b91c1c; font-family: monospace; margin: 1rem 0; }
+    .btn { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Vigil Adversarial Lab: Countdown Evasion Attack</h1>
+  <p>Demonstrates fake urgency evasion tactics: randomized class names, split digit spans, and reset-on-reload loop.</p>
+
+  <div class="banner">
+    <h2>🔥 Flash Sale Ends In:</h2>
+    <div id="dynamicTimerContainer" class="timer-text">
+      <!-- Random dynamic container regenerated periodically -->
+    </div>
+    <button class="btn" onclick="location.reload()">Simulate Page Reload (Observe Timer Reset)</button>
+  </div>
+
+  <script>
+    let remaining = 900; // Always starts at 15:00 on page reload
+    const container = document.getElementById('dynamicTimerContainer');
+
+    function renderEvasiveTimer() {
+      // 1. Dynamic randomized class name
+      const randomClass = 'urg-' + Math.random().toString(36).substring(7);
+      const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+      const seconds = String(remaining % 60).padStart(2, '0');
+
+      // 2. Split digit spans to evade brittle static text queries
+      container.innerHTML = '<span class="' + randomClass + '">' +
+        '<span>' + minutes[0] + '</span><span>' + minutes[1] + '</span>' +
+        ':' +
+        '<span>' + seconds[0] + '</span><span>' + seconds[1] + '</span>' +
+        '</span>';
+
+      if (remaining > 0) remaining--;
+    }
+
+    renderEvasiveTimer();
+    setInterval(renderEvasiveTimer, 1000);
+  </script>
+</body>
+</html>

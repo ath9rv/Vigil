@@ -5,8 +5,9 @@ import { SEVERITY_PENALTIES, SCORE_EMA_ALPHA, SCORE_CAUTION_THRESHOLD, SCORE_DAN
 import { registerMessageHandlers } from './message-router';
 
 // Initialize storage and strict privacy policies on install/startup
-chrome.runtime.onInstalled.addListener(async () => {
-  await initializeStorage();
+if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
+  chrome.runtime.onInstalled.addListener(async () => {
+    await initializeStorage();
   
   // V2: WebRTC IP Leak Protection
   // Forces WebRTC to only use the default public interface, hiding the user's true local IP
@@ -44,10 +45,13 @@ chrome.runtime.onInstalled.addListener(async () => {
       }
     ]
   }).catch(console.error);
-});
+  });
+}
 
 // Register message handlers on startup
-registerMessageHandlers();
+if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+  registerMessageHandlers();
+}
 
 /**
  * Aggregates trust scores for a domain based on its findings, computes module sub-scores,

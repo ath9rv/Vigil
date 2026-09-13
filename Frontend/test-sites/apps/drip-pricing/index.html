@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigil Adversarial Lab — Drip Pricing Simulation</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #1e293b; }
+    .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .price-display { font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+    .btn { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: #1d4ed8; }
+    .fee-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+    .hidden { display: none; }
+    .stepper { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .step { padding: 6px 12px; border-radius: 20px; background: #f1f5f9; font-size: 0.85rem; font-weight: 600; }
+    .step.active { background: #2563eb; color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>Vigil Adversarial Lab: Drip Pricing Attack</h1>
+  <p>Simulates a deceptive progression flow where an unannounced mandatory fee is injected after customer commitment.</p>
+
+  <div class="stepper">
+    <span class="step active" id="badgeStep1">1. Product</span>
+    <span class="step" id="badgeStep2">2. Shipping</span>
+    <span class="step" id="badgeStep3">3. Review & Pay</span>
+  </div>
+
+  <!-- Stage 1: Product Showcase -->
+  <div class="card" id="stage1">
+    <h2>Ergonomic Mechanical Keyboard</h2>
+    <p>Premium wireless mechanical keyboard with hot-swappable switches.</p>
+    <div class="price-display" id="productBasePrice" data-displayed-base-price="50">$50.00</div>
+    <br/>
+    <button class="btn" id="btnProceed">Proceed to Checkout</button>
+  </div>
+
+  <!-- Stage 2: Shipping Address -->
+  <div class="card hidden" id="stage2">
+    <h2>Shipping Address</h2>
+    <input type="text" id="addressInput" placeholder="123 Market St, San Francisco, CA" style="width: 100%; padding: 8px; margin-bottom: 1rem;" />
+    <br/>
+    <button class="btn" id="btnContinueReview">Continue to Order Review</button>
+  </div>
+
+  <!-- Stage 3: Order Review with Injected Drip Fee -->
+  <div class="card hidden" id="stage3">
+    <h2>Order Summary</h2>
+    <div class="fee-row">
+      <span>Item Subtotal</span>
+      <span>$50.00</span>
+    </div>
+    <div class="fee-row" id="unannouncedFeeRow" data-fee-appeared="true" data-mandatory="true">
+      <span style="color: #dc2626; font-weight: 600;">Mandatory Service & Platform Fee</span>
+      <span style="color: #dc2626; font-weight: 600;">$18.00</span>
+    </div>
+    <div class="fee-row" style="font-size: 1.25rem; font-weight: 700; border-top: 2px solid #0f172a; margin-top: 8px;">
+      <span>Total Amount</span>
+      <span id="finalTotalDisplay" data-price="68">$68.00</span>
+    </div>
+    <br/>
+    <button class="btn" id="btnFinalPay">Complete Purchase</button>
+  </div>
+
+  <script>
+    const stage1 = document.getElementById('stage1');
+    const stage2 = document.getElementById('stage2');
+    const stage3 = document.getElementById('stage3');
+
+    document.getElementById('btnProceed').addEventListener('click', () => {
+      stage1.classList.add('hidden');
+      stage2.classList.remove('hidden');
+      document.getElementById('badgeStep1').classList.remove('active');
+      document.getElementById('badgeStep2').classList.add('active');
+    });
+
+    document.getElementById('btnContinueReview').addEventListener('click', () => {
+      stage2.classList.add('hidden');
+      stage3.classList.remove('hidden');
+      document.getElementById('badgeStep2').classList.remove('active');
+      document.getElementById('badgeStep3').classList.add('active');
+    });
+  </script>
+</body>
+</html>

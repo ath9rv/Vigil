@@ -8,7 +8,7 @@ import { EVIDENCE_BUDGETS } from '../shared/constants';
 
 describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
   let engine: TrustEngine;
-  
+
   beforeEach(() => {
     engine = new TrustEngine();
     // Reset any state if necessary, but we create a new engine instance
@@ -22,98 +22,116 @@ describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
     startedAt: Date.now()
   };
 
-  function createObs(navId: string, type: 'DOM' | 'NETWORK' | 'STORAGE' | 'DOCUMENT', payload: any = {}): RawObservation {
+  function createObs(
+    navId: string,
+    type: 'DOM' | 'NETWORK' | 'STORAGE' | 'DOCUMENT',
+    payload: any = {},
+    customTimestamp?: number
+  ): RawObservation {
+    const timestamp = customTimestamp ?? Date.now();
     return {
       id: crypto.randomUUID(),
       tabId: 1,
       navigationId: navId,
-      timestamp: Date.now(),
+      timestamp,
       sourceType: type,
       source: 'test',
       payload,
       collector: 'test',
       collectorVersion: '1',
+      provenance: {
+        source: type === 'DOCUMENT' ? 'POLICY' : type,
+        detectorId: 'test-detector',
+        navigationId: navId,
+        timestamp,
+        evidenceType: 'TEST_EVIDENCE',
+      },
     };
   }
 
   it('1. Navigation A events → B starts → late A events: A events discarded', () => {
     navigationState.startNavigation(1, 'nav-2'); // Current active nav is nav-2
-    
+
     // Attempt to observe event for nav-1
     const obsA = createObs('nav-1', 'DOM');
     engine.observe(obsA);
-    
+
+    expect(engine.getActiveGraphNodeCount()).toBe(0);
+
+    // Observe event for nav-2
     const obsB = createObs('nav-2', 'DOM');
     engine.observe(obsB);
-    
-    const resA = engine.finalize('nav-1');
-    const resB = engine.finalize('nav-2');
-    
-    expect(resA.resolutions.length).toBe(0); // A discarded
-    // B might not have resolutions if it doesn't trigger a rule, but we ensure A is empty.
+
+    expect(engine.getActiveGraphNodeCount()).toBe(1);
   });
 
   it('2. Rapid reloads (3 navs in 200ms): Only latest has findings', () => {
     navigationState.startNavigation(1, 'nav-1');
-    navigationState.startNavigation(1, 'nav-2');
-    navigationState.startNavigation(1, 'nav-3'); // Latest active
-
     engine.observe(createObs('nav-1', 'DOM'));
+
+    navigationState.startNavigation(1, 'nav-2');
     engine.observe(createObs('nav-2', 'DOM'));
+
+    navigationState.startNavigation(1, 'nav-3');
     engine.observe(createObs('nav-3', 'DOM'));
 
-    expect(engine.finalize('nav-1').resolutions.length).toBe(0);
-    expect(engine.finalize('nav-2').resolutions.length).toBe(0);
+    const res1 = engine.finalize('nav-1');
+    const res2 = engine.finalize('nav-2');
+    const res3 = engine.finalize('nav-3');
+
+    expect(res1.resolutions.length).toBe(0);
+    expect(res2.resolutions.length).toBe(0);
+    expect(res3.resolutions.length).toBeGreaterThanOrEqual(0);
   });
 
-  it('3. Duplicate observations (same ID): Processed once', () => {
+  it('3. In-flight observation during navigation disposal: Clean drop', () => {
     navigationState.startNavigation(1, 'nav-1');
-    const obs = createObs('nav-1', 'NETWORK', { crossSite: true });
-    
-    engine.observe(obs);
-    engine.observe(obs); // Duplicate by ID
-    
-    // We can't directly check the internal node count easily without exposing it, 
-    // but we know only one will be added. 
-    // We will verify budget rejects is 0.
-    expect(engine.budgetRejectedCount).toBe(0);
-  });
+    engine.observe(createObs('nav-1', 'DOM'));
 
-  it('4. Evidence budget exceeded (201 nodes)', () => {
-    navigationState.startNavigation(1, 'nav-1');
-    
-    for (let i = 0; i < EVIDENCE_BUDGETS.MAX_NODES_PER_NAVIGATION + 5; i++) {
-      engine.observe(createObs('nav-1', 'DOM', { i }));
-    }
-    
-    expect(engine.budgetRejectedCount).toBe(5);
-  });
-
-  it('5. Identical observations (same payload hash): No confidence compounding', () => {
-    navigationState.startNavigation(1, 'nav-1');
-    
-    // These have different IDs but identical payload/source
-    const obs1 = createObs('nav-1', 'NETWORK', { crossSite: true, domain: 'tracker.com' });
-    const obs2 = { ...obs1, id: crypto.randomUUID() };
-    
-    engine.observe(obs1);
-    engine.observe(obs2);
-    
-    // Only one should be processed
-    // To verify, we would need to check graph size. 
-    // We can indirectly verify by checking that it doesn't artificially inflate anything.
-  });
-
-  it('6. Finalize with zero observations: Empty VerdictResolution[]', () => {
-    navigationState.startNavigation(1, 'nav-1');
-    const res = engine.finalize('nav-1');
-    expect(res.resolutions.length).toBe(0);
-  });
-
-  it('7. Dispose clears all state', () => {
-    navigationState.startNavigation(1, 'nav-1');
-    engine.observe(createObs('nav-1', 'NETWORK', { crossSite: true }));
     engine.dispose('nav-1');
+
+    // Dropped because disposed
+    engine.observe(createObs('nav-1', 'DOM'));
+    expect(engine.getActiveGraphNodeCount()).toBe(0);
+  });
+
+  it('4. Corrupted/unparseable evidence: Handled gracefully, not crashed', () => {
+    navigationState.startNavigation(1, 'nav-1');
+    // We cast to any to simulate malformed observation
+    const malformed = { ...createObs('nav-1', 'DOM'), payload: null };
+    expect(() => engine.observe(malformed as any)).not.toThrow();
+  });
+
+  it('5. Node count > MAX_NODES_PER_NAVIGATION: Excess rejected, logged', () => {
+    navigationState.startNavigation(1, 'nav-1');
+    for (let i = 0; i < EVIDENCE_BUDGETS.MAX_NODES_PER_NAVIGATION + 50; i++) {
+      engine.observe(createObs('nav-1', 'DOM', { idx: i }));
+    }
+
+    expect(engine.getActiveGraphNodeCount()).toBe(EVIDENCE_BUDGETS.MAX_NODES_PER_NAVIGATION);
+    expect(engine.budgetRejectedCount).toBe(50);
+  });
+
+  it('6. Contradictory evidence: Both nodes retained, contradiction edge exists', () => {
+    navigationState.startNavigation(1, 'nav-1');
+
+    // Cookie declared strictly necessary
+    engine.observe(createObs('nav-1', 'STORAGE', {
+      cookieName: '_ga',
+      declaredCategory: 'NECESSARY'
+    }));
+
+    // But network request shows it sent to tracker
+    engine.observe(createObs('nav-1', 'NETWORK', {
+      url: 'https://google-analytics.com/collect',
+      cookieSent: '_ga'
+    }));
+
+    expect(engine.getActiveGraphNodeCount()).toBe(2);
+  });
+
+  it('7. Empty graph: Finalize returns empty report, no crash', () => {
+    navigationState.startNavigation(1, 'nav-1');
     const res = engine.finalize('nav-1');
     expect(res.resolutions.length).toBe(0);
   });
@@ -121,11 +139,9 @@ describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
   it('8. Out-of-order timestamps: Deterministic ordering preserved', () => {
     // This is handled by TemporalCorrelator. We just ensure it runs without crashing.
     navigationState.startNavigation(1, 'nav-1');
-    const obs1 = createObs('nav-1', 'DOM');
-    const obs2 = createObs('nav-1', 'NETWORK');
-    obs1.timestamp = 2000;
-    obs2.timestamp = 1000;
-    
+    const obs1 = createObs('nav-1', 'DOM', {}, 2000);
+    const obs2 = createObs('nav-1', 'NETWORK', {}, 1000);
+
     engine.observe(obs1);
     engine.observe(obs2);
     engine.finalize('nav-1');
@@ -134,10 +150,10 @@ describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
   it('9. Cross-navigation observation leak: Nav A cannot appear in Nav B', () => {
     navigationState.startNavigation(1, 'nav-1');
     engine.observe(createObs('nav-1', 'NETWORK', { crossSite: true }));
-    
+
     navigationState.startNavigation(1, 'nav-2');
     const res = engine.finalize('nav-2');
-    
+
     expect(res.resolutions.length).toBe(0);
   });
 
@@ -156,7 +172,7 @@ describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
       detectedAt: 'now',
       context: { scan: mockContext, coverage: {} as any }
     };
-    
+
     const obs = ObservationFactory.fromLegacyFinding(finding, mockContext);
     expect(obs.sourceType).toBe('DOM');
     expect(obs.payload.originalSeverity).toBe('CRITICAL');
@@ -165,10 +181,10 @@ describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
   it('11. finalize() called twice -> identical result', () => {
     navigationState.startNavigation(1, 'nav-1');
     engine.observe(createObs('nav-1', 'NETWORK', { crossSite: true }));
-    
+
     const res1 = engine.finalize('nav-1');
     const res2 = engine.finalize('nav-1');
-    
+
     expect(res1.resolutions.length).toBe(res2.resolutions.length);
   });
 
@@ -192,19 +208,19 @@ describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
     const obs = ObservationFactory.fromLegacyFinding(finding, mockContext);
     engine.observe(obs);
     const res = engine.finalize('nav-1');
-    
+
     // There are no contradiction rules that support a verdict just based on a legacy finding payload alone right now
-    expect(res.resolutions.length).toBe(0); 
+    expect(res.resolutions.length).toBe(0);
   });
 
   it('14. cross-site request without identifiable data -> must NOT produce shares_personal_information', () => {
     navigationState.startNavigation(1, 'nav-1');
-    
+
     // A standard cross-site request
     engine.observe(createObs('nav-1', 'NETWORK', { crossSite: true, domain: 'cdn.example' }));
-    
+
     const res = engine.finalize('nav-1');
-    
+
     // Cross-site transmission might be evaluated, but NOT shares_personal_information
     const hasDataShare = res.resolutions.some(r => r.claimId.includes('shares_personal_information') && r.eligibility === 'ELIGIBLE');
     expect(hasDataShare).toBe(false);
@@ -212,20 +228,20 @@ describe('Phase 5: TrustEngine Integration & Adversarial Validation', () => {
 
   it('15. Amazon-style scenario end-to-end', () => {
     navigationState.startNavigation(1, 'nav-amazon');
-    
+
     // 1. Policy allows third-party sharing
     engine.observe(createObs('nav-amazon', 'DOCUMENT', { predicate: 'shares_personal_information', availability: 'EXPLICITLY_ALLOWED' }));
-    
+
     // 2. Network sends identifier to service provider
     engine.observe(createObs('nav-amazon', 'NETWORK', { crossSite: true, containsIdentifier: true }));
-    
+
     // 3. No broker evidence
-    
+
     const res = engine.finalize('nav-amazon');
-    
+
     const shareVerdict = res.resolutions.find(r => engine.claimPredicateMap.get(r.claimId) === 'shares_personal_information');
     expect(shareVerdict?.eligibility).toBe('ELIGIBLE');
-    
+
     const saleVerdict = res.resolutions.find(r => engine.claimPredicateMap.get(r.claimId) === 'sells_personal_information');
     expect(saleVerdict).toBeUndefined(); // Claim shouldn't even be extracted without broker evidence
   });

@@ -54,6 +54,19 @@ function hasHomographCharacters(str: string): boolean {
   return homoglyphRegex.test(str);
 }
 
+const COMMON_SECOND_LEVEL_DOMAINS = new Set(['co', 'com', 'org', 'net', 'gov', 'edu', 'ac', 'res', 'mil']);
+
+function extractBaseDomainName(hostname: string): string {
+  const parts = hostname.toLowerCase().split('.');
+  if (parts.length <= 1) return hostname;
+  if (parts.length === 2) return parts[0];
+  const secondToLast = parts[parts.length - 2];
+  if (COMMON_SECOND_LEVEL_DOMAINS.has(secondToLast) && parts.length >= 3) {
+    return parts[parts.length - 3];
+  }
+  return secondToLast;
+}
+
 /**
  * Evaluates URL safety using a 100% offline, deterministic heuristic threat engine.
  * Never transmits candidate URLs or credentials to external services.
@@ -72,20 +85,19 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
 
   const hostname = parsed.hostname.toLowerCase();
 
-  // Layer 1: Punycode & IDN Homograph Attack Detection
+  // Layer 1: Punycode & IDN Homograph Attack Detection (Heuristic signal -> SUGGESTIVE)
   if (hostname.startsWith('xn--') || hasHomographCharacters(hostname)) {
     return {
       status: 'KNOWN_PHISHING',
       source: 'LOCAL_HEURISTIC',
-      confidence: 'CONFIRMED',
-      details: `Punycode / IDN homograph impersonation detected in hostname: ${hostname}`
+      confidence: 'SUGGESTIVE',
+      details: `Punycode / IDN homograph representation observed in hostname: ${hostname}`
     };
   }
 
   // Layer 2: Typosquatting / Visual Brand Impersonation (Levenshtein Distance)
-  // Extract base domain without subdomains (e.g. paypa1.com -> paypa1)
-  const hostParts = hostname.split('.');
-  const baseName = hostParts.length >= 2 ? hostParts[hostParts.length - 2] : hostname;
+  // Robust base domain extraction handling multi-part ccTLDs (e.g. paypal.co.uk -> paypal)
+  const baseName = extractBaseDomainName(hostname);
 
   for (const target of SENSITIVE_TARGETS) {
     if (baseName !== target && baseName.includes(target)) {
@@ -95,7 +107,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
           return {
             status: 'KNOWN_PHISHING',
             source: 'LOCAL_HEURISTIC',
-            confidence: 'CONFIRMED',
+            confidence: 'SUGGESTIVE',
             details: `Credential harvesting pattern matching brand "${target}": ${hostname}`
           };
         }
@@ -107,8 +119,8 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
       return {
         status: 'KNOWN_PHISHING',
         source: 'LOCAL_HEURISTIC',
-        confidence: 'CONFIRMED',
-        details: `Typosquatting brand impersonation detected. Base domain "${baseName}" is deceptively similar to "${target}" (Levenshtein distance: ${dist}).`
+        confidence: 'SUGGESTIVE',
+        details: `Typosquatting brand impersonation signal. Base domain "${baseName}" is deceptively similar to "${target}" (Levenshtein distance: ${dist}).`
       };
     }
   }
@@ -149,7 +161,7 @@ export async function evaluateUrlThreat(url: string, isDeepAudit = false): Promi
 
   return {
     status: 'NO_KNOWN_THREAT',
-    confidence: 'CONFIRMED',
-    details: 'Verified clean against local heuristic threat engine.'
+    confidence: 'OBSERVED',
+    details: 'No known threat indicators observed in local threat index.'
   };
 }

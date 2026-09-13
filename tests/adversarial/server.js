@@ -1,4 +1,4 @@
-﻿const http = require('http');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
@@ -44,11 +44,20 @@ const server = http.createServer((req, res) => {
     let safePath = path.normalize(parsedUrl.pathname).replace(/^(\.\.[\/\\])+/, '');
     if (safePath === '/' || safePath === '\\' || !safePath) safePath = '/index.html';
     
-    const filePath = path.join(BASE_DIR, safePath);
-    
-    if (!filePath.startsWith(BASE_DIR)) {
-        res.writeHead(403);
-        return res.end('Forbidden');
+    let filePath;
+    const testSitesDir = path.resolve(__dirname, '../../Frontend/test-sites');
+    if (safePath.startsWith('/apps/') || safePath.startsWith('apps/') || safePath.startsWith('\\apps\\') || safePath.startsWith('apps\\')) {
+        filePath = path.join(testSitesDir, safePath);
+        if (!filePath.startsWith(testSitesDir)) {
+            res.writeHead(403);
+            return res.end('Forbidden');
+        }
+    } else {
+        filePath = path.join(BASE_DIR, safePath);
+        if (!filePath.startsWith(BASE_DIR)) {
+            res.writeHead(403);
+            return res.end('Forbidden');
+        }
     }
 
     let extname = path.extname(filePath);

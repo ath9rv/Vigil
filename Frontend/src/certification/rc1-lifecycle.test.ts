@@ -70,6 +70,13 @@ describe('Vigil V2.1 RC1 Certification: End-to-End Lifecycle & Canonical Scenari
           text: 'Hurry! Sale expires in 02:15',
           elementSelector: '#countdown-banner',
         },
+        provenance: {
+          source: 'DOM',
+          detectorId: 'urgency-detector',
+          navigationId,
+          timestamp: Date.now(),
+          evidenceType: 'DOM_MUTATION',
+        },
       };
       expect(stage3_observation.id).toBe('obs-rc1-urgency-001');
 

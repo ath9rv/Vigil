@@ -4,7 +4,7 @@ import { getStorageValue, setStorageValue, atomicUpdateStorage } from '../shared
 import { createForensicAnalysis } from '../evidence/forensics';
 import { aggregateScores } from './service-worker';
 import { handleFastLaneAlert } from './fast-lane';
-import { performLiveVerification } from './live-scanner';
+import { collectLiveObservations } from './live-scanner';
 import { getBlockedTrackerStats } from '../network/tracker-stats';
 import { navigationState } from './navigation-state';
 
@@ -102,18 +102,53 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
       const ctx = message.context;
       const domain = ctx.hostname;
       
-      // Perform Live Network/Internet verification & Policy Audit
-      const liveFindings = await performLiveVerification(domain, ctx.navigationId);
-      const allFindings = [...message.findings, ...liveFindings];
+      // Collect Live Network/Internet & Threat Intelligence Observations
+      const liveObservations = await collectLiveObservations(domain, ctx.navigationId, ctx);
 
-      // Feed legacy findings into the TrustEngine
-      for (const f of allFindings) {
+      // Ingest live observations directly into the TrustEngine
+      for (const obs of liveObservations) {
+        trustEngine.observe(obs);
+      }
+
+      // Ingest content-script scan observations into the TrustEngine
+      for (const f of message.findings) {
         trustEngine.observe(ObservationFactory.fromLegacyFinding(f, ctx));
       }
 
       // Finalize reasoning — this is the canonical verdict pipeline
       const trustResult = trustEngine.finalize(ctx.navigationId);
       
+      // Derive canonical findings for eligible TrustEngine verdicts not originating from DOM scan
+      const derivedFindings: Finding[] = [];
+      for (const report of trustResult.reports) {
+        if (report.verdictType === 'PHISHING_RISK' && !message.findings.some(f => f.module === 'M2')) {
+          derivedFindings.push({
+            id: crypto.randomUUID(),
+            ruleId: 'M2-THREAT-INTEL',
+            ruleName: 'Threat Intelligence Risk',
+            module: 'M2',
+            category: 'SECURITY',
+            severity: 'CRITICAL',
+            confidenceState: report.confidenceLabel === 'HIGH' ? 'CONFIRMED' : 'SUGGESTIVE',
+            reviewStatus: 'CONFIRMED',
+            statuteRef: 'Local Threat Intelligence',
+            explanation: report.rationale,
+            interpretation: report.rationale,
+            elementSelector: 'html',
+            pageUrl: ctx.origin || ctx.hostname,
+            detectedAt: new Date().toISOString(),
+            context: {
+              scan: { tabId: ctx.tabId || 0, navigationId: ctx.navigationId, origin: ctx.origin || ctx.hostname, hostname: domain, startedAt: Date.now() },
+              evidence: [],
+              trustEngineReport: report,
+              coverage: { dom: false, threatIntel: true, network: true, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+            }
+          });
+        }
+      }
+
+      const allFindings = [...message.findings, ...derivedFindings];
+
       // Attach TrustEngine forensic reports to findings for traceability
       // Each finding gets a graphRef pointing to the evidence that produced it
       if (trustResult.reports.length > 0) {
@@ -141,10 +176,11 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
           `${trustResult.rejectedCount} budget rejections`);
       }
       
-      // Fast-lane integration: trigger alert if there is any severe finding
-      const severeFinding = allFindings.find(f =>
-        f.severity === 'CRITICAL' && (f.reviewStatus === 'CONFIRMED' || f.confidenceState === 'CONFIRMED')
+      // Fast-lane integration: trigger alert strictly downstream of a finalized HIGH confidence security report
+      const severeReport = trustResult.reports.find(r =>
+        r.verdictType === 'PHISHING_RISK' && r.confidenceLabel === 'HIGH'
       );
+      const severeFinding = severeReport ? allFindings.find(f => f.module === 'M2') : undefined;
       if (severeFinding && ctx.tabId) {
         await handleFastLaneAlert(severeFinding, ctx.tabId);
       }

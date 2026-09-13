@@ -44,6 +44,13 @@ class NavigationStateManager {
   public clearTab(tabId: number): void {
     this.activeNavigations.delete(tabId);
   }
+
+  /**
+   * Resets all navigation state (used for testing and lifecycle reboots).
+   */
+  public reset(): void {
+    this.activeNavigations.clear();
+  }
 }
 
 export const navigationState = new NavigationStateManager();

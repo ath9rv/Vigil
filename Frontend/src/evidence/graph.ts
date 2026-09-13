@@ -14,7 +14,7 @@ export interface EvidenceProvenance {
   collector: string;
   collectorVersion: string;
   observationId: string;
-  source?: 'DOM' | 'NETWORK' | 'STORAGE' | 'POLICY' | 'DEFENDER' | 'TEST_LAB';
+  source?: 'DOM' | 'NETWORK' | 'STORAGE' | 'POLICY' | 'DEFENDER' | 'TEST_LAB' | 'THREAT_INTEL';
   detectorId?: string;
   timestamp?: number;
   frameId?: string;
@@ -53,6 +53,28 @@ export interface NodeTrace {
   node: EvidenceNode;
   provenance: EvidenceProvenance;
   edges: EvidenceEdge[];
+}
+
+/**
+ * Read-only snapshot interface for V4 Cognitive Reasoning and downstream consumers.
+ * Conforms to INV-V4-001 / ADR-004: reasoning engines consume immutable evidence
+ * and have zero authority or API pathways to mutate the graph.
+ */
+export interface ReadOnlyEvidenceGraph {
+  readonly navigationId: string;
+  getNode(id: string): Readonly<EvidenceNode> | undefined;
+  getNodes(): readonly Readonly<EvidenceNode>[];
+  getNodeProvenance(nodeId: string): Readonly<EvidenceProvenance> | undefined;
+  getSourceObservation(nodeId: string): Readonly<RawObservation> | undefined;
+  getNodeTrace(nodeId: string): Readonly<NodeTrace> | undefined;
+  getConnectedSubgraph(startNodeId: string): Readonly<EvidenceSubgraph>;
+  getNeighborsByRelation(
+    nodeId: string,
+    relation: EvidenceRelation,
+    direction?: 'IN' | 'OUT' | 'BOTH'
+  ): readonly Readonly<EvidenceNode>[];
+  getNodeCount(): number;
+  getEdgeCount(): number;
 }
 
 /**
@@ -237,5 +259,58 @@ export class EvidenceGraph {
     }
 
     return nodeIds.size;
+  }
+
+  /**
+   * Generates an immutable, read-only snapshot of the evidence subgraph
+   * for a specific navigationId. Conforms to ADR-004.
+   */
+  public createReadOnlySnapshot(navigationId: string): ReadOnlyEvidenceGraph {
+    const navNodes = Object.freeze(
+      this.getNodesByNavigationId(navigationId).map(n => Object.freeze({ ...n }))
+    );
+    const nodeMap = new Map<string, Readonly<EvidenceNode>>();
+    for (const node of navNodes) {
+      nodeMap.set(node.id, node);
+    }
+    const self = this;
+
+    return Object.freeze({
+      navigationId,
+      getNode(id: string): Readonly<EvidenceNode> | undefined {
+        return nodeMap.get(id);
+      },
+      getNodes(): readonly Readonly<EvidenceNode>[] {
+        return navNodes;
+      },
+      getNodeProvenance(nodeId: string): Readonly<EvidenceProvenance> | undefined {
+        return nodeMap.get(nodeId)?.provenance;
+      },
+      getSourceObservation(nodeId: string): Readonly<RawObservation> | undefined {
+        return nodeMap.get(nodeId)?.provenance?.rawObservation;
+      },
+      getNodeTrace(nodeId: string): Readonly<NodeTrace> | undefined {
+        if (!nodeMap.has(nodeId)) return undefined;
+        return self.getNodeTrace(nodeId);
+      },
+      getConnectedSubgraph(startNodeId: string): Readonly<EvidenceSubgraph> {
+        if (!nodeMap.has(startNodeId)) return { nodes: [], edges: [] };
+        return self.getConnectedSubgraph(startNodeId);
+      },
+      getNeighborsByRelation(
+        nodeId: string,
+        relation: EvidenceRelation,
+        direction?: 'IN' | 'OUT' | 'BOTH'
+      ): readonly Readonly<EvidenceNode>[] {
+        if (!nodeMap.has(nodeId)) return [];
+        return Object.freeze(self.getNeighborsByRelation(nodeId, relation, direction));
+      },
+      getNodeCount(): number {
+        return navNodes.length;
+      },
+      getEdgeCount(): number {
+        return self.getEdgeCount();
+      },
+    });
   }
 }

@@ -5,7 +5,7 @@ import {
   VerdictResolution,
 } from '../shared/types';
 import { EVIDENCE_BUDGETS } from '../shared/constants';
-import { EvidenceGraph, EvidenceNode } from './graph';
+import { EvidenceGraph, EvidenceNode, ReadOnlyEvidenceGraph } from './graph';
 import { TemporalCorrelator, TemporalEventType } from './temporal';
 import { ConsistencyEngine } from './contradiction';
 import { VerdictResolver } from './verdict-resolver';
@@ -167,6 +167,14 @@ export class TrustEngine {
 
   public getActiveGraphEdgeCount(): number {
     return this.graph.getEdgeCount();
+  }
+
+  /**
+   * Returns a frozen, read-only evidence graph snapshot for V4 reasoning consumers.
+   * Enforces INV-V4-001 and ADR-004: V4 cannot mutate the EvidenceGraph.
+   */
+  public getReadOnlyEvidenceSnapshot(navigationId: string): ReadOnlyEvidenceGraph {
+    return this.graph.createReadOnlySnapshot(navigationId);
   }
 
   private recordBudgetRejection(type: string) {

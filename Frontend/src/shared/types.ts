@@ -176,7 +176,16 @@ export type VerdictType =
   | 'IDENTIFIER_EXFILTRATION'
   | 'DECEPTIVE_UI_PATTERN'
   | 'CONSENT_VIOLATION'
-  | 'PHISHING_RISK';
+  | 'PHISHING_RISK'
+  // Legal Auditor verdicts
+  | 'LEGAL_DATA_SALE_RISK'
+  | 'LEGAL_ARBITRATION_RISK'
+  | 'LEGAL_CLASS_ACTION_WAIVER'
+  | 'LEGAL_UNFAIR_DATA_PRACTICE'
+  | 'LEGAL_AI_TRAINING_RISK'
+  | 'LEGAL_CONSUMER_RIGHTS_GOOD'
+  | 'LEGAL_UNFAIR_TERM'
+  | 'LEGAL_INDENMNITY_RISK';
 
 export interface RejectedInference {
   claimPredicate: string;
@@ -224,12 +233,12 @@ export interface ForensicReport {
 }
 
 export interface EvidenceGraphRef {
-  graphId: string;
-  nodeIds: string[];
-  edgeIds: string[];
-  temporalEventIds: string[];
-  temporalCorrelationIds: string[];
-  createdAt: number;
+  readonly graphId: string;
+  readonly nodeIds: readonly string[];
+  readonly edgeIds: readonly string[];
+  readonly temporalEventIds: readonly string[];
+  readonly temporalCorrelationIds: readonly string[];
+  readonly createdAt: number;
 }
 
 export interface FindingContext {
@@ -246,27 +255,28 @@ export interface FindingContext {
 // ─── Phase 5: Trust Engine Integration ────────────────────────────────────────
 
 export interface ObservationProvenance {
-  source: 'DOM' | 'NETWORK' | 'STORAGE' | 'POLICY' | 'DEFENDER' | 'TEST_LAB';
-  detectorId: string;
-  navigationId?: string;
-  timestamp: number;
-  frameId?: string;
-  origin?: string;
-  evidenceType: string;
-  collectionMethod?: string;
+  readonly source: 'DOM' | 'NETWORK' | 'STORAGE' | 'POLICY' | 'DEFENDER' | 'TEST_LAB' | 'THREAT_INTEL';
+  readonly detectorId: string;
+  readonly navigationId?: string;
+  readonly timestamp: number;
+  readonly frameId?: string;
+  readonly origin?: string;
+  readonly evidenceType: string;
+  readonly collectionMethod?: string;
 }
 
 export interface RawObservation {
-  id: string;
-  tabId: number;
-  navigationId: string;
-  timestamp: number;
-  sourceType: 'DOM' | 'NETWORK' | 'DOCUMENT' | 'STORAGE' | 'THREAT_INTEL';
-  source: string;
-  payload: any;
-  collector: string;
-  collectorVersion: string;
-  provenance?: ObservationProvenance;
+  readonly id: string;
+  readonly observationId?: string;
+  readonly tabId: number;
+  readonly navigationId: string;
+  readonly timestamp: number;
+  readonly sourceType: 'DOM' | 'NETWORK' | 'DOCUMENT' | 'STORAGE' | 'THREAT_INTEL';
+  readonly source: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+  readonly collector: string;
+  readonly collectorVersion: string;
+  readonly provenance: Readonly<ObservationProvenance>;
 }
 
 export interface TrustEngineResult {

@@ -19,6 +19,7 @@
 import { querySelectorAllDeep } from './dom-utils';
 import { interventionManager } from '../intervention/manager';
 import { metricsCollector } from '../observability/metrics';
+import { classifyDarkPattern } from './ml-dark-pattern';
 
 // ─── Constants & Patterns ───────────────────────────────────────────────────
 
@@ -299,7 +300,9 @@ function neutralizeScarcityIndicators(): void {
 
       const text = (el.textContent || '').trim();
       if (text.length > 0 && text.length < 100) {
-        const isScarcity = SCARCITY_PATTERNS.some((p) => p.test(text));
+        const isScarcityRegex = SCARCITY_PATTERNS.some((p) => p.test(text));
+        const mlCategory = !isScarcityRegex && text.length > 5 ? classifyDarkPattern(text) : null;
+        const isScarcity = isScarcityRegex || mlCategory === 'SCARCITY' || mlCategory === 'URGENCY';
         if (isScarcity) {
           // Strict e-commerce transactional context required
           const context = el.closest('[class*="cart"], [class*="checkout"], [class*="product"], [class*="price"], [class*="add-to"], [class*="buy"], [class*="shop"], [class*="offer"], [class*="sale"], [class*="deal"]');
@@ -347,7 +350,9 @@ function neutralizeFakeSocialProof(): void {
 
       const text = (el.textContent || '').trim();
       if (text.length > 0 && text.length < 120) {
-        const isFakeSocialProof = socialProofPatterns.some((p) => p.test(text));
+        const isSocialProofRegex = socialProofPatterns.some((p) => p.test(text));
+        const mlCategory = !isSocialProofRegex && text.length > 5 ? classifyDarkPattern(text) : null;
+        const isFakeSocialProof = isSocialProofRegex || mlCategory === 'SOCIAL_PROOF';
         if (isFakeSocialProof) {
           const context = el.closest('[class*="cart"], [class*="checkout"], [class*="product"], [class*="shop"], [class*="buy"], [class*="price"], [class*="offer"]');
           if (context) {

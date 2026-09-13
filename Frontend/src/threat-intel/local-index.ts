@@ -1,41 +1,8 @@
 import { getStorageValue, setStorageValue } from '../shared/storage';
-import { HashPrefixEntry, WebRiskState, HashConfirmationCacheEntry, ThreatSource } from './types';
+import { HashPrefixEntry, HashConfirmationCacheEntry } from './types';
 
 const THREAT_DB_PREFIX_KEY = 'vigil_threat_prefixes';
-const THREAT_STATE_KEY = 'vigil_threat_state';
 const THREAT_CONFIRM_CACHE_KEY = 'vigil_threat_confirm_cache';
-
-export async function applyWebRiskDiff(
-  additions: HashPrefixEntry[], 
-  removals: string[], // prefixes to remove
-  newState: WebRiskState
-) {
-  const currentPrefixes = await getStorageValue(THREAT_DB_PREFIX_KEY) as Record<string, HashPrefixEntry> || {};
-  
-  // Atomic apply
-  for (const removePrefix of removals) {
-    delete currentPrefixes[removePrefix];
-  }
-  
-  for (const addition of additions) {
-    currentPrefixes[addition.prefix] = addition;
-  }
-  
-  await setStorageValue(THREAT_DB_PREFIX_KEY, currentPrefixes);
-  await setStorageValue(THREAT_STATE_KEY, newState);
-}
-
-export async function resetWebRiskDatabase(newState: WebRiskState, newEntries: HashPrefixEntry[]) {
-  const currentPrefixes: Record<string, HashPrefixEntry> = {};
-  for (const entry of newEntries) {
-    currentPrefixes[entry.prefix] = entry;
-  }
-  await setStorageValue(THREAT_DB_PREFIX_KEY, currentPrefixes);
-  await setStorageValue(THREAT_STATE_KEY, newState);
-  
-  // Clear the confirmation cache on a reset
-  await setStorageValue(THREAT_CONFIRM_CACHE_KEY, {});
-}
 
 export async function lookupPrefixesLocally(prefixCandidatesBase64: string[]): Promise<HashPrefixEntry[]> {
   const currentPrefixes = await getStorageValue(THREAT_DB_PREFIX_KEY) as Record<string, HashPrefixEntry> || {};
@@ -49,10 +16,6 @@ export async function lookupPrefixesLocally(prefixCandidatesBase64: string[]): P
   }
   
   return matches;
-}
-
-export async function getWebRiskState(): Promise<WebRiskState | null> {
-  return await getStorageValue(THREAT_STATE_KEY) as WebRiskState || null;
 }
 
 // Caching layer for full hash confirmation

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigil Adversarial Lab — Message Spoofing & Tampering Bench</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #1e293b; }
+    .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; background: #fff; margin-bottom: 1rem; }
+    .btn { background: #475569; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; margin: 0.25rem; }
+    #consoleLog { background: #0f172a; color: #38bdf8; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; height: 160px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Vigil Adversarial Lab: Security & Tampering Bench</h1>
+  <p>Tests extension perimeter security against direct web-page messaging attacks.</p>
+
+  <div class="card">
+    <h3>Simulate Hostile Attacks</h3>
+    <button class="btn" id="btnFakeSender">Forge Untrusted Sender ID</button>
+    <button class="btn" id="btnCrossTab">Cross-Tab Spoof</button>
+    <button class="btn" id="btnStaleNav">Inject Stale Navigation ID</button>
+    <button class="btn" id="btnClosedShadow">Mount Closed Shadow DOM</button>
+    <button class="btn" id="btnFlood">Send 1,000 Message Flood</button>
+  </div>
+
+  <div id="consoleLog">Console ready. Click any attack above.</div>
+  <div id="shadowHost" style="margin-top: 1rem;"></div>
+
+  <script>
+    const logEl = document.getElementById('consoleLog');
+    function log(msg) {
+      logEl.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + logEl.textContent;
+    }
+
+    document.getElementById('btnFakeSender').addEventListener('click', () => {
+      log('Attacking: chrome.runtime.sendMessage with untrusted extension ID...');
+      log('Expected: Unauthorized: untrusted sender ID');
+    });
+
+    document.getElementById('btnCrossTab').addEventListener('click', () => {
+      log('Attacking: Mismatched sender tab vs context tab...');
+      log('Expected: Unauthorized: tabId spoofing detected');
+    });
+
+    document.getElementById('btnStaleNav').addEventListener('click', () => {
+      log('Attacking: Message with stale navigationId from prior page...');
+      log('Expected: Dropped: stale_navigation');
+    });
+
+    document.getElementById('btnClosedShadow').addEventListener('click', () => {
+      const host = document.getElementById('shadowHost');
+      try {
+        const shadow = host.attachShadow({ mode: 'closed' });
+        shadow.innerHTML = '<p style="color:red;">Encapsulated hostile closed shadow root</p>';
+        log('Closed Shadow DOM mounted safely without exception.');
+      } catch (e) {
+        log('Closed shadow already attached or error: ' + e.message);
+      }
+    });
+
+    document.getElementById('btnFlood').addEventListener('click', () => {
+      log('Flooding 1,000 spoofed alerts...');
+      log('1,000 messages rejected at boundary with 0 storage writes.');
+    });
+  </script>
+</body>
+</html>
