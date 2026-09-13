@@ -151,7 +151,7 @@ export function formatChromiumProfileCard(opts: VigilChromiumProfileOptions): st
   lines.push(`Benchmark: ${opts.benchmark}`);
   lines.push(`Trials: ${opts.trials} repeated executions`);
   lines.push(`Browser: ${opts.browser ?? 'Chromium (Real Packaged Extension Runtime)'}`);
-  lines.push(`Extension build: ${opts.extensionBuild ?? 'v2.1.0-rc.1 (V4-L3-certified)'}`);
+  lines.push(`Extension build: ${opts.extensionBuild ?? 'v5.0.0 (V5-certified)'}`);
   lines.push('');
 
   const renderMetric = (m: ProfileMetricRow) => {

@@ -193,7 +193,7 @@ export class FieldValidationHarness {
       domain,
       browser: typeof navigator !== 'undefined' ? navigator.userAgent : 'Chrome/130 (Headless)',
       os: 'Windows 11',
-      vigilVersion: '2.1.0-rc.1',
+      vigilVersion: '5.0.0',
       timestamp: Date.now(),
       stages: {
         off: offResults,

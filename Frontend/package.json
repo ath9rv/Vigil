@@ -1,6 +1,6 @@
 {
   "name": "vigil-extension",
-  "version": "2.1.0-rc.1",
+  "version": "5.0.0",
   "description": "Vigil — Universal Web Trust & Safety Shield Browser Extension",
   "author": "Vigil Project Contributors",
   "type": "module",

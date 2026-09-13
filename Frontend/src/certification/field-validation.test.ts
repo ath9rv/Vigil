@@ -33,7 +33,7 @@ describe('Vigil V2.1 RC1 Certification: Field Validation Harness & Explain Mode'
 
     expect(session).toBeDefined();
     expect(session.domain).toBe('testshop.com');
-    expect(session.vigilVersion).toBe('2.1.0-rc.1');
+    expect(session.vigilVersion).toBe('5.0.0');
     expect(session.stages.off.loadTimeMs).toBeGreaterThan(0);
     expect(session.stages.observeOnly.domMutationsSuppressed).toBe(2);
     expect(session.stages.dryRun.plannedInterventionsCount).toBeGreaterThan(0);

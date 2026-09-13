@@ -143,7 +143,7 @@ export const CANCELLATION_URLS: Record<string, string> = {
 
 // ─── Version ───────────────────────────────────────────────────────────────
 
-export const EXTENSION_VERSION = '2.0.0';
+export const EXTENSION_VERSION = '5.0.0';
 
 // ─── Known Domains for M2 Similarity Check ─────────────────────────────────
 

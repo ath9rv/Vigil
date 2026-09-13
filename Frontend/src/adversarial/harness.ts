@@ -154,7 +154,7 @@ export class AdversarialLabHarness {
       scenario: params.scenario,
       environment: params.environment ?? 'Local TestLab / Node.js 20 / Vitest',
       browser: params.browser ?? 'Vitest Harness (jsdom simulated runtime)',
-      extensionBuild: params.extensionBuild ?? 'v2.1.0-rc.1 (V4-L3-certified)',
+      extensionBuild: params.extensionBuild ?? 'v5.0.0 (V5-certified)',
       outcome: params.outcome,
       detectionLatencyMs: detectionLatency,
       reasoningLatencyMs: reasoningLatency,
