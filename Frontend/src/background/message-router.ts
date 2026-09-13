@@ -63,8 +63,8 @@ export function registerMessageHandlers(): void {
       if (message.type === 'VIGIL_COOKIE_ACTION') {
         observation = ObservationFactory.fromCookieAction(message.context, { action: message.action, cmp: message.cmp });
       } else if (message.type === 'VIGIL_TRACKER_REPORT') {
-        observation = ObservationFactory.fromNetworkRequest(message.context, { 
-          trackerCount: message.payload.trackerCount, 
+        observation = ObservationFactory.fromNetworkRequest(message.context, {
+          trackerCount: message.payload.trackerCount,
           isTracker: message.payload.trackerCount > 0,
           crossSite: true
         });
@@ -83,9 +83,9 @@ export function registerMessageHandlers(): void {
         console.error('Message handler error:', err);
         sendResponse({ error: err.message });
       });
-    
+
     // Return true to indicate that the response will be sent asynchronously
-    return true; 
+    return true;
   });
 }
 
@@ -101,7 +101,7 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
     case 'SCAN_COMPLETE': {
       const ctx = message.context;
       const domain = ctx.hostname;
-      
+
       // Collect Live Network/Internet & Threat Intelligence Observations
       const liveObservations = await collectLiveObservations(domain, ctx.navigationId, ctx);
 
@@ -117,7 +117,7 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
 
       // Finalize reasoning — this is the canonical verdict pipeline
       const trustResult = trustEngine.finalize(ctx.navigationId);
-      
+
       // Derive canonical findings for eligible TrustEngine verdicts not originating from DOM scan
       const derivedFindings: Finding[] = [];
       for (const report of trustResult.reports) {
@@ -175,7 +175,7 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
           `${trustResult.reports.length} eligible reports, ` +
           `${trustResult.rejectedCount} budget rejections`);
       }
-      
+
       // Fast-lane integration: trigger alert strictly downstream of a finalized HIGH confidence security report
       const severeReport = trustResult.reports.find(r =>
         r.verdictType === 'PHISHING_RISK' && r.confidenceLabel === 'HIGH'
@@ -184,10 +184,10 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
       if (severeFinding && ctx.tabId) {
         await handleFastLaneAlert(severeFinding, ctx.tabId);
       }
-      
+
       // Delegate to score aggregation logic
       await aggregateScores(allFindings, ctx);
-      
+
       // Atomically cache the findings for this domain without racing other tabs or clobbering legal findings
       await atomicUpdateStorage('findings_cache', (cache) => {
         const existingLegal = (cache[domain] || []).filter(f => f.category === 'LEGAL');
@@ -213,25 +213,25 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
 
       return { success: true };
     }
-    
+
     case 'GET_STATUS': {
       const trustDataRecord = await getStorageValue('trust_data');
       const findingsCache = await getStorageValue('findings_cache');
       const denylist = await getStorageValue('site_denylist');
-      
+
       const response: StatusResponseMessage = {
         type: 'STATUS_RESPONSE',
         trustData: trustDataRecord[message.domain] || null,
         findings: findingsCache[message.domain] || [],
         enabled: !denylist.includes(message.domain)
       };
-      
+
       return response;
     }
-    
+
     case 'TOGGLE_SITE': {
       const denylist = await getStorageValue('site_denylist');
-      
+
       if (message.enabled) {
         // Remove from denylist to enable
         const newDenylist = denylist.filter(d => d !== message.domain);
@@ -243,16 +243,16 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
           await setStorageValue('site_denylist', denylist);
         }
       }
-      
+
       return { success: true };
     }
-    
+
     case 'VIGIL_LAYOUT_SHIFT': {
       const domain = message.context.hostname;
-      
+
       const findingsCache = await getStorageValue('findings_cache');
       const domainFindings = findingsCache[domain] || [];
-      
+
       // Basic Threat Correlator Logic
       const analysis = createForensicAnalysis({
         confidence: 'CONFIRMED',
@@ -292,7 +292,7 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
           }
         }
       };
-      
+
       // Deduplicate to avoid flooding
       const alreadyHasShift = domainFindings.some(f => f.ruleId === 'M4-003');
       if (!alreadyHasShift) {
@@ -301,10 +301,10 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
         await setStorageValue('findings_cache', findingsCache);
         await aggregateScores(domainFindings, message.context);
       }
-      
+
       return { success: true };
     }
-    
+
     case 'VIGIL_COOKIE_ACTION': {
       await setStorageValue('vigil_cookie_action', {
         domain: message.context.hostname,
@@ -349,9 +349,9 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
         const storage = await chrome.storage.local.get('permission_state');
         const permState = storage.permission_state;
         const isStrict = permState?.strictIntent || (permState?.protectedOrigins && permState.protectedOrigins.length > 0);
-        
+
         const existing = await chrome.scripting.getRegisteredContentScripts({ ids: ['vigil-strict-main'] });
-        
+
         if (isStrict) {
           const origins = (permState.protectedOrigins && permState.protectedOrigins.length > 0)
             ? permState.protectedOrigins.map((o: string) => `https://${o}/*`)
@@ -389,8 +389,16 @@ async function handleMessage(message: ExtensionMessage, sender: chrome.runtime.M
       return { success: true };
     }
 
+    case 'LOCATE_ON_PAGE':
+    case 'HIGHLIGHT_REQUEST': {
+      const targetTabId = (message as any).tabId || sender.tab?.id || (message as any).context?.tabId;
+      if (targetTabId && chrome.tabs && typeof chrome.tabs.sendMessage === 'function') {
+        chrome.tabs.sendMessage(targetTabId, message).catch(() => {});
+      }
+      return { success: true };
+    }
+
     case 'GET_RULES':
-    case 'HIGHLIGHT_REQUEST':
     case 'REPORT_FINDING':
       return { success: true, stub: true };
 

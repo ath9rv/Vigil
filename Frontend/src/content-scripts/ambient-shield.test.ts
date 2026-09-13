@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { showAmbientAlert, dismissAmbientAlert } from './ambient-shield';
+import { showAmbientAlert, dismissAmbientAlert, handleAmbientShieldMessage } from './ambient-shield';
 
 describe('Ambient In-Situ Warning Shield (Direct Integration Tests)', () => {
   let createdElements: any[] = [];
@@ -126,6 +126,50 @@ describe('Ambient In-Situ Warning Shield (Direct Integration Tests)', () => {
       onDismiss: onDismiss,
     });
 
+    expect(currentHost).not.toBeNull();
+  });
+
+  it('rejects spoofed SHOW_EMERGENCY_ALERT messages from unauthorized senders', () => {
+    (globalThis as any).chrome = {
+      runtime: { id: 'vigil-official-id' }
+    };
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Spoofed sender
+    const accepted = handleAmbientShieldMessage(
+      { type: 'SHOW_EMERGENCY_ALERT', alert: { id: 'spoof', type: 'CRITICAL_SECURITY', title: 'Fake', message: 'Fake' } },
+      { id: 'malicious-extension-id' }
+    );
+
+    expect(accepted).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[Vigil Security] Message rejected in ambient-shield: untrusted sender.id'),
+      'malicious-extension-id'
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('accepts authorized SHOW_EMERGENCY_ALERT messages from background runtime', () => {
+    (globalThis as any).chrome = {
+      runtime: { id: 'vigil-official-id' }
+    };
+
+    const accepted = handleAmbientShieldMessage(
+      {
+        type: 'SHOW_EMERGENCY_ALERT',
+        alert: {
+          id: 'auth-alert',
+          type: 'CRITICAL_SECURITY',
+          title: 'Official Phishing Alert',
+          message: 'Credential threat detected.'
+        }
+      },
+      { id: 'vigil-official-id' }
+    );
+
+    expect(accepted).toBe(true);
     expect(currentHost).not.toBeNull();
   });
 });

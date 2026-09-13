@@ -221,7 +221,7 @@ export interface ForensicReport {
   evidenceNodeIds: string[];
   temporalCorrelationIds: string[];
   eligibility: VerdictEligibility;
-  
+
   // Phase 1: Observability & Calibration Enhancements
   observed?: string[];
   inferred?: string[];
@@ -306,10 +306,10 @@ export interface Finding {
   pageUrl: string;
   /** ISO timestamp of detection */
   detectedAt: string;
-  
-  /** 
+
+  /**
    * V4 Trust Engine Architecture
-   * A finding CANNOT exist without a strictly bound forensic context. 
+   * A finding CANNOT exist without a strictly bound forensic context.
    */
   context: FindingContext;
 }
@@ -413,7 +413,18 @@ export type ExtensionMessage =
   | VigilCookieActionMessage
   | VigilTrackerReportMessage
   | VigilNavigationStartedMessage
-  | VigilCapabilitiesChangedMessage;
+  | VigilCapabilitiesChangedMessage
+  | LocateOnPageMessage;
+
+export interface LocateOnPageMessage {
+  type: 'LOCATE_ON_PAGE';
+  selector?: string;
+  text?: string;
+  ruleName?: string;
+  severity?: string;
+  findingId?: string;
+  tabId?: number;
+}
 
 export interface ScanCompleteMessage extends PageBoundMessage {
   type: 'SCAN_COMPLETE';

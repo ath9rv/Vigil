@@ -26,10 +26,10 @@ function ensureHost(): ShadowRoot {
     hostElement.style.right = '20px';
     hostElement.style.zIndex = '2147483647';
     hostElement.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    
+
     // Strict closed Shadow DOM prevents host page scripts from inspecting or tampering with the shield
     shadowRoot = hostElement.attachShadow({ mode: 'closed' });
-    
+
     const style = document.createElement('style');
     style.textContent = `
       :host {
@@ -283,4 +283,28 @@ export function clearAmbientAlerts(): void {
     hostElement = null;
     shadowRoot = null;
   }
+}
+
+/**
+ * Processes emergency alert messages from the background service worker.
+ * Strictly validates sender identity to prevent page or cross-extension spoofing.
+ */
+export function handleAmbientShieldMessage(message: any, sender: { id?: string }): boolean {
+  if (typeof chrome !== 'undefined' && chrome.runtime?.id && sender?.id && sender.id !== chrome.runtime.id) {
+    console.warn('[Vigil Security] Message rejected in ambient-shield: untrusted sender.id', sender.id);
+    return false;
+  }
+  if (message?.type === 'SHOW_EMERGENCY_ALERT' && message.alert) {
+    showAmbientAlert(message.alert);
+    return true;
+  } else if (message?.type === 'CLEAR_EMERGENCY_ALERTS') {
+    clearAmbientAlerts();
+    return true;
+  }
+  return false;
+}
+
+// Runtime message listener for background FastLane and TrustEngine emergency alerts
+if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+  chrome.runtime.onMessage.addListener(handleAmbientShieldMessage);
 }

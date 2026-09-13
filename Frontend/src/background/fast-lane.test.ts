@@ -7,12 +7,14 @@ describe('Background Worker Fast-Lane Emergency Alert Engine', () => {
   let notificationMock: any = null;
   let badgeTextMock: any = null;
   let badgeColorMock: any = null;
+  let tabsSendMessageMock: any = null;
 
   beforeEach(() => {
     storageMock = {};
     notificationMock = null;
     badgeTextMock = null;
     badgeColorMock = null;
+    tabsSendMessageMock = null;
 
     (globalThis as any).chrome = {
       notifications: {
@@ -26,6 +28,12 @@ describe('Background Worker Fast-Lane Emergency Alert Engine', () => {
         }),
         setBadgeBackgroundColor: vi.fn((opts: any) => {
           badgeColorMock = opts;
+        })
+      },
+      tabs: {
+        sendMessage: vi.fn(async (tabId: number, msg: any) => {
+          tabsSendMessageMock = { tabId, msg };
+          return true;
         })
       },
       storage: {
@@ -121,5 +129,89 @@ describe('Background Worker Fast-Lane Emergency Alert Engine', () => {
     expect(storageMock.fast_lane_alerts).toBeDefined();
     expect(storageMock.fast_lane_alerts.length).toBe(1);
     expect(storageMock.fast_lane_alerts[0].domain).toBe('arnazon.in');
+  });
+
+  it('dispatches SHOW_EMERGENCY_ALERT to affected tab for in-page Ambient Shield intervention', async () => {
+    const fakeFinding: Finding = {
+      id: 'crit-04',
+      ruleId: 'M2-005',
+      ruleName: 'credential_theft',
+      module: 'M2',
+      severity: 'CRITICAL',
+      confidenceState: 'CONFIRMED',
+      statuteRef: '',
+      explanation: 'Credential submission to unauthorized external domain',
+      elementSelector: 'form#login',
+      elementRect: { top: 0, left: 0, width: 0, height: 0 },
+      context: {
+        scan: { tabId: 10, navigationId: 'https://deceptive-portal.net', origin: 'https://deceptive-portal.net', hostname: 'deceptive-portal.net', startedAt: Date.now() },
+        evidence: [],
+        coverage: { dom: true, threatIntel: true, network: true, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+      },
+      pageUrl: 'https://deceptive-portal.net',
+      detectedAt: new Date().toISOString()
+    };
+
+    await handleFastLaneAlert(fakeFinding, 10);
+
+    expect(tabsSendMessageMock).toBeDefined();
+    expect(tabsSendMessageMock.tabId).toBe(10);
+    expect(tabsSendMessageMock.msg.type).toBe('SHOW_EMERGENCY_ALERT');
+    expect(tabsSendMessageMock.msg.alert.type).toBe('CRITICAL_SECURITY');
+    expect(tabsSendMessageMock.msg.alert.title).toContain('Vigil Critical Security Alert');
+    expect(tabsSendMessageMock.msg.alert.message).toContain('Credential submission');
+  });
+
+  it('does NOT dispatch in-page emergency alert for non-critical findings', async () => {
+    const nonCritFinding: Finding = {
+      id: 'med-01',
+      ruleId: 'M1-001',
+      ruleName: 'urgency_timer',
+      module: 'M1',
+      severity: 'SUGGESTIVE',
+      confidenceState: 'OBSERVED',
+      statuteRef: '',
+      explanation: 'Countdown timer on product page',
+      elementSelector: '.timer',
+      elementRect: { top: 0, left: 0, width: 0, height: 0 },
+      context: {
+        scan: { tabId: 10, navigationId: 'https://shop.com', origin: 'https://shop.com', hostname: 'shop.com', startedAt: Date.now() },
+        evidence: [],
+        coverage: { dom: true, threatIntel: false, network: false, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+      },
+      pageUrl: 'https://shop.com',
+      detectedAt: new Date().toISOString()
+    };
+
+    await handleFastLaneAlert(nonCritFinding, 10);
+
+    // Desktop notification still triggered, but in-page emergency alert is blocked by eligibility policy
+    expect(tabsSendMessageMock).toBeNull();
+  });
+
+  it('gracefully suppresses in-page emergency alert on internal chrome:// pages', async () => {
+    const chromePageFinding: Finding = {
+      id: 'crit-chrome',
+      ruleId: 'M2-005',
+      ruleName: 'credential_theft',
+      module: 'M2',
+      severity: 'CRITICAL',
+      confidenceState: 'CONFIRMED',
+      statuteRef: '',
+      explanation: 'Critical event on chrome internal page',
+      elementSelector: 'body',
+      elementRect: { top: 0, left: 0, width: 0, height: 0 },
+      context: {
+        scan: { tabId: 10, navigationId: 'chrome://settings', origin: 'chrome://settings', hostname: 'settings', startedAt: Date.now() },
+        evidence: [],
+        coverage: { dom: true, threatIntel: true, network: true, cookies: false, dynamicEvents: false, storage: false, crossSite: false }
+      },
+      pageUrl: 'chrome://settings',
+      detectedAt: new Date().toISOString()
+    };
+
+    await handleFastLaneAlert(chromePageFinding, 10);
+
+    expect(tabsSendMessageMock).toBeNull();
   });
 });

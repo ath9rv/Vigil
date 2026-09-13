@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Finding } from '../../evidence/evidence';
+import { Finding, extractLocationTarget } from '../../evidence/evidence';
 import { ExplainModePanel } from './ExplainModePanel';
 import { ReportAdapter } from '../../evidence/forensic-report/report-adapter';
 
@@ -30,6 +30,27 @@ export function FindingCard({ finding }: Props) {
   const headerColor = SEVERITY_COLORS[finding.severity] || SEVERITY_COLORS.INFO;
   const icon = SEVERITY_ICONS[finding.severity] || SEVERITY_ICONS.INFO;
   const report = ReportAdapter.ensureCanonicalReport(finding);
+  const locationTarget = extractLocationTarget(finding);
+
+  const handleLocate = () => {
+    if (!locationTarget) return;
+
+    if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'LOCATE_ON_PAGE',
+            selector: locationTarget.selector,
+            text: locationTarget.text,
+            ruleName: locationTarget.ruleName,
+            severity: locationTarget.severity,
+            findingId: locationTarget.findingId,
+          });
+        }
+      });
+    }
+  };
+
 
   // Threat card rendering (Critical priority)
   if (isThreat) {
@@ -60,6 +81,14 @@ export function FindingCard({ finding }: Props) {
               <span>🔍</span>
               <span>{showExplain ? 'Hide Explanation ▾' : 'Why did Vigil flag this? ▸'}</span>
             </button>
+            {Boolean(locationTarget) && (
+              <button
+                onClick={handleLocate}
+                className="text-red-600 hover:text-red-800 text-[11px] font-bold transition-colors"
+              >
+                Locate on Page ↗
+              </button>
+            )}
           </div>
           {showExplain && <ExplainModePanel report={report} />}
         </div>
@@ -105,29 +134,14 @@ export function FindingCard({ finding }: Props) {
             <span>{showExplain ? 'Hide Explanation ▾' : 'Why did Vigil flag this? ▸'}</span>
           </button>
 
-          {(finding.evidence?.sourceType === 'DOCUMENT' ||
-            finding.evidence?.sourceType === 'DOM' ||
-            !finding.evidence) &&
-            (finding.evidence?.excerpt || finding.interpretation) && (
-              <button
-                onClick={() => {
-                  const textToHighlight = finding.evidence?.excerpt || finding.interpretation;
-                  if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
-                    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-                      if (tabs[0]?.id) {
-                        chrome.tabs.sendMessage(tabs[0].id, {
-                          type: 'VIGIL_HIGHLIGHT_TEXT',
-                          text: textToHighlight,
-                        });
-                      }
-                    });
-                  }
-                }}
-                className="text-gray-500 hover:text-gray-700 text-[11px] font-medium transition-colors"
-              >
-                Locate on Page ↗
-              </button>
-            )}
+          {Boolean(locationTarget) && (
+            <button
+              onClick={handleLocate}
+              className="text-gray-500 hover:text-gray-700 text-[11px] font-medium transition-colors"
+            >
+              Locate on Page ↗
+            </button>
+          )}
         </div>
 
         {/* Explain Mode Progressive Disclosure Panel (Levels 1, 2, 3 & Export) */}

@@ -7,6 +7,7 @@ import { runTrackerAnalysis } from './tracker-analysis';
 import { initAdversarialObserver } from './adversarial-observer';
 import { initUrgencyNeutralizer } from './urgency-neutralizer';
 import './highlighter';
+import './ambient-shield';
 
 async function bootstrap() {
   const domain = window.location.hostname;
@@ -29,10 +30,10 @@ async function bootstrap() {
 
   // 1. Static/DOM Scanner
   initScanner();
-  
+
   // 2. DOM Mutation Trigger
   startObserver(() => scanPage());
-  
+
   // 3. Reactive Web Vitals (Pillar 2/3)
   const vitals = new ReactiveWebVitalsObserver({
     shiftThreshold: 0.08,
@@ -67,7 +68,7 @@ async function bootstrap() {
 
   // 6. Urgency Neutralization (Active countdown/scarcity freeze)
   initUrgencyNeutralizer();
-  
+
   // 7. Third-Party Tracker Analysis (runs after page loads fully)
   setTimeout(() => {
     runTrackerAnalysis();

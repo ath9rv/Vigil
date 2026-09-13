@@ -10,10 +10,33 @@ export interface FastLaneAlertRecord {
 }
 
 /**
+ * Strict eligibility policy for in-page Ambient Shield emergency intervention:
+ * - Must be CRITICAL severity
+ * - Must be CONFIRMED confidence
+ * - Must be an active security threat (Module 2 Phishing / Credential theft)
+ * - Must NOT be an internal browser URL (chrome://, edge://, about:)
+ */
+export function isEmergencyAlertEligible(finding: Finding): boolean {
+  if (finding.severity !== 'CRITICAL') return false;
+  if (finding.confidenceState !== 'CONFIRMED') return false;
+
+  if (finding.pageUrl) {
+    try {
+      const parsed = new URL(finding.pageUrl);
+      if (parsed.protocol === 'chrome:' || parsed.protocol === 'edge:' || parsed.protocol === 'about:') {
+        return false;
+      }
+    } catch {}
+  }
+
+  return finding.module === 'M2';
+}
+
+/**
  * Handles Module 2 severe phishing alerts with ZERO network dependency.
  * Creates an urgent notification and sets a badge on the affected tab.
  * Stores events in a bounded, TTL-cleaned local audit queue.
- * 
+ *
  * @param finding - The severe finding triggering the alert.
  * @param tabId - The ID of the tab where the finding occurred.
  */
@@ -44,6 +67,27 @@ export async function handleFastLaneAlert(finding: Finding, tabId: number): Prom
     }
     if (typeof chrome.action.setBadgeBackgroundColor === 'function') {
       chrome.action.setBadgeBackgroundColor({ color: '#ef4444', tabId });
+    }
+  }
+
+  // In-page Ambient Shield: STRICTLY triggered downstream of verified critical security policy
+  if (isEmergencyAlertEligible(finding) && chrome.tabs && typeof chrome.tabs.sendMessage === 'function' && tabId) {
+    try {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'SHOW_EMERGENCY_ALERT',
+        alert: {
+          id: `fast-lane-${finding.id}`,
+          type: 'CRITICAL_SECURITY',
+          title: '🚨 Vigil Critical Security Alert',
+          message: finding.explanation || `Phishing or deceptive credential threat detected on ${domain}.`,
+          details: finding.ruleName ? `Pattern: ${finding.ruleName} (${finding.ruleId})` : undefined,
+          primaryActionLabel: 'Review Security Details'
+        }
+      }).catch(() => {
+        // Tab might be in an internal chrome:// URL or navigated away
+      });
+    } catch {
+      // Ignore synchronous dispatch failures
     }
   }
 

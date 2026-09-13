@@ -41,23 +41,54 @@ export type ReviewStatus = 'CONFIRMED' | 'REVIEW_NEEDED' | 'INCONCLUSIVE';
 
 import type { CanonicalForensicReport } from './forensic-report/types';
 
+export interface LocationTarget {
+  readonly selector?: string;
+  readonly text?: string;
+  readonly ruleName?: string;
+  readonly findingId: string;
+  readonly severity?: string;
+}
+
 export interface Finding {
   id: string;
   category: FindingCategory;
   severity: SeverityLevel;
   confidence: ConfidenceLevel;
   reviewStatus: ReviewStatus;
-  
+
   // What triggered this finding?
   ruleId?: string;
   ruleName?: string;
-  
+
   // Explain why it matters
   interpretation: string;
-  
+
   // The immutable evidence backing this finding
   evidence: Evidence;
 
+  // Optional DOM selector or locatable target
+  elementSelector?: string;
+  locationTarget?: LocationTarget;
+
   // Layer 3 Canonical Forensic Report (Explain Mode)
   report?: CanonicalForensicReport;
+}
+
+/**
+ * Extracts a typed LocationTarget from any Finding without untyped casts.
+ */
+export function extractLocationTarget(finding: Finding): LocationTarget | null {
+  if (finding.locationTarget) return finding.locationTarget;
+  const selector = finding.elementSelector;
+  const text = finding.evidence?.excerpt || finding.interpretation;
+  if (!selector && (!text || !text.trim())) {
+    return null;
+  }
+  return {
+    selector,
+    text: text?.trim(),
+    ruleName: finding.ruleName,
+    findingId: finding.id,
+    severity: finding.severity,
+  };
 }
